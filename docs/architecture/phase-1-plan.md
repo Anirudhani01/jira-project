@@ -585,6 +585,18 @@ Implemented per M1 / R2 / V2.3–V2.5 / V2.9. The approved decisions are unchang
 - Pre-commit security review fixed F1 (rate-limit race → atomic reserve/release), F2 (SQL parameters in exception text → `hide_parameters`), F3 (spoofable `X-Forwarded-For` in the compose proxy → overwrite at nginx, IP validation), F4 (non-range 200 counted as clean), F6 (stale credentials during login). Details in `docs/decisions.md`.
 - Observed: the development sandbox blocks `api.pwnedpasswords.com`, so fail-open (D7) was exercised for real. **Production must allow this egress.**
 
+## V3.9 M2 implementation record (added after M2 implementation; pending review)
+Implemented per M2 / R2 / R4 / R5 / C3 / C4 / V2.5 / V2.9; design recorded in ADR 0009. The approved decisions are unchanged. Deviations and additions:
+- **Temporary:** `outbox.org_id` and RLS deferred to M3. Not an isolation assumption: every M2 job is a global identity email keyed by user id (test-enforced); M3 adds `org_id` + R3.2 policies before any tenant job.
+- Reset request answers `503 email_unavailable` (same for every address) while email delivery is disabled; a failed send invalidates its own token.
+- No `EMAIL_VERIFICATION_REQUIRED` flag: nothing is gated on verification before M3.
+- No separate resend endpoint: repeating signup with an unverified address re-sends verification (R2), 3/h per address.
+- Extra limits: reset requests 20/h per IP (429); invalid token submissions 30/h per IP (429, failures only).
+- Reset requests for unknown/disabled addresses enqueue a no-op job (timing/work parity).
+- Token pages submit only on an explicit click (no auto-consume by link scanners).
+- Worker role tightened on M1 tables (no `user_sessions`, read-only `users`), per R3.1.
+- Email delivery off by default; dev/test use Mailpit (free, local). Production email remains blocked until D13 picks a provider (D14 applies).
+
 ## V3.7 M0 review record (accepted with limitations)
 M0 accepted on local validation results, with these recorded limitations:
 - GitHub Actions had not run at acceptance time; CI status is reported only from an actual Actions run.

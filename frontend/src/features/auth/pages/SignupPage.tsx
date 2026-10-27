@@ -22,10 +22,13 @@ type Values = z.infer<typeof schema>;
 
 /**
  * The response is identical whether or not the email already has an account (plan R2),
- * so the confirmation copy must be true in every case.
+ * so the confirmation copy must be true in every case: a new or unverified address gets a
+ * verification link, an already registered one gets a notice instead. It must also not
+ * claim an email was sent: per-address limits and (outside production) disabled delivery
+ * can mean nothing is sent.
  */
 export const SIGNUP_ACCEPTED_MESSAGE =
-  'Request received. If you can sign in with these credentials, continue to sign in.';
+  'Request received. If we can email that address, you will receive a message with the next step.';
 
 export function SignupPage() {
   const signup = useSignup();
@@ -44,7 +47,7 @@ export function SignupPage() {
     return (
       <section aria-labelledby="signup-done" className="mx-auto max-w-sm space-y-4">
         <h1 id="signup-done" className="text-2xl font-semibold">
-          Check your details
+          Check your email
         </h1>
         <p role="status">{SIGNUP_ACCEPTED_MESSAGE}</p>
         <Link to="/login" className="text-blue-700 underline">

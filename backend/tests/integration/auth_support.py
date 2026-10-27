@@ -31,6 +31,13 @@ def integration_settings(**overrides: Any) -> Any:
         "redis_url": SecretStr(os.environ["TEST_REDIS_URL"]),
         "app_base_url": ORIGIN,
         "redis_timeout_seconds": 0.5,
+        # Delivery to the local Mailpit sink (free; nothing leaves the machine).
+        "email_delivery_enabled": True,
+        "email_from": "no-reply@jira.test",
+        "smtp_host": os.environ["TEST_SMTP_HOST"],
+        "smtp_port": int(os.environ["TEST_SMTP_PORT"]),
+        "smtp_security": "none",
+        "smtp_timeout_seconds": 5,
     }
     values.update(overrides)
     return make_settings(**values)

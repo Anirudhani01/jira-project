@@ -33,6 +33,13 @@ LOGIN_PER_IP: Final = RateLimit("login-ip", 30, 60)
 SIGNUP_PER_IP: Final = RateLimit("signup-ip", 5, 3600)
 # Guards current-password guessing with a stolen session.
 PASSWORD_CHANGE_PER_USER: Final = RateLimit("password-change-user", 5, 900)
+# M2 (plan §4.5): emails per address are limited silently (the response never changes, so
+# the limit reveals nothing); per-IP limits answer 429.
+SIGNUP_EMAIL_PER_ADDRESS: Final = RateLimit("signup-email-address", 3, 3600)
+PASSWORD_RESET_PER_ADDRESS: Final = RateLimit("password-reset-address", 3, 3600)
+PASSWORD_RESET_PER_IP: Final = RateLimit("password-reset-ip", 20, 3600)
+# Invalid verification/reset token submissions (counted on failure only).
+TOKEN_FAILURES_PER_IP: Final = RateLimit("token-failures-ip", 30, 3600)
 
 # Atomic check-and-reserve: concurrent requests cannot all pass the check before any
 # of them is counted (the original check-then-hit design allowed parallel bursts).

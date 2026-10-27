@@ -1,6 +1,14 @@
 # Local development / CI stack. Not a production deployment.
-# Usage via Makefile: `make infra-up` (Postgres + Redis) or `make up` (full stack).
+# Usage via Makefile: `make infra-up` (Postgres, Redis, Mailpit) or `make up` (full stack).
 name: jira-project
+
+# Development email settings: delivery goes to the local Mailpit sink only.
+x-dev-email: &dev-email
+  EMAIL_DELIVERY_ENABLED: "true"
+  EMAIL_FROM: no-reply@jira.localhost
+  SMTP_HOST: mailpit
+  SMTP_PORT: "1025"
+  SMTP_SECURITY: none
 
 services:
   postgres:
@@ -33,6 +41,24 @@ services:
       timeout: 3s
       retries: 30
 
+  # Free, local SMTP sink for development and tests (M2). Captures every message; nothing
+  # leaves the machine. Web UI and API on http://localhost:8025. Never used in production.
+  mailpit:
+    image: axllent/mailpit:v1.27.11
+    environment:
+      MP_DISABLE_VERSION_CHECK: "true"
+      MP_MAX_MESSAGES: "5000"
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
   migrate:
     build:
       context: ../backend
@@ -59,6 +85,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       APP_SECRET_KEY: ${APP_SECRET_KEY:?set APP_SECRET_KEY in .env}
       BREACH_CHECK_MODE: ${BREACH_CHECK_MODE:-hibp}
+      <<: *dev-email
       # Only nginx can reach the backend in this stack, so its X-Forwarded-For is trusted.
       # Production must list the real load-balancer addresses instead of "*".
       FORWARDED_ALLOW_IPS: "*"
@@ -67,11 +94,36 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+      mailpit:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=3).status == 200 else 1)"]
       interval: 5s
       timeout: 5s
       retries: 20
+
+  # Delivers outbox jobs (M2: verification / reset / sign-up notice emails).
+  worker:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    profiles: ["app"]
+    command: ["python", "-m", "app.worker"]
+    environment:
+      ENVIRONMENT: dev
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      APP_BASE_URL: http://localhost:8080
+      COOKIE_SECURE: "false"
+      DATABASE_URL: postgresql+asyncpg://app_rw:${APP_RW_PASSWORD}@postgres:5432/jira
+      WORKER_DATABASE_URL: postgresql+asyncpg://app_worker:${APP_WORKER_PASSWORD}@postgres:5432/jira
+      REDIS_URL: redis://redis:6379/0
+      APP_SECRET_KEY: ${APP_SECRET_KEY:?set APP_SECRET_KEY in .env}
+      <<: *dev-email
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_healthy
 
   frontend:
     build:

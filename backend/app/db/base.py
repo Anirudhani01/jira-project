@@ -19,4 +19,5 @@ class Base(DeclarativeBase):
 def import_all_models() -> None:
     """Import every model module so Base.metadata is complete (used by Alembic)."""
     from app.modules.identity import models as identity_models  # noqa: F401, PLC0415
+    from app.modules.outbox import models as outbox_models  # noqa: F401, PLC0415
     from app.modules.security_events import models as event_models  # noqa: F401, PLC0415

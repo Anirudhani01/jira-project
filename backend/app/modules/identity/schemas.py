@@ -26,6 +26,8 @@ Email = Annotated[str, Field(max_length=320), AfterValidator(_validate_email)]
 DisplayName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 # Length policy (12+) is enforced by the password policy so the rejection is uniform.
 Password = Annotated[str, Field(min_length=1, max_length=MAX_PASSWORD_LENGTH)]
+# Email-link tokens are URL-safe base64 (43 chars for 32 bytes); anything else is invalid.
+EmailToken = Annotated[str, Field(min_length=16, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")]
 
 
 class _Request(BaseModel):
@@ -50,6 +52,19 @@ class ChangePasswordRequest(_Request):
 
 class UpdateProfileRequest(_Request):
     display_name: DisplayName
+
+
+class VerifyEmailRequest(_Request):
+    token: EmailToken
+
+
+class PasswordResetRequest(_Request):
+    email: Email
+
+
+class PasswordResetConfirmRequest(_Request):
+    token: EmailToken
+    new_password: Password
 
 
 class AcceptedResponse(BaseModel):

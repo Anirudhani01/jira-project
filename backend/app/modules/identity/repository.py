@@ -8,11 +8,11 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import ColumnElement, func, select, text, update
+from sqlalchemy import ColumnElement, func, insert, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.identity.models import User, UserSession
+from app.modules.identity.models import User, UserSession, UserToken
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,14 +49,18 @@ async def get_user_by_id(session: AsyncSession, user_id: uuid.UUID) -> User | No
 
 async def insert_user_if_absent(
     session: AsyncSession, *, email: str, display_name: str, password_hash: str
-) -> None:
-    """INSERT ... ON CONFLICT DO NOTHING: concurrent duplicate signups both succeed."""
+) -> uuid.UUID | None:
+    """INSERT ... ON CONFLICT DO NOTHING: concurrent duplicate signups both succeed.
+
+    Returns the new user's id, or None when the email already existed.
+    """
     statement = (
         pg_insert(User)
         .values(email=email, display_name=display_name, password_hash=password_hash)
         .on_conflict_do_nothing(index_elements=[User.email])
+        .returning(User.id)
     )
-    await session.execute(statement)
+    return (await session.execute(statement)).scalar_one_or_none()
 
 
 async def update_password(session: AsyncSession, user_id: uuid.UUID, password_hash: str) -> None:
@@ -220,3 +224,112 @@ async def revoke_user_sessions(
         .returning(UserSession.id)
     )
     return len(result.all())
+
+
+# --------------------------------------------------------------------------- tokens
+# Validity (unused, not invalidated, unexpired) is always evaluated with the DB clock.
+def _token_usable(purpose: str) -> ColumnElement[bool]:
+    return (
+        (UserToken.purpose == purpose)
+        & UserToken.used_at.is_(None)
+        & UserToken.invalidated_at.is_(None)
+        & (UserToken.expires_at > func.now())
+    )
+
+
+async def find_usable_token_user(
+    session: AsyncSession, token_hash: bytes, purpose: str
+) -> uuid.UUID | None:
+    """The owner of a usable token, without consuming it."""
+    return (
+        await session.execute(
+            select(UserToken.user_id).where(
+                UserToken.token_hash == token_hash, _token_usable(purpose)
+            )
+        )
+    ).scalar_one_or_none()
+
+
+async def consume_token(session: AsyncSession, token_hash: bytes, purpose: str) -> uuid.UUID | None:
+    """Atomically mark a usable token as used and return its owner.
+
+    A single conditional UPDATE: of two concurrent submissions of the same token, the
+    second blocks on the row lock, re-evaluates ``used_at IS NULL`` and matches nothing.
+    """
+    result = await session.execute(
+        update(UserToken)
+        .where(UserToken.token_hash == token_hash, _token_usable(purpose))
+        .values(used_at=func.now())
+        .returning(UserToken.user_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def invalidate_user_tokens(
+    session: AsyncSession, user_id: uuid.UUID, purposes: tuple[str, ...]
+) -> int:
+    result = await session.execute(
+        update(UserToken)
+        .where(
+            UserToken.user_id == user_id,
+            UserToken.purpose.in_(purposes),
+            UserToken.used_at.is_(None),
+            UserToken.invalidated_at.is_(None),
+        )
+        .values(invalidated_at=func.now())
+        .returning(UserToken.id)
+    )
+    return len(result.all())
+
+
+async def invalidate_token(session: AsyncSession, token_hash: bytes) -> None:
+    """Withdraw one unused token (e.g. its email could not be sent)."""
+    await session.execute(
+        update(UserToken)
+        .where(
+            UserToken.token_hash == token_hash,
+            UserToken.used_at.is_(None),
+            UserToken.invalidated_at.is_(None),
+        )
+        .values(invalidated_at=func.now())
+    )
+
+
+async def lock_user_tokens(session: AsyncSession, user_id: uuid.UUID, purpose: str) -> None:
+    """Serialize minting per user and purpose so the active-token cap cannot be exceeded."""
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+        {"key": f"user-tokens:{purpose}:{user_id}"},
+    )
+
+
+async def invalidate_tokens_beyond(
+    session: AsyncSession, user_id: uuid.UUID, purpose: str, *, keep: int
+) -> int:
+    """Invalidate the user's usable tokens for ``purpose`` beyond the newest ``keep``."""
+    stale = (
+        select(UserToken.id)
+        .where(UserToken.user_id == user_id, _token_usable(purpose))
+        .order_by(UserToken.created_at.desc(), UserToken.id.desc())
+        .offset(keep)
+    )
+    result = await session.execute(
+        update(UserToken)
+        .where(UserToken.id.in_(stale))
+        .values(invalidated_at=func.now())
+        .returning(UserToken.id)
+    )
+    return len(result.all())
+
+
+async def insert_token(
+    session: AsyncSession, *, user_id: uuid.UUID, purpose: str, token_hash: bytes, ttl_seconds: int
+) -> None:
+    await session.execute(
+        insert(UserToken).values(
+            user_id=user_id,
+            purpose=purpose,
+            token_hash=token_hash,
+            expires_at=func.now() + func.make_interval(0, 0, 0, 0, 0, 0, ttl_seconds),
+        )
+    )
