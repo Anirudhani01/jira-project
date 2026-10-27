@@ -21,6 +21,11 @@ def build_schema() -> str:
         environment="dev",
         database_url=SecretStr("postgresql+asyncpg://openapi:unused@localhost:1/openapi"),
         redis_url=SecretStr("redis://localhost:1/0"),
+        app_secret_key=SecretStr("openapi-export-placeholder-key-not-used-0000"),
+        breach_check_mode="local_only",
+        password_hash_time_cost=1,
+        password_hash_memory_kib=1024,
+        password_hash_parallelism=1,
     )
     app = create_app(settings, configure_logs=False)
     return json.dumps(app.openapi(), indent=2, sort_keys=True) + "\n"

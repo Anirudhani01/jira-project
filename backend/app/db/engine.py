@@ -17,6 +17,9 @@ def create_db_engine(settings: Settings, *, application_name: str = "jira-api") 
         max_overflow=settings.db_max_overflow,
         pool_timeout=settings.db_pool_timeout_seconds,
         pool_pre_ping=True,
+        # Never embed bound parameters (password hashes, token hashes, emails) in exception
+        # messages: those reach logs via tracebacks.
+        hide_parameters=True,
         connect_args={
             "timeout": settings.db_connect_timeout_seconds,
             "server_settings": {

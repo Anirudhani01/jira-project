@@ -5,8 +5,10 @@ description = "API and worker for the Jira-like project management platform"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "alembic>=1.14",
+    "argon2-cffi>=23.1",
     "asyncpg>=0.30",
     "fastapi>=0.115",
+    "httpx>=0.28",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
     "redis>=5.2",
@@ -16,7 +18,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28",
     "mypy>=1.13",
     "pip-audit>=2.7",
     "pytest>=8.3",

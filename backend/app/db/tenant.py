@@ -33,6 +33,20 @@ _BIND_SQL = text(
 )
 
 
+_BIND_AUTH_EMAIL_SQL = text("SELECT set_config('app.auth_email', :email, true)")
+
+
+async def bind_auth_email(session: AsyncSession, email: str) -> None:
+    """Allow the ``users`` RLS policy to expose the single row matching ``email``.
+
+    Used only by signup/login (and the dev CLI) before a user identity is known.
+    Transaction-local like all other context.
+    """
+    if not session.in_transaction():
+        raise TenantContextError("auth context must be bound inside an explicit transaction")
+    await session.execute(_BIND_AUTH_EMAIL_SQL, {"email": email})
+
+
 async def bind_tenant(session: AsyncSession, context: TenantContext) -> None:
     """Bind tenant/user context for the current transaction.
 

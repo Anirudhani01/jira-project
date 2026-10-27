@@ -4,6 +4,10 @@
 - **Verification: NOT verified.** M0 contains no tenant tables. Cross-tenant isolation is
   unverified until the M3 cross-tenant suite (plan R3.5) is implemented and passes in CI.
   Verified in M0: runtime-role safety and tenant-context helper behavior only.
+- M1 status: `users` has forced RLS (visible only as the bound user or the bound auth-lookup
+  email; the org-membership branch arrives in M3). Tested in
+  `tests/integration/test_identity_db.py`. This is still not cross-tenant verification:
+  no tenant tables exist yet.
 - Plan reference: R3 (authoritative), V2.7, V3.2
 
 ## Decision

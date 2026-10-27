@@ -38,6 +38,8 @@ _REDACTED = "[REDACTED]"
 _REDACTION_PATTERNS: Final = (
     # credentials embedded in URLs: scheme://user:secret@host
     (re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://[^:/\s@]*):[^@\s/]+@"), rf"\1:{_REDACTED}@"),
+    # email addresses (e.g. PostgreSQL DETAIL lines such as "Key (email)=(...)")
+    (re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"), "[EMAIL]"),
     # bearer tokens
     (re.compile(r"(?i)\bbearer\s+[a-z0-9._~+/-]+=*"), f"Bearer {_REDACTED}"),
     # key=value / key: value pairs with sensitive key names

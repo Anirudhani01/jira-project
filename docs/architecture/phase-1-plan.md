@@ -574,6 +574,17 @@ Out of scope: any domain table, auth endpoints/config flags, worker process, out
   - revoking the grant takes effect on the next request;
   - granting is audited, and only owners/admins can grant.
 
+## V3.8 M1 implementation record (added after M1 implementation; pending review)
+Implemented per M1 / R2 / V2.3–V2.5 / V2.9. The approved decisions are unchanged. Deviations and additions:
+- CSRF token = HMAC(derived key, session token), not a stored hash (§4.1). Same binding and rotation properties.
+- `users` INSERT policy requires `email = app_auth_email()` (stricter than R3.2 `true`).
+- Additional rate limit: password change 5 per 15 min per user.
+- Breach-check outage: in-process counter + `breach_check.unavailable` log; metric export/alerting deferred to M12.
+- Local denylist stores only the 12–128-character entries of the 100k source list (483 entries).
+- `EMAIL_DELIVERY_ENABLED=true` rejected in all environments until M2.
+- Pre-commit security review fixed F1 (rate-limit race → atomic reserve/release), F2 (SQL parameters in exception text → `hide_parameters`), F3 (spoofable `X-Forwarded-For` in the compose proxy → overwrite at nginx, IP validation), F4 (non-range 200 counted as clean), F6 (stale credentials during login). Details in `docs/decisions.md`.
+- Observed: the development sandbox blocks `api.pwnedpasswords.com`, so fail-open (D7) was exercised for real. **Production must allow this egress.**
+
 ## V3.7 M0 review record (accepted with limitations)
 M0 accepted on local validation results, with these recorded limitations:
 - GitHub Actions had not run at acceptance time; CI status is reported only from an actual Actions run.
