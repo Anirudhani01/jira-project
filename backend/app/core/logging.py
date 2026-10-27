@@ -31,6 +31,9 @@ ALLOWED_EXTRA_FIELDS: Final = frozenset(
         "violations",
         "org_id",
         "user_id",
+        "job_id",
+        "topic",
+        "attempts",
     }
 )
 

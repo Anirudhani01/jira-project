@@ -15,7 +15,15 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 BACKEND = Path(__file__).resolve().parents[2]
-REQUIRED_ENV = ("TEST_DATABASE_URL", "TEST_MIGRATION_DATABASE_URL", "TEST_REDIS_URL")
+REQUIRED_ENV = (
+    "TEST_DATABASE_URL",
+    "TEST_MIGRATION_DATABASE_URL",
+    "TEST_WORKER_DATABASE_URL",
+    "TEST_REDIS_URL",
+    "TEST_SMTP_HOST",
+    "TEST_SMTP_PORT",
+    "TEST_MAILPIT_URL",
+)
 
 
 def integration_env_missing() -> list[str]:
@@ -62,6 +70,13 @@ def _engine(url_env: str) -> AsyncEngine:
 @pytest.fixture
 async def rw_engine() -> AsyncIterator[AsyncEngine]:
     engine = _engine("TEST_DATABASE_URL")
+    yield engine
+    await engine.dispose()
+
+
+@pytest.fixture
+async def worker_engine() -> AsyncIterator[AsyncEngine]:
+    engine = _engine("TEST_WORKER_DATABASE_URL")
     yield engine
     await engine.dispose()
 

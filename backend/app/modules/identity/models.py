@@ -1,4 +1,4 @@
-"""Identity tables: users and server-side sessions.
+"""Identity tables: users, server-side sessions and single-use email tokens.
 
 ``users`` is global (no org) and protected by RLS (see migration 0002): a runtime role
 can see only the bound user or the row matching the bound auth-lookup email.
@@ -72,3 +72,40 @@ class UserSession(Base):
     revoke_reason: Mapped[str | None] = mapped_column(String(32))
     ip: Mapped[str | None] = mapped_column(INET)
     user_agent: Mapped[str | None] = mapped_column(String(256))
+
+
+TOKEN_PURPOSES = ("verify_email", "reset_password")
+
+
+class UserToken(Base):
+    """Single-use verification / password-reset tokens (plan R4, V2.4).
+
+    Only the SHA-256 hash is stored. Tokens are minted by the worker at send time, so the
+    raw value exists only in the delivered email (in the URL fragment) and in transit.
+    """
+
+    __tablename__ = "user_tokens"
+    __table_args__ = (
+        CheckConstraint("purpose IN ('verify_email', 'reset_password')", name="purpose_valid"),
+        Index(
+            "ix_user_tokens_user_id_purpose_active",
+            "user_id",
+            "purpose",
+            postgresql_where=text("used_at IS NULL AND invalidated_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
+    )
+    purpose: Mapped[str] = mapped_column(String(32))
+    token_hash: Mapped[bytes] = mapped_column(LargeBinary, unique=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    invalidated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

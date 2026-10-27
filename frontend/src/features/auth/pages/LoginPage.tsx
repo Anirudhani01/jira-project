@@ -66,6 +66,11 @@ export function LoginPage() {
         <SubmitButton pending={login.isPending}>Sign in</SubmitButton>
       </form>
       <p className="text-sm text-slate-600">
+        <Link to="/forgot-password" className="text-blue-700 underline">
+          Forgot password?
+        </Link>
+      </p>
+      <p className="text-sm text-slate-600">
         No account?{' '}
         <Link to="/signup" className="text-blue-700 underline">
           Create one

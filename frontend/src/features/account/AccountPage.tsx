@@ -192,7 +192,8 @@ export function AccountPage() {
       <h1 className="text-2xl font-semibold">Account</h1>
       {user.email_verified ? null : (
         <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          Your email address is not verified yet. Verification arrives with email delivery.
+          Your email address is not verified yet. Open the verification link we emailed you. To get
+          a new link, sign up again with the same email address.
         </p>
       )}
       <ProfileForm displayName={user.display_name} email={user.email} />

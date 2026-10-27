@@ -11,3 +11,6 @@ export type User = Schemas['UserResponse'];
 export type SessionState = Schemas['SessionStateResponse'];
 export type SessionList = Schemas['SessionListResponse'];
 export type SessionListItem = Schemas['SessionListItem'];
+export type VerifyEmailRequest = Schemas['VerifyEmailRequest'];
+export type PasswordResetRequest = Schemas['PasswordResetRequest'];
+export type PasswordResetConfirmRequest = Schemas['PasswordResetConfirmRequest'];

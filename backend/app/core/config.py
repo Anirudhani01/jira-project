@@ -16,6 +16,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 Environment = Literal["dev", "test", "staging", "prod"]
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
 BreachCheckMode = Literal["hibp", "local_only"]
+SmtpSecurity = Literal["none", "starttls", "tls"]
 
 PLACEHOLDER_MARKERS = ("change-me", "changeme", "placeholder")
 # Roles that must never be used by the API or worker at runtime.
@@ -50,6 +51,8 @@ class Settings(BaseSettings):
     database_url: SecretStr
     # Only consulted to detect API/migration credential reuse; the API never connects with it.
     migration_database_url: SecretStr | None = None
+    # Worker process connection (app_worker role). Required only by `python -m app.worker`.
+    worker_database_url: SecretStr | None = None
     redis_url: SecretStr
 
     db_pool_size: int = Field(default=10, ge=1, le=100)
@@ -71,8 +74,25 @@ class Settings(BaseSettings):
     # None = environment default: enabled everywhere except prod (D1: prod stays off
     # until M2 delivers email verification).
     signup_enabled: bool | None = None
-    # Email delivery arrives in M2; enabling it before then is rejected.
+    # --- Email (M2) ------------------------------------------------------------------
+    # Off by default: nothing is sent until a provider is explicitly configured.
+    # Dev/test use Mailpit (free, local). Production requires an approved provider (D13/D14).
     email_delivery_enabled: bool = False
+    email_from: str | None = None
+    smtp_host: str | None = None
+    smtp_port: int = Field(default=587, ge=1, le=65_535)
+    smtp_security: SmtpSecurity = "starttls"
+    smtp_username: str | None = None
+    smtp_password: SecretStr | None = None
+    smtp_timeout_seconds: float = Field(default=10.0, gt=0, le=60)
+    verify_email_token_ttl_seconds: int = Field(default=86_400, ge=600, le=604_800)
+    reset_password_token_ttl_seconds: int = Field(default=3_600, ge=300, le=86_400)
+    max_active_tokens_per_purpose: int = Field(default=3, ge=1, le=10)
+    # --- Worker (M2) -----------------------------------------------------------------
+    worker_poll_interval_seconds: float = Field(default=1.0, gt=0, le=60)
+    worker_batch_size: int = Field(default=20, ge=1, le=500)
+    worker_lease_seconds: int = Field(default=300, ge=10, le=3_600)
+    worker_max_attempts: int = Field(default=10, ge=1, le=50)
     session_idle_ttl_seconds: int = Field(default=86_400, ge=300)
     session_absolute_ttl_seconds: int = Field(default=1_209_600, ge=3_600)
     session_max_active: int = Field(default=20, ge=1, le=100)
@@ -84,7 +104,7 @@ class Settings(BaseSettings):
     hibp_base_url: str = "https://api.pwnedpasswords.com"
     hibp_timeout_ms: int = Field(default=2_000, ge=100, le=10_000)
 
-    @field_validator("database_url", "migration_database_url")
+    @field_validator("database_url", "migration_database_url", "worker_database_url")
     @classmethod
     def _require_asyncpg_scheme(cls, value: SecretStr | None) -> SecretStr | None:
         if value is not None and not value.get_secret_value().startswith("postgresql+asyncpg://"):
@@ -145,9 +165,40 @@ class Settings(BaseSettings):
         if len(self.app_secret_key.get_secret_value()) < MIN_SECRET_KEY_LENGTH:
             problems.append(f"APP_SECRET_KEY must be at least {MIN_SECRET_KEY_LENGTH} characters")
         if self.email_delivery_enabled:
-            problems.append("EMAIL_DELIVERY_ENABLED is not available until milestone M2")
+            if not self.smtp_host:
+                problems.append("EMAIL_DELIVERY_ENABLED requires SMTP_HOST")
+            if not self.email_from or "@" not in self.email_from:
+                problems.append("EMAIL_DELIVERY_ENABLED requires a valid EMAIL_FROM")
         if self.session_absolute_ttl_seconds < self.session_idle_ttl_seconds:
             problems.append("SESSION_ABSOLUTE_TTL_SECONDS must be >= SESSION_IDLE_TTL_SECONDS")
+        return problems
+
+    def _production_email_problems(self) -> list[str]:
+        # Production mail must go over TLS to an authenticated provider (never a local
+        # sink such as Mailpit). Which provider is a future decision (D13, zero cost D14).
+        problems: list[str] = []
+        if self.email_delivery_enabled:
+            if self.smtp_security == "none":
+                problems.append("SMTP_SECURITY must be starttls or tls")
+            if not self.smtp_username or self.smtp_password is None:
+                problems.append("SMTP_USERNAME and SMTP_PASSWORD are required")
+        return problems
+
+    def _database_role_problems(self) -> list[str]:
+        problems: list[str] = []
+        runtime_user = _db_username(self.database_url.get_secret_value())
+        if runtime_user is None:
+            problems.append("DATABASE_URL must name a database user")
+        elif runtime_user in FORBIDDEN_RUNTIME_DB_USERS:
+            problems.append("DATABASE_URL must use the least-privileged runtime role")
+        if self.migration_database_url is not None:
+            migration_user = _db_username(self.migration_database_url.get_secret_value())
+            if migration_user is not None and migration_user == runtime_user:
+                problems.append("DATABASE_URL must not reuse the migration role")
+        if self.worker_database_url is not None:
+            worker_user = _db_username(self.worker_database_url.get_secret_value())
+            if worker_user is None or worker_user in FORBIDDEN_RUNTIME_DB_USERS:
+                problems.append("WORKER_DATABASE_URL must use the least-privileged worker role")
         return problems
 
     def _production_problems(self) -> list[str]:
@@ -158,6 +209,7 @@ class Settings(BaseSettings):
             and not self.email_delivery_enabled
         ):
             problems.append("SIGNUP_ENABLED requires EMAIL_DELIVERY_ENABLED in prod (D1)")
+        problems += self._production_email_problems()
         if self.breach_check_mode != "hibp":
             problems.append("BREACH_CHECK_MODE must be hibp")
         if not self.hibp_base_url.startswith("https://"):
@@ -176,18 +228,14 @@ class Settings(BaseSettings):
         }
         if self.migration_database_url is not None:
             secrets["MIGRATION_DATABASE_URL"] = self.migration_database_url
+        if self.worker_database_url is not None:
+            secrets["WORKER_DATABASE_URL"] = self.worker_database_url
+        if self.smtp_password is not None:
+            secrets["SMTP_PASSWORD"] = self.smtp_password
         for name, secret in secrets.items():
             if any(marker in secret.get_secret_value().lower() for marker in PLACEHOLDER_MARKERS):
                 problems.append(f"{name} contains a placeholder value")
-        runtime_user = _db_username(self.database_url.get_secret_value())
-        if runtime_user is None:
-            problems.append("DATABASE_URL must name a database user")
-        elif runtime_user in FORBIDDEN_RUNTIME_DB_USERS:
-            problems.append("DATABASE_URL must use the least-privileged runtime role")
-        if self.migration_database_url is not None:
-            migration_user = _db_username(self.migration_database_url.get_secret_value())
-            if migration_user is not None and migration_user == runtime_user:
-                problems.append("DATABASE_URL must not reuse the migration role")
+        problems += self._database_role_problems()
         return problems
 
 

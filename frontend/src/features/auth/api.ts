@@ -5,11 +5,14 @@ import { ApiError } from '../../lib/api/errors';
 import type {
   ChangePasswordRequest,
   LoginRequest,
+  PasswordResetConfirmRequest,
+  PasswordResetRequest,
   SessionList,
   SessionState,
   SignupRequest,
   UpdateProfileRequest,
   User,
+  VerifyEmailRequest,
 } from '../../lib/api/types';
 
 export const sessionKey = ['auth', 'session'] as const;
@@ -119,6 +122,43 @@ export function useRevokeOtherSessions() {
     mutationFn: () => apiFetch<undefined>('/me/sessions/revoke-others', { method: 'POST' }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: sessionsKey });
+    },
+  });
+}
+
+export function useVerifyEmail() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: VerifyEmailRequest) =>
+      apiFetch<undefined>('/auth/verify-email', { method: 'POST', json: body }),
+    // The current session (if it was the token owner's) was rotated and every other one
+    // revoked: refetch the session and its new CSRF token.
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: sessionKey });
+    },
+  });
+}
+
+export function useRequestPasswordReset() {
+  return useMutation({
+    mutationFn: (body: PasswordResetRequest) =>
+      apiFetch<{ status: 'accepted' }>('/auth/password-reset/request', {
+        method: 'POST',
+        json: body,
+      }),
+  });
+}
+
+export function useConfirmPasswordReset() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: PasswordResetConfirmRequest) =>
+      apiFetch<undefined>('/auth/password-reset/confirm', { method: 'POST', json: body }),
+    // Every session (including this browser's) was revoked; nothing cached is valid.
+    onSuccess: () => {
+      setCsrfToken(null);
+      queryClient.clear();
+      queryClient.setQueryData(sessionKey, null);
     },
   });
 }

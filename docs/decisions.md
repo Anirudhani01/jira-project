@@ -23,7 +23,7 @@ plan is marked **[SUPERSEDED]** and must not guide implementation.
 | D9 | Project creation **Option B — explicit grant only**: org owners/admins, or members explicitly granted `can_create_projects` by an owner/admin. Project-admin role confers no org-wide creation right; creating a project grants nothing | Approved | plan V3.6 |
 | D10 | Viewers cannot comment or be assigned | Approved | plan V3.3 |
 | D11 | Attachments deferred to v1.1 | Approved | plan V3.1 |
-| D13 | Deployment provider, region, email provider: future decisions; email provider before M2 production email | Open (by design) | plan V3.1 |
+| D13 | Deployment provider, region, email provider: future decisions; email provider before M2 production email | Open (by design; M2 ships with delivery off by default and Mailpit for dev/test) | plan V3.1, ADR 0009 |
 | D14 | **Zero paid software cost**: no paid resources, subscriptions, paid APIs or paid services without explicit owner approval | Approved | plan V3.5 |
 
 ## Verification status
@@ -47,7 +47,7 @@ approved decision):
   ones are rejected by the length rule anyway.
 - Extra rate limit on password change (5 per 15 minutes per user).
 - `users` INSERT policy requires the bound auth-lookup email (stricter than R3.2's `true`).
-- `EMAIL_DELIVERY_ENABLED=true` is rejected until M2 in every environment.
+- `EMAIL_DELIVERY_ENABLED=true` was rejected in every environment during M1 (lifted in M2; see below).
 - `openapi-typescript` declares a TypeScript ^5 peer; it works with the pinned TypeScript 6.0.
 
 ### M1 security review (pre-commit)
@@ -67,6 +67,39 @@ Fixed, with regression tests in `backend/tests/integration/test_security_review.
   user could believe they had signed out while the session stayed valid. State is now
   cleared only on a confirmed logout, and a failure is shown.
 
+## M2 implementation record (pending review)
+Implemented per plan M2 / R2 / R4 / R5 / C3 / C4 / V2.5 / V2.9; design in
+[ADR 0009](adr/0009-outbox-worker-email-tokens.md). No approved decision changed.
+Deviations and additions:
+- **Temporary:** `outbox` has no `org_id` column and no RLS in M2. This is a deliberate,
+  time-boxed decision, not a tenant-isolation assumption: all M2 jobs are global identity
+  emails keyed by user id, and a unit test blocks tenant topics. M3 must add `org_id` and the
+  R3.2 outbox policies before any tenant-scoped job is introduced.
+- No `EMAIL_VERIFICATION_REQUIRED` flag (plan M2 rollback note): nothing is gated on
+  verification until M3 (org creation, invitation acceptance), so there is nothing to toggle.
+- No separate "resend verification" endpoint: as R2 specifies, signing up again with an
+  unverified address re-sends the verification email (3 per hour per address).
+- Added limits: reset requests 20/hour per IP (`429`); invalid token submissions 30/hour per
+  IP (`429`, failures only). Per-address email limits are silent.
+- Reset requests for unknown or disabled addresses enqueue a no-op job (`user_id: null`), so
+  both paths do the same database work.
+- Verification and reset require one click on the page (the token is never submitted on
+  page load), so email link scanners cannot consume tokens.
+- Password reset also marks the email verified (R1 #2) and invalidates outstanding
+  verification tokens.
+- Worker role tightened on M1 tables: no `user_sessions` access, `SELECT` only on `users`.
+- Jobs claimed more than `WORKER_MAX_ATTEMPTS` times without an ack (repeated crashes) and
+  jobs with unknown topics or malformed payloads are dead-lettered immediately.
+- `EMAIL_DELIVERY_ENABLED` defaults to `false` in the application. `.env.example` enables it
+  for local development only, pointing at Mailpit. With delivery off, the worker drops email
+  jobs as processed without minting tokens.
+- Reset requests answer `503 email_unavailable` (identical for every address) while delivery
+  is disabled, instead of a `202` that would imply a link was sent.
+- A failed send invalidates that attempt's token, so retries never push a delivered link out
+  of the 3-token cap; an SMTP `QUIT` failure after acceptance counts as sent.
+- Production delivery is still impossible by design: staging/prod require STARTTLS/TLS and
+  SMTP credentials, and the provider is an open decision (D13; zero cost D14).
+
 ## Open questions
 - Retention of platform security events (proposed 1 y), application logs (30 d), traces (14 d).
 - Org audit events after org deletion (needed before org deletion is built).
@@ -76,3 +109,6 @@ Fixed, with regression tests in `backend/tests/integration/test_security_review.
 - Production egress to `api.pwnedpasswords.com` must be allowed, otherwise breach screening
   silently runs in local-denylist-only mode (observed in the development sandbox).
 - Whether org admins later see their members' login events.
+- Email provider (D13): must support STARTTLS/TLS + SMTP auth and stay within D14 (free tier
+  or explicit approval). Until then `EMAIL_DELIVERY_ENABLED` must stay `false` outside
+  dev/test, which also keeps prod signup off (D1).

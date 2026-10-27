@@ -6,11 +6,12 @@ boards, sprints), built as a modular monolith: React + TypeScript frontend, Fast
 backend, PostgreSQL with a shared-schema tenancy design based on row-level security
 (RLS), and Redis.
 
-**Status: M1 — Identity & sessions.** On top of the M0 foundations: enumeration-safe
-signup, login/logout, server-side sessions (idle 24 h, absolute 14 d, max 20 per user),
-CSRF protection, breached-password screening, auth rate limiting, platform security
-events, and login/signup/account pages. There are no organizations, projects or issues
-yet, and email delivery (verification, password reset) arrives in M2.
+**Status: M2 — Email outbox, verification, password reset.** On top of M0/M1
+(enumeration-safe signup, login/logout, server-side sessions, CSRF protection,
+breached-password screening, auth rate limiting, platform security events): a
+transactional outbox and a worker process that send verification, sign-up-notice and
+password-reset emails with single-use, hashed, expiring tokens. Email delivery is off by
+default; local development uses Mailpit. There are no organizations, projects or issues yet.
 
 > **Verification status — tenant isolation is NOT yet verified.** No tenant-owned tables
 > exist in M0, so there is nothing to isolate yet. Cross-tenant isolation remains
@@ -44,10 +45,11 @@ Switch to the pinned Node version with `nvm use` or `fnm use` in the repository 
 ```bash
 cp .env.example .env        # optional: local-only placeholder values; edit if you like
 make install                # backend + frontend deps from lockfiles
-make dev                    # Postgres + Redis in Docker, migrations, API :8000, web :5173
+make dev                    # Postgres, Redis, Mailpit in Docker; migrations; API :8000, worker, web :5173
 ```
 
-Open http://localhost:5173. The Vite dev server proxies `/api` to the API. Interactive API
+Open http://localhost:5173. Emails sent in development are captured by Mailpit (nothing
+leaves your machine): http://localhost:8025. The Vite dev server proxies `/api` to the API. Interactive API
 docs (dev only): http://localhost:8000/api/docs.
 
 Without a `.env`, the Makefile falls back to `.env.example` (placeholder values only; the
@@ -65,7 +67,8 @@ make reset-db  # DESTRUCTIVE: also deletes the local database volume
 
 | Command | What it does |
 |---|---|
-| `make infra-up` | Start PostgreSQL and Redis and wait until healthy |
+| `make infra-up` | Start PostgreSQL, Redis and Mailpit and wait until healthy |
+| `make worker-dev` | Run the outbox worker locally (part of `make dev`) |
 | `make migrate` | Apply migrations to the dev DB (as `app_owner`) |
 | `make test` | Backend unit + integration tests (needs `infra-up`) and frontend tests |
 | `make lint` / `make typecheck` / `make fmt` | ruff + ESLint/Prettier / mypy + tsc / auto-format |
@@ -78,11 +81,14 @@ make reset-db  # DESTRUCTIVE: also deletes the local database volume
 
 CI (`.github/workflows/ci.yml`) runs exactly `make ci` followed by `make images`.
 
-## Identity (M1) at a glance
+## Identity (M1, M2) at a glance
 
 | Endpoint | Notes |
 |---|---|
-| `POST /api/v1/auth/signup` | Always `202`, no cookie, whether or not the email exists. `404` when `SIGNUP_ENABLED` is off (default in prod until M2). |
+| `POST /api/v1/auth/signup` | Always `202`, no cookie, whether or not the email exists. Emails a verification link (new/unverified) or a notice (already registered). `404` when `SIGNUP_ENABLED` is off (default in prod). |
+| `POST /api/v1/auth/verify-email` | `{token}`; verifies, rotates the current session if it is the owner's, signs out the owner's other sessions |
+| `POST /api/v1/auth/password-reset/request` | `202` for every address; `503 email_unavailable` for every address while email delivery is disabled |
+| `POST /api/v1/auth/password-reset/confirm` | `{token, new_password}`; password policy applies; signs out everywhere; never signs in |
 | `POST /api/v1/auth/login` / `logout` | Generic `401`; sets/clears the HttpOnly session cookie |
 | `GET /api/v1/auth/session` | Current user + session-bound CSRF token |
 | `PATCH /api/v1/me`, `POST /api/v1/me/password` | Profile; password change rotates the session and signs out other devices |
@@ -95,6 +101,15 @@ CI (`.github/workflows/ci.yml`) runs exactly `make ci` followed by `make images`
   unreachable, signup/password change fall back to the local list only and log
   `breach_check.unavailable` (decision D7). **Production needs outbound HTTPS to
   `api.pwnedpasswords.com`.**
+- Email links carry the token in the URL fragment (`/verify-email#token=…`), which is never
+  sent to servers or logs. Tokens are stored as SHA-256 hashes, single-use, 24 h
+  (verification) / 1 h (reset), at most 3 active per purpose.
+- Email: `EMAIL_DELIVERY_ENABLED` is `false` by default. `.env.example` enables it for local
+  development against Mailpit. Staging/prod require STARTTLS/TLS and SMTP credentials; **no
+  production provider is configured yet** (decision D13; zero paid cost, D14).
+- Worker: `python -m app.worker` (role `app_worker`, `WORKER_DATABASE_URL`); at-least-once
+  delivery with retries and dead-lettering after 10 attempts. Inspect and retry dead jobs
+  with `uv run python -m app.cli outbox list-dead` / `outbox requeue <id>`.
 - Dev only: mark an account verified with `cd backend && uv run python -m app.cli users verify <email>`
   (refuses to run in staging/prod; there is no HTTP bypass).
 - Behind a proxy, set `FORWARDED_ALLOW_IPS` to the proxy addresses so per-IP rate limits see
@@ -107,7 +122,8 @@ CI (`.github/workflows/ci.yml`) runs exactly `make ci` followed by `make images`
 - `app_owner` — owns the schema; used **only** by Alembic (`MIGRATION_DATABASE_URL`).
 - `app_rw` — API runtime role (`DATABASE_URL`): not superuser, no BYPASSRLS, cannot create
   objects, no access to `alembic_version`.
-- `app_worker` — worker runtime role (used from M2).
+- `app_worker` — worker runtime role (`WORKER_DATABASE_URL`): drives the outbox, mints email
+  tokens; no access to sessions, read-only on users.
 - `platform_security_reader` — NOLOGIN role with read access to
   `security.platform_security_events`; runtime roles can only insert there.
 

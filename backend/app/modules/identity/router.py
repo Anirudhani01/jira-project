@@ -1,4 +1,4 @@
-"""Identity HTTP API (M1). All routes are under /api/v1."""
+"""Identity HTTP API (M1, M2 email flows). All routes are under /api/v1."""
 
 import uuid
 from typing import Annotated
@@ -23,6 +23,8 @@ from app.modules.identity.schemas import (
     AcceptedResponse,
     ChangePasswordRequest,
     LoginRequest,
+    PasswordResetConfirmRequest,
+    PasswordResetRequest,
     SessionInfo,
     SessionListItem,
     SessionListResponse,
@@ -30,12 +32,22 @@ from app.modules.identity.schemas import (
     SignupRequest,
     UpdateProfileRequest,
     UserResponse,
+    VerifyEmailRequest,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["identity"])
 
 # Routes reachable without a session. Everything else requires one (enforced by test).
-PUBLIC_ROUTES = frozenset({"/api/v1/auth/signup", "/api/v1/auth/login", "/api/v1/auth/logout"})
+PUBLIC_ROUTES = frozenset(
+    {
+        "/api/v1/auth/signup",
+        "/api/v1/auth/login",
+        "/api/v1/auth/logout",
+        "/api/v1/auth/verify-email",
+        "/api/v1/auth/password-reset/request",
+        "/api/v1/auth/password-reset/confirm",
+    }
+)
 
 
 @router.post(
@@ -77,6 +89,59 @@ async def logout(
     """Idempotent: revokes the current session if there is one and clears the cookie."""
     if auth is not None:
         await service.logout(services, auth, client_info(request))
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    clear_session_cookie(response, services.settings)
+    return response
+
+
+@router.post(
+    "/auth/verify-email", status_code=status.HTTP_204_NO_CONTENT, dependencies=[CsrfProtected]
+)
+async def verify_email(
+    body: VerifyEmailRequest,
+    request: Request,
+    services: Services,
+    auth: Annotated[AuthContext | None, Depends(optional_session)],
+) -> Response:
+    """Consume a verification token. Works signed in or out; if the current session is
+    the token owner's it is rotated (new cookie), and all their other sessions end."""
+    issued = await service.verify_email(
+        services, token=body.token, auth=auth, client=client_info(request)
+    )
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    if issued is not None:
+        set_session_cookie(response, services.settings, issued.token)
+    return response
+
+
+@router.post(
+    "/auth/password-reset/request",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=AcceptedResponse,
+    dependencies=[SameOrigin],
+    responses={503: {"description": "Email delivery is disabled"}},
+)
+async def request_password_reset(
+    body: PasswordResetRequest, request: Request, services: Services
+) -> AcceptedResponse:
+    """202 whether or not an account exists for the address; 503 for every address while
+    email delivery is disabled."""
+    await service.request_password_reset(services, email=body.email, client=client_info(request))
+    return AcceptedResponse()
+
+
+@router.post(
+    "/auth/password-reset/confirm",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[SameOrigin],
+)
+async def confirm_password_reset(
+    body: PasswordResetConfirmRequest, request: Request, services: Services
+) -> Response:
+    """Sets the new password and signs out everywhere; never signs in (no cookie)."""
+    await service.confirm_password_reset(
+        services, token=body.token, new_password=body.new_password, client=client_info(request)
+    )
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
     clear_session_cookie(response, services.settings)
     return response

@@ -39,9 +39,9 @@ frontend-install: node-version-check
 	$(PNPM) install --frozen-lockfile
 
 # ---------------------------------------------------------------------- local stack
-.PHONY: infra-up down reset-db up dev backend-dev frontend-dev
-infra-up: ## Start PostgreSQL and Redis (waits until healthy)
-	$(COMPOSE) up -d --wait postgres redis
+.PHONY: infra-up down reset-db up dev backend-dev worker-dev frontend-dev
+infra-up: ## Start PostgreSQL, Redis and Mailpit (waits until healthy)
+	$(COMPOSE) up -d --wait postgres redis mailpit
 
 down: ## Stop all containers (keeps data)
 	$(COMPOSE) --profile app down
@@ -52,11 +52,14 @@ reset-db: ## DESTRUCTIVE: stop containers and delete the local database volume
 up: ## Build and run the full stack in containers (http://localhost:8080)
 	$(COMPOSE) --profile app up -d --build --wait
 
-dev: infra-up migrate ## Run infra in containers + backend/frontend with hot reload
-	$(MAKE) -j2 backend-dev frontend-dev
+dev: infra-up migrate ## Run infra in containers + backend/worker/frontend locally
+	$(MAKE) -j3 backend-dev worker-dev frontend-dev
 
 backend-dev:
 	$(UV) run uvicorn app.main:create_app --factory --reload --no-access-log --host 127.0.0.1 --port 8000
+
+worker-dev: ## Run the outbox worker (emails go to Mailpit: http://localhost:8025)
+	$(UV) run python -m app.worker
 
 frontend-dev: node-version-check
 	$(PNPM) dev

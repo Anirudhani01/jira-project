@@ -127,10 +127,93 @@ def test_m1_production_rules(overrides: dict[str, Any], expected: str) -> None:
         build(**overrides)
 
 
+# ---------------------------------------------------------------------------- M2 rules
+PROD_EMAIL: dict[str, Any] = {
+    "email_delivery_enabled": True,
+    "email_from": "no-reply@pm.example.com",
+    "smtp_host": "smtp.provider.example",
+    "smtp_username": "apikey",
+    "smtp_password": SecretStr("provider-credential-value"),  # gitleaks:allow (synthetic)
+}
+
+
+def test_email_delivery_is_off_by_default() -> None:
+    assert not build().email_delivery_enabled
+
+
+def test_production_email_delivery_with_tls_and_credentials_is_accepted() -> None:
+    settings = build(signup_enabled=True, **PROD_EMAIL)
+    assert settings.signup_is_enabled
+    assert settings.email_delivery_enabled
+
+
+def test_dev_may_deliver_to_local_sink_without_tls_or_credentials() -> None:
+    settings = build(
+        environment="dev",
+        app_base_url="http://localhost:5173",
+        email_delivery_enabled=True,
+        email_from="no-reply@jira.localhost",
+        smtp_host="localhost",
+        smtp_port=1025,
+        smtp_security="none",
+    )
+    assert settings.email_delivery_enabled
+
+
 @pytest.mark.parametrize("environment", ["dev", "test", "staging", "prod"])
-def test_email_delivery_cannot_be_enabled_before_m2(environment: str) -> None:
-    with pytest.raises(ValidationError, match="not available until milestone M2"):
-        build(environment=environment, email_delivery_enabled=True)
+@pytest.mark.parametrize(
+    ("overrides", "expected"),
+    [
+        ({"smtp_host": None}, "EMAIL_DELIVERY_ENABLED requires SMTP_HOST"),
+        ({"email_from": None}, "EMAIL_DELIVERY_ENABLED requires a valid EMAIL_FROM"),
+        ({"email_from": "not-an-address"}, "EMAIL_DELIVERY_ENABLED requires a valid EMAIL_FROM"),
+    ],
+)
+def test_enabled_delivery_requires_host_and_sender(
+    environment: str, overrides: dict[str, Any], expected: str
+) -> None:
+    base = {"app_base_url": "http://localhost:5173"} if environment == "dev" else {}
+    with pytest.raises(ValidationError, match=expected):
+        build(environment=environment, **{**base, **PROD_EMAIL, **overrides})
+
+
+@pytest.mark.parametrize("environment", ["staging", "prod"])
+@pytest.mark.parametrize(
+    ("overrides", "expected"),
+    [
+        ({"smtp_security": "none"}, "SMTP_SECURITY must be starttls or tls"),
+        ({"smtp_username": None}, "SMTP_USERNAME and SMTP_PASSWORD are required"),
+        ({"smtp_password": None}, "SMTP_USERNAME and SMTP_PASSWORD are required"),
+        (
+            {"smtp_password": SecretStr("change-me-smtp")},
+            "SMTP_PASSWORD contains a placeholder value",
+        ),
+    ],
+)
+def test_production_email_rules(environment: str, overrides: dict[str, Any], expected: str) -> None:
+    with pytest.raises(ValidationError, match=expected):
+        build(environment=environment, **{**PROD_EMAIL, **overrides})
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("postgresql+asyncpg://app_owner:x1@db/jira", "least-privileged worker role"),
+        ("postgresql+asyncpg://postgres:x1@db/jira", "least-privileged worker role"),
+        ("postgresql+asyncpg://app_worker:change-me@db/jira", "WORKER_DATABASE_URL contains a"),
+        ("postgresql://app_worker:x1@db/jira", "scheme"),
+    ],
+)
+def test_worker_database_url_rules(url: str, expected: str) -> None:
+    with pytest.raises(ValidationError, match=expected):
+        build(worker_database_url=SecretStr(url))
+
+
+def test_validation_errors_never_echo_smtp_password() -> None:
+    secret = "do-not-echo-this-credential"  # gitleaks:allow (synthetic)
+    with pytest.raises(ValidationError) as excinfo:
+        build(**{**PROD_EMAIL, "smtp_security": "none", "smtp_password": SecretStr(secret)})
+    assert secret not in str(excinfo.value)
 
 
 @pytest.mark.parametrize("environment", ["dev", "test", "staging", "prod"])

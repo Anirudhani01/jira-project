@@ -11,6 +11,8 @@ from app.modules.identity.deps import require_csrf, require_same_origin, require
 from app.modules.identity.router import PUBLIC_ROUTES
 
 UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
+# Public routes that still act on the current session when there is one.
+PUBLIC_SESSION_ROUTES = {"/api/v1/auth/logout", "/api/v1/auth/verify-email"}
 
 
 def _calls(dependant: Dependant) -> Iterator[Callable[..., Any]]:
@@ -51,7 +53,7 @@ def test_every_authenticated_unsafe_route_requires_csrf_token(app: FastAPI) -> N
         f"{sorted(_methods(r))} {r.path}"
         for r in _api_routes(app)
         if _methods(r) & UNSAFE
-        and (r.path not in PUBLIC_ROUTES or r.path == "/api/v1/auth/logout")
+        and (r.path not in PUBLIC_ROUTES or r.path in PUBLIC_SESSION_ROUTES)
         and require_csrf not in set(_calls(r.dependant))
     ]
     assert missing == []

@@ -33,6 +33,11 @@ EVENT_METADATA_ALLOWLIST: Final[dict[str, frozenset[str]]] = {
     "auth.session.revoked": frozenset({"scope", "count"}),
     "auth.rate_limited": frozenset({"rule"}),
     "user.verified_by_cli": frozenset(),
+    # M2
+    "auth.email.verified": frozenset({"sessions_revoked", "rotated"}),
+    "auth.password_reset.requested": frozenset(),
+    "auth.password.reset": frozenset({"breach_check", "sessions_revoked"}),
+    "auth.token.rejected": frozenset({"purpose"}),
 }
 
 

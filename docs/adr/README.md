@@ -15,6 +15,7 @@ Each ADR records one decision, its context and its consequences. The full approv
 | [0006](0006-api-conventions.md) | API conventions | Accepted |
 | [0007](0007-failure-mode-policy.md) | Failure-mode and fail-open/closed policy | Accepted |
 | [0008](0008-data-classes-retention-access.md) | Data classes, retention and access | Accepted |
+| [0009](0009-outbox-worker-email-tokens.md) | Transactional outbox, worker and email tokens | Accepted (M2, pending review) |
 
 New ADRs: copy the structure of an existing one, take the next number, and link it here.
 Superseding an ADR: set the old one's status to "Superseded by NNNN"; never delete it.
