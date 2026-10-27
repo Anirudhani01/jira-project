@@ -83,10 +83,17 @@ class SessionInfo(BaseModel):
     expires_at: datetime
 
 
+class SessionOrg(BaseModel):
+    slug: str
+    name: str
+    role: str
+
+
 class SessionStateResponse(BaseModel):
     user: UserResponse
     csrf_token: str
     session: SessionInfo
+    orgs: list[SessionOrg]
 
 
 class SessionListItem(BaseModel):

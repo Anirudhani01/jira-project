@@ -28,6 +28,7 @@ export const SIGNED_IN = {
   },
   csrf_token: 'csrf-abc',
   session: { id: 's1', expires_at: '2030-01-01T00:00:00Z' },
+  orgs: [] as { slug: string; name: string; role: string }[],
 };
 
 /** Route fetch calls by "METHOD /path" (path relative to /api/v1). Records every call. */

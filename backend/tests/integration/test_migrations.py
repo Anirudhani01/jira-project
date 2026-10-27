@@ -16,7 +16,7 @@ IDENTITY_TABLES = text(
     "('security', 'platform_security_events'))"
 )
 SECURITY_SCHEMA = text("SELECT count(*) FROM pg_namespace WHERE nspname = 'security'")
-HEAD = "0003"
+HEAD = "0004"
 
 
 async def _scalar(engine: AsyncEngine, statement: object) -> object:

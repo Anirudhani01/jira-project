@@ -597,6 +597,15 @@ Implemented per M2 / R2 / R4 / R5 / C3 / C4 / V2.5 / V2.9; design recorded in AD
 - Worker role tightened on M1 tables (no `user_sessions`, read-only `users`), per R3.1.
 - Email delivery off by default; dev/test use Mailpit (free, local). Production email remains blocked until D13 picks a provider (D14 applies).
 
+## V3.10 M3 implementation record (added after M3 implementation; pending review)
+Implemented per M3 / R3.1–R3.5 / V2.6 / V2.9 / V3.6 with the approved M3 checklist decisions; design in ADR 0010. Approved decisions unchanged. Deviations and additions:
+- Policies are stricter than the R3.2 templates (membership-aware via SECURITY DEFINER helpers; role-restricted membership writes; owner/admin audit reads).
+- Deferred `org_has_owner` constraint trigger (initial-owner invariant); owner removal/role-change locking stays in M4.
+- D9: `can_create_projects` column + policy only; grant endpoint and audit event in M4.
+- R3.5 suite path `backend/tests/integration/security/`; FK-cross rule enforced by the catalog test until M5/M6 tables exist.
+- Route-guard tests were vacuous under FastAPI 0.16x (zero routes enumerated); fixed with non-vacuity regression test.
+- Cross-tenant isolation remains "not verified" until the applicable R3.5 suite passes in GitHub Actions.
+
 ## V3.7 M0 review record (accepted with limitations)
 M0 accepted on local validation results, with these recorded limitations:
 - GitHub Actions had not run at acceptance time; CI status is reported only from an actual Actions run.

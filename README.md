@@ -6,17 +6,16 @@ boards, sprints), built as a modular monolith: React + TypeScript frontend, Fast
 backend, PostgreSQL with a shared-schema tenancy design based on row-level security
 (RLS), and Redis.
 
-**Status: M2 — Email outbox, verification, password reset.** On top of M0/M1
-(enumeration-safe signup, login/logout, server-side sessions, CSRF protection,
-breached-password screening, auth rate limiting, platform security events): a
-transactional outbox and a worker process that send verification, sign-up-notice and
-password-reset emails with single-use, hashed, expiring tokens. Email delivery is off by
-default; local development uses Mailpit. There are no organizations, projects or issues yet.
+**Status: M3 — Organizations & tenancy.** On top of M0–M2 (identity, sessions, email
+verification and password reset via an outbox worker): organizations with immutable slugs,
+memberships (owner/admin/member), seeded issue types and priorities, an owner/admin-only
+org audit log, an authorization framework (`app/authz`), and row-level security policies
+bound to the caller's active membership. Projects, invitations and issues arrive later.
 
-> **Verification status — tenant isolation is NOT yet verified.** No tenant-owned tables
-> exist in M0, so there is nothing to isolate yet. Cross-tenant isolation remains
-> **unverified until the M3 cross-tenant test suite (plan R3.5) is implemented and passes
-> in CI**. What M0 does verify (by tests): the runtime database role is least-privileged
+> **Verification status — tenant isolation is NOT yet verified.** M3 adds the first tenant
+> tables and the applicable cross-tenant suite (plan R3.5,
+> `backend/tests/integration/security/`). Isolation is **unverified until that suite passes
+> in GitHub Actions**, and any claim then covers only the tables it tests. What M0 does verify (by tests): the runtime database role is least-privileged
 > (not superuser, no BYPASSRLS, owns nothing, cannot create objects), and the
 > tenant-context helpers return NULL without context and do not leak between transactions.
 > Statements about isolation in the docs describe the *design*, not proven behavior.
@@ -115,6 +114,18 @@ CI (`.github/workflows/ci.yml`) runs exactly `make ci` followed by `make images`
 - Behind a proxy, set `FORWARDED_ALLOW_IPS` to the proxy addresses so per-IP rate limits see
   real client IPs.
 
+## Organizations (M3) at a glance
+
+| Endpoint | Notes |
+|---|---|
+| `POST /api/v1/orgs` | `{slug, name}`; verified email required (`403 email_unverified`); caller becomes owner; `409 slug_unavailable` for taken/reserved slugs; 10 attempts/hour/user |
+| `GET /api/v1/orgs` | My organizations (also in `GET /auth/session`) |
+| `GET/PATCH /api/v1/orgs/{slug}` | View; rename (owners/admins). The slug never changes (`422 field_immutable`) |
+| `GET /api/v1/orgs/{slug}/issue-types`, `/priorities` | Seeded configuration |
+| `GET /api/v1/orgs/{slug}/audit-events` | Owners/admins only; cursor-paginated; filters `action`, `actor`, `from`, `to` |
+
+Every inaccessible organization (unknown, not a member, removed) answers the same `404`.
+
 ## Database roles
 
 `infra/postgres/init/01-roles.sh` provisions (dev/CI only; production uses IaC):
@@ -123,7 +134,8 @@ CI (`.github/workflows/ci.yml`) runs exactly `make ci` followed by `make images`
 - `app_rw` — API runtime role (`DATABASE_URL`): not superuser, no BYPASSRLS, cannot create
   objects, no access to `alembic_version`.
 - `app_worker` — worker runtime role (`WORKER_DATABASE_URL`): drives the outbox, mints email
-  tokens; no access to sessions, read-only on users.
+  tokens; no access to sessions; read-only on users, organizations and memberships (under
+  RLS and a job's bound org); no access to org configuration or audit tables.
 - `platform_security_reader` — NOLOGIN role with read access to
   `security.platform_security_events`; runtime roles can only insert there.
 

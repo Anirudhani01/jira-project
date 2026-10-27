@@ -14,3 +14,6 @@ export type SessionListItem = Schemas['SessionListItem'];
 export type VerifyEmailRequest = Schemas['VerifyEmailRequest'];
 export type PasswordResetRequest = Schemas['PasswordResetRequest'];
 export type PasswordResetConfirmRequest = Schemas['PasswordResetConfirmRequest'];
+export type OrgSummary = Schemas['OrgSummary'];
+export type Org = Schemas['OrgResponse'];
+export type CreateOrgRequest = Schemas['CreateOrgRequest'];

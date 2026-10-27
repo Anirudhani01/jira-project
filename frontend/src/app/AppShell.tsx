@@ -1,6 +1,7 @@
 import { Link, Outlet, useNavigate } from 'react-router';
 
 import { useLogout, useSession } from '../features/auth/api';
+import { OrgSwitcher } from '../features/orgs/OrgSwitcher';
 
 function UserNav() {
   const session = useSession();
@@ -22,6 +23,7 @@ function UserNav() {
   }
   return (
     <div className="flex items-center gap-4 text-sm">
+      <OrgSwitcher />
       <Link to="/account" className="hover:underline">
         {session.data.user.display_name}
       </Link>

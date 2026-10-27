@@ -8,14 +8,18 @@ user of a pooled connection.
 RLS is defense in depth, not a complete boundary: any code holding a connection can
 call ``set_config``. See docs/adr/0003-tenancy-shared-schema-rls.md for the trust model.
 
-M0 provides the infrastructure only; no routes bind a tenant yet.
+From M3, org routes bind ``(org_id, user_id)`` only after resolving the caller's active
+membership (``app/authz/deps.py``); the worker binds a job's org with ``bind_job_context``.
+The bound context is also recorded on the session, so tenant repositories can refuse to
+query when nothing was bound (``require_org_context``).
 """
 
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import text
+from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session, SessionTransaction
 
 
 class TenantContextError(RuntimeError):
@@ -47,6 +51,24 @@ async def bind_auth_email(session: AsyncSession, email: str) -> None:
     await session.execute(_BIND_AUTH_EMAIL_SQL, {"email": email})
 
 
+TENANT_INFO_KEY = "app.tenant_context"
+
+
+def require_org_context(session: AsyncSession) -> TenantContext:
+    """The org context bound in this transaction; raises if none (fail closed, R3.1)."""
+    context = session.info.get(TENANT_INFO_KEY)
+    if not isinstance(context, TenantContext) or context.org_id is None:
+        raise TenantContextError("no organization context bound for this transaction")
+    if not session.in_transaction():
+        raise TenantContextError("tenant queries must run inside an explicit transaction")
+    return context
+
+
+async def bind_job_context(session: AsyncSession, org_id: UUID) -> None:
+    """Worker: bind the org recorded on an outbox job (never taken from its payload)."""
+    await bind_tenant(session, TenantContext(org_id=org_id, user_id=None))
+
+
 async def bind_tenant(session: AsyncSession, context: TenantContext) -> None:
     """Bind tenant/user context for the current transaction.
 
@@ -65,3 +87,11 @@ async def bind_tenant(session: AsyncSession, context: TenantContext) -> None:
             "user_id": str(context.user_id) if context.user_id else "",
         },
     )
+    # Cleared with the transaction (see the listener below), like the settings themselves.
+    session.info[TENANT_INFO_KEY] = context
+
+
+@event.listens_for(Session, "after_transaction_end")
+def _forget_context(session: Session, transaction: SessionTransaction) -> None:
+    if transaction.parent is None:
+        session.info.pop(TENANT_INFO_KEY, None)
