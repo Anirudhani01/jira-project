@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: make ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout (full history for secret scanning)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: backend/.python-version
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.32"
+
+      - name: Set up pnpm (version from frontend/package.json packageManager)
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      # Identical to running `make ci` locally: installs from lockfiles, starts
+      # Postgres/Redis via docker compose, then lint, typecheck, tests, migration
+      # round trip, OpenAPI drift, build, dependency audit and secret scan.
+      - name: make ci
+        run: make ci
+
+      # Builds both production images on the runner to prove the Dockerfiles work.
+      # Nothing is pushed: no registry login, no credentials, no paid services.
+      - name: Build container images (local only, not pushed)
+        run: make images
+
+      - name: Stop services
+        if: always()
+        run: make down
