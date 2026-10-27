@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Production SPA image: static build served by unprivileged nginx, /api proxied to the backend.
 
-FROM node:24-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml ./
