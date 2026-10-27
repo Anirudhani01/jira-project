@@ -25,7 +25,21 @@ def test_tenant_settings_are_only_bound_in_tenant_module() -> None:
 # Tables each milestone may introduce. A table outside this list means scope creep or a
 # later milestone's work; update deliberately when a milestone is authorized.
 ALLOWED_TABLES = frozenset(
-    {"users", "user_sessions", "platform_security_events", "user_tokens", "outbox"}
+    {
+        # M1
+        "users",
+        "user_sessions",
+        "platform_security_events",
+        # M2
+        "user_tokens",
+        "outbox",
+        # M3
+        "organizations",
+        "org_memberships",
+        "issue_types",
+        "priorities",
+        "audit_events",
+    }
 )
 
 

@@ -40,6 +40,8 @@ PASSWORD_RESET_PER_ADDRESS: Final = RateLimit("password-reset-address", 3, 3600)
 PASSWORD_RESET_PER_IP: Final = RateLimit("password-reset-ip", 20, 3600)
 # Invalid verification/reset token submissions (counted on failure only).
 TOKEN_FAILURES_PER_IP: Final = RateLimit("token-failures-ip", 30, 3600)
+# M3: organization creation attempts per user (every attempt counts).
+ORG_CREATE_PER_USER: Final = RateLimit("org-create-user", 10, 3600)
 
 # Atomic check-and-reserve: concurrent requests cannot all pass the check before any
 # of them is counted (the original check-then-hit design allowed parallel bursts).

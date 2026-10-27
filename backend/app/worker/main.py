@@ -60,6 +60,9 @@ class Worker:
         self.stopping = asyncio.Event()
 
     async def _email(self, job: ClaimedJob) -> str:
+        if job.org_id is not None:
+            # Identity emails are platform jobs; one carrying an org is malformed.
+            raise PermanentJobError("platform job with org_id")
         if not self.settings.email_delivery_enabled:
             # Nothing is sent until a provider is explicitly configured; no token is minted.
             return "skipped_delivery_disabled"

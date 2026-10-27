@@ -67,7 +67,7 @@ Fixed, with regression tests in `backend/tests/integration/test_security_review.
   user could believe they had signed out while the session stayed valid. State is now
   cleared only on a confirmed logout, and a failure is shown.
 
-## M2 implementation record (pending review)
+## M2 implementation record
 Implemented per plan M2 / R2 / R4 / R5 / C3 / C4 / V2.5 / V2.9; design in
 [ADR 0009](adr/0009-outbox-worker-email-tokens.md). No approved decision changed.
 Deviations and additions:
@@ -100,6 +100,36 @@ Deviations and additions:
 - Production delivery is still impossible by design: staging/prod require STARTTLS/TLS and
   SMTP credentials, and the provider is an open decision (D13; zero cost D14).
 
+## M3 implementation record (pending review)
+Implemented per plan M3 / R3.1–R3.5 / V2.6 / V2.9 / V3.6 and the M3 checklist approvals;
+design in [ADR 0010](adr/0010-orgs-authz-membership-audit.md). No approved decision changed.
+- Approved M3 decisions: D9 column + policy now, grant endpoint in M4; audit read API now
+  (UI/retention M12); initial-owner trigger now, owner-removal/role-change locking M4;
+  org-creation limit 10/hour/user; org name 1–100 characters after trimming (API + DB check);
+  worker read-only on organizations/memberships under RLS.
+- Stricter than the R3.2 templates: policies require an active membership of the bound
+  user (not only `org_id = app_current_org()`); audit reads require owner/admin in RLS;
+  membership writes are role-restricted in RLS; `organizations` INSERT requires
+  `created_by = app_current_user()`.
+- Slug immutability is enforced by a column-level UPDATE grant as well as the API.
+- Reserved slugs and taken slugs both return `409 slug_unavailable`.
+- The R3.5 suite lives in `backend/tests/integration/security/` (not `backend/tests/security/`)
+  so it shares the integration fixtures and the REQUIRE_INTEGRATION guard.
+- `test_fk_cross_tenant`: M3 has no foreign keys between two org-owned tables, so the rule
+  is enforced by `test_rls_catalog` (with a probe proving the check is not vacuous); row-level
+  FK-cross tests start with M5/M6 tables.
+- Org-creation attempts rejected by request validation (e.g. malformed slug) do not count
+  toward the per-user limit; all well-formed attempts do.
+- `GET /auth/session` now also returns `orgs` (plan §3.2).
+
+### M3 security finding (fixed)
+- The M1 route-guard tests (Origin check, CSRF, session required) were **vacuous**: with
+  FastAPI 0.16x, `app.routes` holds lazy router wrappers, so the tests iterated zero routes
+  and passed without checking anything. They now enumerate routes with
+  `fastapi.routing.iter_route_contexts`, a regression test asserts the route list is not
+  empty, and a mutation check (removing CSRF from a route) makes them fail as intended.
+  With real enumeration, all existing routes pass, i.e. no route was actually unprotected.
+
 ## Open questions
 - Retention of platform security events (proposed 1 y), application logs (30 d), traces (14 d).
 - Org audit events after org deletion (needed before org deletion is built).
@@ -109,6 +139,9 @@ Deviations and additions:
 - Production egress to `api.pwnedpasswords.com` must be allowed, otherwise breach screening
   silently runs in local-denylist-only mode (observed in the development sandbox).
 - Whether org admins later see their members' login events.
+- Org audit IP address and user agent (M3): retained per V2.7 and visible to owners/admins
+  only; the 1-year retention job, any minimisation (e.g. truncating IPs) and the privacy
+  notice are to be settled with the M12 retention work.
 - Email provider (D13): must support STARTTLS/TLS + SMTP auth and stay within D14 (free tier
   or explicit approval). Until then `EMAIL_DELIVERY_ENABLED` must stay `false` outside
   dev/test, which also keeps prod signup off (D1).

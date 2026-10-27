@@ -8,6 +8,12 @@
   email; the org-membership branch arrives in M3). Tested in
   `tests/integration/test_identity_db.py`. This is still not cross-tenant verification:
   no tenant tables exist yet.
+- M3 status: tenant tables (`organizations`, `org_memberships`, `issue_types`, `priorities`,
+  `audit_events`) and the outbox have forced RLS, and the R3.5 suite applicable to M3 is
+  implemented in `backend/tests/integration/security/` (restricted roles only). **Still
+  "not verified"** until that suite passes in GitHub Actions; even then the claim covers
+  only the M3 tables, and every later tenant table must pass the catalog/matrix tests.
+  Membership-aware policies and the SECURITY DEFINER helpers are described in ADR 0010.
 - Plan reference: R3 (authoritative), V2.7, V3.2
 
 ## Decision

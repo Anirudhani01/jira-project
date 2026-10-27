@@ -3,18 +3,19 @@
 Payloads hold identifiers only (never tokens, passwords or email bodies). Grants: the API
 role may INSERT only; the worker role may SELECT/UPDATE.
 
-TEMPORARY M2 DECISION: no ``org_id`` column and no RLS. This is safe only because every M2
-job is a global identity email keyed by user id (enforced by the unit test
-``test_outbox_carries_no_tenant_jobs_until_m3``). M3 must add ``org_id`` and the plan R3.2
-outbox policies before any tenant-scoped topic exists. It is not a tenant-isolation
-assumption.
+Tenant scope (M3, plan R3.2): ``org_id`` is NULL for platform jobs (the M2 identity
+emails) and set for tenant jobs. Under FORCED RLS the API role may only insert rows with a
+NULL ``org_id`` or the bound org it is an active member of; the worker role sees every row
+and must bind the job's org (``bind_job_context``) before touching tenant tables. No
+tenant-scoped topic exists yet (enforced by ``test_tenant_topics_require_org_id``).
 """
 
+import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, DateTime, Identity, Index, Integer, String, text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Identity, Index, Integer, String, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -34,6 +35,9 @@ class OutboxJob(Base):
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
+    org_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="RESTRICT")
+    )
     topic: Mapped[str] = mapped_column(String(64))
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
     created_at: Mapped[datetime] = mapped_column(

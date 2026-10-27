@@ -28,6 +28,7 @@ from app.modules.identity.schemas import (
     SessionInfo,
     SessionListItem,
     SessionListResponse,
+    SessionOrg,
     SessionStateResponse,
     SignupRequest,
     UpdateProfileRequest,
@@ -155,10 +156,15 @@ async def session_state(auth: CurrentSession, services: Services) -> SessionStat
     )
     if current is None:
         raise AppError(401, "unauthenticated", "Authentication required.")
+    # Imported here: the orgs module depends on identity, not the other way round.
+    from app.modules.orgs.service import list_my_orgs  # noqa: PLC0415
+
+    orgs = await list_my_orgs(services, auth.user_id)
     return SessionStateResponse(
         user=_user_response(user),
         csrf_token=services.keys.csrf_token(auth.token),
         session=SessionInfo(id=current.id, expires_at=current.expires_at),
+        orgs=[SessionOrg(slug=o.slug, name=o.name, role=o.role) for o in orgs],
     )
 
 

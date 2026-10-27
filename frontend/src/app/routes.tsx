@@ -7,6 +7,9 @@ import { ResetPasswordPage } from '../features/auth/pages/ResetPasswordPage';
 import { SignupPage } from '../features/auth/pages/SignupPage';
 import { VerifyEmailPage } from '../features/auth/pages/VerifyEmailPage';
 import { RequireAuth } from '../features/auth/RequireAuth';
+import { CreateOrgPage } from '../features/orgs/pages/CreateOrgPage';
+import { OrgHomePage } from '../features/orgs/pages/OrgHomePage';
+import { OrgSettingsPage } from '../features/orgs/pages/OrgSettingsPage';
 
 import { AppShell } from './AppShell';
 import { HomePage } from './pages/HomePage';
@@ -27,7 +30,12 @@ export const routes: RouteObject[] = [
       { path: 'reset-password', element: <ResetPasswordPage /> },
       {
         element: <RequireAuth />,
-        children: [{ path: 'account', element: <AccountPage /> }],
+        children: [
+          { path: 'account', element: <AccountPage /> },
+          { path: 'orgs/new', element: <CreateOrgPage /> },
+          { path: 'o/:org', element: <OrgHomePage /> },
+          { path: 'o/:org/settings', element: <OrgSettingsPage /> },
+        ],
       },
       { path: '*', element: <NotFoundPage /> },
     ],

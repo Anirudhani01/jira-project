@@ -1,0 +1,121 @@
+"""Tenancy tables (M3): organizations, memberships and seeded per-org configuration.
+
+All rows are protected by FORCED row-level security (migration 0004). Every policy is
+written for the runtime roles and checks the bound context (``app_current_org()`` /
+``app_current_user()``) *and* the caller's active membership, through SECURITY DEFINER
+helpers so policies never recurse. ``organizations.slug`` is immutable (column-level
+UPDATE grant); memberships are soft-removed (``removed_at``), never deleted.
+"""
+
+import uuid
+from datetime import datetime
+
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+    text,
+)
+from sqlalchemy.dialects.postgresql import CITEXT, UUID
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.db.base import Base
+
+ORG_ROLES = ("owner", "admin", "member")
+ISSUE_TYPE_KINDS = ("epic", "standard", "subtask")
+SLUG_PATTERN = r"^[a-z0-9][a-z0-9-]{1,38}$"
+MAX_ORG_NAME_LENGTH = 100
+
+
+class Organization(Base):
+    __tablename__ = "organizations"
+    __table_args__ = (
+        CheckConstraint(f"slug ~ '{SLUG_PATTERN}'", name="slug_format"),
+        CheckConstraint(
+            f"name = btrim(name) AND char_length(name) BETWEEN 1 AND {MAX_ORG_NAME_LENGTH}",
+            name="name_valid",
+        ),
+        # No RETURNING: a row becomes visible to its creator only once the owner
+        # membership exists (SELECT policy), so INSERT ... RETURNING would be refused.
+        {"implicit_returning": False},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    slug: Mapped[str] = mapped_column(CITEXT, unique=True)
+    name: Mapped[str] = mapped_column(String(MAX_ORG_NAME_LENGTH))
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+
+class OrgMembership(Base):
+    __tablename__ = "org_memberships"
+    __table_args__ = (
+        CheckConstraint("role IN ('owner', 'admin', 'member')", name="role_valid"),
+        Index("ix_org_memberships_user_id_org_id", "user_id", "org_id"),
+        {"implicit_returning": False},
+    )
+
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="RESTRICT"), primary_key=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), primary_key=True
+    )
+    role: Mapped[str] = mapped_column(String(16))
+    # D9 Option B: explicit, owner/admin-set grant (endpoint arrives in M4).
+    can_create_projects: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class IssueType(Base):
+    __tablename__ = "issue_types"
+    __table_args__ = (
+        CheckConstraint("kind IN ('epic', 'standard', 'subtask')", name="kind_valid"),
+        UniqueConstraint("org_id", "id"),
+        UniqueConstraint("org_id", "name"),
+        {"implicit_returning": False},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="RESTRICT")
+    )
+    name: Mapped[str] = mapped_column(CITEXT)
+    kind: Mapped[str] = mapped_column(String(16))
+    position: Mapped[int] = mapped_column(Integer)
+
+
+class Priority(Base):
+    __tablename__ = "priorities"
+    __table_args__ = (
+        UniqueConstraint("org_id", "id"),
+        UniqueConstraint("org_id", "name"),
+        {"implicit_returning": False},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="RESTRICT")
+    )
+    name: Mapped[str] = mapped_column(CITEXT)
+    sort_order: Mapped[int] = mapped_column(Integer)
+    color: Mapped[str] = mapped_column(String(7))

@@ -16,6 +16,13 @@ from app.modules.outbox.models import OutboxJob
 
 OUTBOX_TABLE = cast(Table, OutboxJob.__table__)
 
+# Platform topics (identity emails): global, keyed by user, always enqueued with NULL org_id.
+PLATFORM_TOPICS: Final = frozenset(
+    {"email.verify", "email.signup_existing", "email.password_reset"}
+)
+# Tenant topics must carry the bound org's id (RLS checks it). None exist before M4+.
+TENANT_TOPICS: Final[frozenset[str]] = frozenset()
+
 # topic -> allowed payload keys. Every value must be a UUID string or None.
 TOPIC_PAYLOAD_KEYS: Final[dict[str, frozenset[str]]] = {
     "email.verify": frozenset({"user_id"}),
@@ -38,8 +45,24 @@ def _validate(topic: str, payload: dict[str, PayloadValue]) -> None:
             raise ValueError(f"outbox payload value {key!r} must be a UUID or null")
 
 
-async def enqueue(session: AsyncSession, topic: str, payload: dict[str, uuid.UUID | None]) -> None:
-    """Insert a job in the caller's transaction (no RETURNING: the API role cannot SELECT)."""
+async def enqueue(
+    session: AsyncSession,
+    topic: str,
+    payload: dict[str, uuid.UUID | None],
+    *,
+    org_id: uuid.UUID | None = None,
+) -> None:
+    """Insert a job in the caller's transaction (no RETURNING: the API role cannot SELECT).
+
+    Platform topics never carry an org; tenant topics always do (and RLS only accepts the
+    bound org of an active member).
+    """
     values: dict[str, PayloadValue] = {k: str(v) if v else None for k, v in payload.items()}
     _validate(topic, values)
-    await session.execute(insert(OUTBOX_TABLE).inline().values(topic=topic, payload=values))
+    if topic in PLATFORM_TOPICS and org_id is not None:
+        raise ValueError(f"platform topic {topic} must not carry an org_id")
+    if topic in TENANT_TOPICS and org_id is None:
+        raise ValueError(f"tenant topic {topic} requires an org_id")
+    await session.execute(
+        insert(OUTBOX_TABLE).inline().values(topic=topic, payload=values, org_id=org_id)
+    )

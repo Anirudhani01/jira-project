@@ -11,7 +11,13 @@ import pytest
 from app.core.config import Settings
 from app.core.mailer import EmailDeliveryDisabledError, OutgoingEmail, SmtpMailer, build_message
 from app.modules.identity.emails import EMAIL_TOPICS
-from app.modules.outbox.service import TOPIC_PAYLOAD_KEYS, _validate
+from app.modules.outbox.service import (
+    PLATFORM_TOPICS,
+    TENANT_TOPICS,
+    TOPIC_PAYLOAD_KEYS,
+    _validate,
+    enqueue,
+)
 from tests.conftest import make_settings
 
 EMAIL = OutgoingEmail(
@@ -134,9 +140,23 @@ def test_application_default_keeps_email_delivery_off() -> None:
     assert Settings.model_fields["email_delivery_enabled"].default is False
 
 
-def test_outbox_carries_no_tenant_jobs_until_m3() -> None:
-    """The M2 outbox has no org_id (deferred to M3, plan R3.2). That is only safe while
-    every topic is a global identity job keyed by user. A tenant topic must not be added
-    before the outbox gains org_id and its RLS policies."""
-    assert all(topic.startswith("email.") for topic in TOPIC_PAYLOAD_KEYS)
+def test_tenant_topics_require_org_id() -> None:
+    """M3 adds outbox.org_id + RLS before any tenant-scoped topic exists. Identity emails
+    stay platform jobs (NULL org_id); no tenant topic is introduced in M3."""
+    assert set(TOPIC_PAYLOAD_KEYS) == PLATFORM_TOPICS
+    assert frozenset() == TENANT_TOPICS
     assert all("org_id" not in keys for keys in TOPIC_PAYLOAD_KEYS.values())
+
+
+async def test_platform_topics_refuse_an_org_id() -> None:
+    class NoSession:
+        async def execute(self, *args: object) -> None:
+            raise AssertionError("must be rejected before reaching the database")
+
+    with pytest.raises(ValueError, match="must not carry an org_id"):
+        await enqueue(
+            NoSession(),  # type: ignore[arg-type]
+            "email.verify",
+            {"user_id": uuid.uuid4()},
+            org_id=uuid.uuid4(),
+        )

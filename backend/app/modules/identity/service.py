@@ -67,7 +67,7 @@ def password_rejected(message: str, field: str) -> AppError:
     )
 
 
-async def _reserve(
+async def reserve_rate_limit(
     services: IdentityServices, rule: RateLimit, subject: str, client: ClientInfo
 ) -> Reservation:
     """Atomically take a rate-limit slot or fail with 429 (no check-then-act race)."""
@@ -127,7 +127,7 @@ async def signup(
     services: IdentityServices, *, email: str, password: str, display_name: str, client: ClientInfo
 ) -> None:
     # Every signup attempt counts (never released), whatever the outcome.
-    await _reserve(services, SIGNUP_PER_IP, client.ip or "unknown", client)
+    await reserve_rate_limit(services, SIGNUP_PER_IP, client.ip or "unknown", client)
     try:
         check = await enforce_password_policy(
             password,
@@ -169,9 +169,11 @@ async def login(
     ip = client.ip or "unknown"
     # Slots are reserved before verification so concurrent guesses are counted; they are
     # released on success, so only failed attempts consume the budget.
-    per_ip = await _reserve(services, LOGIN_PER_IP, ip, client)
+    per_ip = await reserve_rate_limit(services, LOGIN_PER_IP, ip, client)
     try:
-        per_ip_email = await _reserve(services, LOGIN_PER_IP_EMAIL, f"{ip}|{email}", client)
+        per_ip_email = await reserve_rate_limit(
+            services, LOGIN_PER_IP_EMAIL, f"{ip}|{email}", client
+        )
     except AppError:
         await services.limiter.release(per_ip)
         raise
@@ -272,7 +274,9 @@ async def change_password(
     new_password: str,
     client: ClientInfo,
 ) -> IssuedSession:
-    attempt = await _reserve(services, PASSWORD_CHANGE_PER_USER, str(auth.user_id), client)
+    attempt = await reserve_rate_limit(
+        services, PASSWORD_CHANGE_PER_USER, str(auth.user_id), client
+    )
     user = await get_user(services, auth.user_id)
     if not await services.hashing.verify(user.password_hash, current_password):
         raise AppError(
@@ -368,7 +372,7 @@ async def verify_email(
     """Consume a verification token. Returns a rotated session when the caller's current
     session belongs to the token owner; every other session of the owner is revoked."""
     ip = client.ip or "unknown"
-    attempt = await _reserve(services, TOKEN_FAILURES_PER_IP, ip, client)
+    attempt = await reserve_rate_limit(services, TOKEN_FAILURES_PER_IP, ip, client)
     new_token = new_session_token()
     issued: IssuedSession | None = None
     try:
@@ -426,7 +430,7 @@ async def request_password_reset(
             "email_unavailable",
             "Password reset by email is not available right now.",
         )
-    await _reserve(services, PASSWORD_RESET_PER_IP, client.ip or "unknown", client)
+    await reserve_rate_limit(services, PASSWORD_RESET_PER_IP, client.ip or "unknown", client)
     send_email = await _within_silent_limit(services, PASSWORD_RESET_PER_ADDRESS, email, client)
     async with services.sessionmaker() as session, session.begin():
         await bind_auth_email(session, email)
@@ -450,7 +454,7 @@ async def confirm_password_reset(
     """Set a new password with a reset token. Revokes every session, marks the email
     verified (the owner proved control of it) and never creates a session."""
     ip = client.ip or "unknown"
-    attempt = await _reserve(services, TOKEN_FAILURES_PER_IP, ip, client)
+    attempt = await reserve_rate_limit(services, TOKEN_FAILURES_PER_IP, ip, client)
     token_hash = hash_token(token)
     async with services.sessionmaker() as session, session.begin():
         user_id = await repository.find_usable_token_user(session, token_hash, RESET_PASSWORD)

@@ -9,6 +9,7 @@ expired (and whose job was re-claimed) cannot overwrite the new owner's state.
 """
 
 import random
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -27,6 +28,8 @@ class ClaimedJob:
     topic: str
     payload: dict[str, Any]
     attempts: int
+    # Tenant jobs: the worker binds this org (bind_job_context), never one from the payload.
+    org_id: uuid.UUID | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,7 +60,7 @@ _CLAIM = text(
             ORDER BY id
             LIMIT :batch
               FOR UPDATE SKIP LOCKED)
-    RETURNING id, topic, payload, attempts
+    RETURNING id, topic, payload, attempts, org_id
     """
 )
 
@@ -65,7 +68,9 @@ _CLAIM = text(
 async def claim(session: AsyncSession, *, batch: int, lease_seconds: int) -> list[ClaimedJob]:
     rows = (await session.execute(_CLAIM, {"batch": batch, "lease": lease_seconds})).all()
     jobs = [
-        ClaimedJob(id=r.id, topic=r.topic, payload=dict(r.payload), attempts=r.attempts)
+        ClaimedJob(
+            id=r.id, topic=r.topic, payload=dict(r.payload), attempts=r.attempts, org_id=r.org_id
+        )
         for r in rows
     ]
     return sorted(jobs, key=lambda job: job.id)
