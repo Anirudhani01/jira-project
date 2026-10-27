@@ -1,0 +1,15 @@
+# gitleaks configuration: default rules plus path exclusions for generated or
+# third-party content. Do not allowlist real findings here; rotate the secret instead.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Dependency, build and cache directories"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)\.venv/''',
+  '''(^|/)frontend/dist/''',
+  '''(^|/)\.tmp/''',
+  '''(^|/)\.(mypy|ruff|pytest)_cache/''',
+  '''(^|/)\.git/''',
+]
