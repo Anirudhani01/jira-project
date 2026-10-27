@@ -13,6 +13,7 @@ from app.main import create_app
 # Inert connection strings: unit tests never open connections.
 UNIT_DATABASE_URL = "postgresql+asyncpg://app_rw:unit@127.0.0.1:1/unit"
 UNIT_REDIS_URL = "redis://127.0.0.1:1/0"
+TEST_SECRET_KEY = "test-secret-key-not-for-production-0123456789"
 
 
 @pytest.fixture(autouse=True)
@@ -27,6 +28,13 @@ def make_settings(**overrides: Any) -> Settings:
         "environment": "test",
         "database_url": SecretStr(UNIT_DATABASE_URL),
         "redis_url": SecretStr(UNIT_REDIS_URL),
+        "app_secret_key": SecretStr(TEST_SECRET_KEY),
+        # Tests never call the real Pwned Passwords API; breach tests inject a mock client.
+        "breach_check_mode": "local_only",
+        # Cheap Argon2 parameters keep the suite fast (production minimums are validated).
+        "password_hash_time_cost": 1,
+        "password_hash_memory_kib": 1024,
+        "password_hash_parallelism": 1,
     }
     values.update(overrides)
     return Settings(**values)

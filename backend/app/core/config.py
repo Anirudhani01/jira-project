@@ -15,10 +15,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["dev", "test", "staging", "prod"]
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
+BreachCheckMode = Literal["hibp", "local_only"]
 
 PLACEHOLDER_MARKERS = ("change-me", "changeme", "placeholder")
 # Roles that must never be used by the API or worker at runtime.
 FORBIDDEN_RUNTIME_DB_USERS = frozenset({"postgres", "app_owner"})
+MIN_SECRET_KEY_LENGTH = 32
+# OWASP minimums for Argon2id; production-like environments may not go below them.
+MIN_ARGON2_TIME_COST = 2
+MIN_ARGON2_MEMORY_KIB = 19_456
 
 
 class UnsafeConfigurationError(ValueError):
@@ -59,6 +64,26 @@ class Settings(BaseSettings):
 
     max_request_body_bytes: int = Field(default=1_048_576, ge=1_024, le=104_857_600)
 
+    # --- Identity (M1) ---------------------------------------------------------------
+    # Root secret; purpose-specific keys (CSRF, email HMAC, rate-limit keys) are derived
+    # from it with domain separation. Rotating it invalidates CSRF tokens only.
+    app_secret_key: SecretStr
+    # None = environment default: enabled everywhere except prod (D1: prod stays off
+    # until M2 delivers email verification).
+    signup_enabled: bool | None = None
+    # Email delivery arrives in M2; enabling it before then is rejected.
+    email_delivery_enabled: bool = False
+    session_idle_ttl_seconds: int = Field(default=86_400, ge=300)
+    session_absolute_ttl_seconds: int = Field(default=1_209_600, ge=3_600)
+    session_max_active: int = Field(default=20, ge=1, le=100)
+    session_touch_interval_seconds: int = Field(default=300, ge=0, le=3_600)
+    password_hash_time_cost: int = Field(default=3, ge=1, le=10)
+    password_hash_memory_kib: int = Field(default=65_536, ge=8, le=1_048_576)
+    password_hash_parallelism: int = Field(default=4, ge=1, le=16)
+    breach_check_mode: BreachCheckMode = "hibp"
+    hibp_base_url: str = "https://api.pwnedpasswords.com"
+    hibp_timeout_ms: int = Field(default=2_000, ge=100, le=10_000)
+
     @field_validator("database_url", "migration_database_url")
     @classmethod
     def _require_asyncpg_scheme(cls, value: SecretStr | None) -> SecretStr | None:
@@ -85,11 +110,27 @@ class Settings(BaseSettings):
     def enforce_db_role_checks(self) -> bool:
         return self.is_production_like
 
+    @property
+    def signup_is_enabled(self) -> bool:
+        if self.signup_enabled is None:
+            return self.environment != "prod"
+        return self.signup_enabled
+
+    @property
+    def session_cookie_name(self) -> str:
+        # The __Host- prefix requires Secure, Path=/ and no Domain (browser-enforced).
+        return "__Host-session" if self.cookie_secure else "session"
+
+    @property
+    def allowed_origin(self) -> str:
+        parts = urlsplit(self.app_base_url)
+        return f"{parts.scheme}://{parts.netloc}"
+
     @model_validator(mode="after")
     def _validate_environment_safety(self) -> "Settings":
-        if not self.is_production_like:
-            return self
-        problems = list(self._production_problems())
+        problems = self._general_problems()
+        if self.is_production_like:
+            problems += self._production_problems()
         if problems:
             # Messages name the offending setting but never include its value.
             raise UnsafeConfigurationError(
@@ -97,13 +138,42 @@ class Settings(BaseSettings):
             )
         return self
 
+    def _general_problems(self) -> list[str]:
+        problems: list[str] = []
+        if not self.cookie_secure and self.environment != "dev":
+            problems.append("COOKIE_SECURE=false is only allowed when ENVIRONMENT=dev")
+        if len(self.app_secret_key.get_secret_value()) < MIN_SECRET_KEY_LENGTH:
+            problems.append(f"APP_SECRET_KEY must be at least {MIN_SECRET_KEY_LENGTH} characters")
+        if self.email_delivery_enabled:
+            problems.append("EMAIL_DELIVERY_ENABLED is not available until milestone M2")
+        if self.session_absolute_ttl_seconds < self.session_idle_ttl_seconds:
+            problems.append("SESSION_ABSOLUTE_TTL_SECONDS must be >= SESSION_IDLE_TTL_SECONDS")
+        return problems
+
     def _production_problems(self) -> list[str]:
         problems: list[str] = []
-        if not self.cookie_secure:
-            problems.append("COOKIE_SECURE must be true")
+        if (
+            self.environment == "prod"
+            and self.signup_is_enabled
+            and not self.email_delivery_enabled
+        ):
+            problems.append("SIGNUP_ENABLED requires EMAIL_DELIVERY_ENABLED in prod (D1)")
+        if self.breach_check_mode != "hibp":
+            problems.append("BREACH_CHECK_MODE must be hibp")
+        if not self.hibp_base_url.startswith("https://"):
+            problems.append("HIBP_BASE_URL must use https")
+        if (
+            self.password_hash_time_cost < MIN_ARGON2_TIME_COST
+            or self.password_hash_memory_kib < MIN_ARGON2_MEMORY_KIB
+        ):
+            problems.append("PASSWORD_HASH_* parameters are below OWASP minimums")
         if not self.app_base_url.startswith("https://"):
             problems.append("APP_BASE_URL must use https")
-        secrets = {"DATABASE_URL": self.database_url, "REDIS_URL": self.redis_url}
+        secrets = {
+            "DATABASE_URL": self.database_url,
+            "REDIS_URL": self.redis_url,
+            "APP_SECRET_KEY": self.app_secret_key,
+        }
         if self.migration_database_url is not None:
             secrets["MIGRATION_DATABASE_URL"] = self.migration_database_url
         for name, secret in secrets.items():

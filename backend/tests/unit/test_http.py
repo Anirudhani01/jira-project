@@ -143,6 +143,9 @@ async def test_hsts_enabled_in_production_like_environments(
         app_base_url="https://staging.example.com",
         database_url=SecretStr("postgresql+asyncpg://app_rw:s3cret@db/jira"),
         redis_url=SecretStr("redis://cache:6379/0"),
+        breach_check_mode="hibp",
+        password_hash_time_cost=2,
+        password_hash_memory_kib=19_456,
     )
     transport = httpx.ASGITransport(app=application)
     async with httpx.AsyncClient(transport=transport, base_url="http://t") as http:

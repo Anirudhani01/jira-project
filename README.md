@@ -6,9 +6,11 @@ boards, sprints), built as a modular monolith: React + TypeScript frontend, Fast
 backend, PostgreSQL with a shared-schema tenancy design based on row-level security
 (RLS), and Redis.
 
-**Status: M0 — Foundations.** The repository contains the development environment,
-database roles and baseline migration, the backend/frontend skeletons, quality gates and
-CI. There are no product features yet (no auth, organizations or issues).
+**Status: M1 — Identity & sessions.** On top of the M0 foundations: enumeration-safe
+signup, login/logout, server-side sessions (idle 24 h, absolute 14 d, max 20 per user),
+CSRF protection, breached-password screening, auth rate limiting, platform security
+events, and login/signup/account pages. There are no organizations, projects or issues
+yet, and email delivery (verification, password reset) arrives in M2.
 
 > **Verification status — tenant isolation is NOT yet verified.** No tenant-owned tables
 > exist in M0, so there is nothing to isolate yet. Cross-tenant isolation remains
@@ -76,6 +78,28 @@ make reset-db  # DESTRUCTIVE: also deletes the local database volume
 
 CI (`.github/workflows/ci.yml`) runs exactly `make ci` followed by `make images`.
 
+## Identity (M1) at a glance
+
+| Endpoint | Notes |
+|---|---|
+| `POST /api/v1/auth/signup` | Always `202`, no cookie, whether or not the email exists. `404` when `SIGNUP_ENABLED` is off (default in prod until M2). |
+| `POST /api/v1/auth/login` / `logout` | Generic `401`; sets/clears the HttpOnly session cookie |
+| `GET /api/v1/auth/session` | Current user + session-bound CSRF token |
+| `PATCH /api/v1/me`, `POST /api/v1/me/password` | Profile; password change rotates the session and signs out other devices |
+| `GET/DELETE /api/v1/me/sessions[/{id}]`, `POST /api/v1/me/sessions/revoke-others` | Session management |
+
+- Every state-changing request must come from the app's own origin (`Origin` header) and,
+  when signed in, carry `X-CSRF-Token` from `GET /auth/session`.
+- Passwords: 12–128 characters, checked against a bundled common-password list and the free
+  Pwned Passwords k-anonymity API (only a 5-character hash prefix is sent). If that API is
+  unreachable, signup/password change fall back to the local list only and log
+  `breach_check.unavailable` (decision D7). **Production needs outbound HTTPS to
+  `api.pwnedpasswords.com`.**
+- Dev only: mark an account verified with `cd backend && uv run python -m app.cli users verify <email>`
+  (refuses to run in staging/prod; there is no HTTP bypass).
+- Behind a proxy, set `FORWARDED_ALLOW_IPS` to the proxy addresses so per-IP rate limits see
+  real client IPs.
+
 ## Database roles
 
 `infra/postgres/init/01-roles.sh` provisions (dev/CI only; production uses IaC):
@@ -84,6 +108,8 @@ CI (`.github/workflows/ci.yml`) runs exactly `make ci` followed by `make images`
 - `app_rw` — API runtime role (`DATABASE_URL`): not superuser, no BYPASSRLS, cannot create
   objects, no access to `alembic_version`.
 - `app_worker` — worker runtime role (used from M2).
+- `platform_security_reader` — NOLOGIN role with read access to
+  `security.platform_security_events`; runtime roles can only insert there.
 
 The API checks its own role at startup and refuses to run in staging/prod with an unsafe
 role (superuser, BYPASSRLS, object owner, …). See

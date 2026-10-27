@@ -105,13 +105,15 @@ frontend-test: node-version-check
 	$(PNPM) test
 
 .PHONY: openapi openapi-check
-openapi: ## Regenerate backend/openapi.json
+openapi: node-version-check ## Regenerate backend/openapi.json and frontend API types
 	$(UV) run python -m app.scripts.export_openapi
+	$(PNPM) gen:api
 
-openapi-check: ## Fail if backend/openapi.json is stale
+openapi-check: node-version-check ## Fail if openapi.json or the generated TS types are stale
 	@mkdir -p $(TMP_DIR)
 	$(UV) run python -m app.scripts.export_openapi $(TMP_DIR)/openapi.json
 	diff -u backend/openapi.json $(TMP_DIR)/openapi.json
+	$(PNPM) check:api
 
 .PHONY: build frontend-build images
 build: frontend-build ## Production frontend build

@@ -37,7 +37,42 @@ yet run at acceptance; exact `make images` not passed in the sandbox (intercepte
 scratch-copy CA builds are supporting evidence only); cross-tenant isolation unverified
 until M3; CI image builds never push or provision paid resources.
 
+## M1 implementation record
+Implemented per plan M1 / R2 / V2.3–V2.5 / V2.9. Deviations and additions (none change an
+approved decision):
+- CSRF token is derived (HMAC of the session token) instead of a stored hash (§4.1).
+- Breach-check outage is counted in-process and logged as `breach_check.unavailable`;
+  metric export and alerting arrive with observability (M12).
+- Local denylist keeps only list entries of 12–128 characters (483 of 100k), since shorter
+  ones are rejected by the length rule anyway.
+- Extra rate limit on password change (5 per 15 minutes per user).
+- `users` INSERT policy requires the bound auth-lookup email (stricter than R3.2's `true`).
+- `EMAIL_DELIVERY_ENABLED=true` is rejected until M2 in every environment.
+- `openapi-typescript` declares a TypeScript ^5 peer; it works with the pinned TypeScript 6.0.
+
+### M1 security review (pre-commit)
+Fixed, with regression tests in `backend/tests/integration/test_security_review.py`,
+`tests/unit/test_security_primitives.py` and `tests/unit/test_passwords.py`:
+- F1 (medium): auth rate limits were check-then-act, so concurrent attempts bypassed them
+  (25/25 parallel wrong-password logins were evaluated). Now an atomic reserve/release.
+- F2 (medium): SQL exception text embedded bound parameters (password/token hashes, emails)
+  that could reach logs. Engine uses `hide_parameters=True`; log backstop masks emails.
+- F3 (medium): the compose nginx appended to client-supplied `X-Forwarded-For` while uvicorn
+  trusted `*`, so clients could choose their IP (bypassing per-IP limits, forging event
+  IPs; non-IP values caused 500s). nginx now overwrites the header; non-IP peers are ignored.
+- F4 (low): a 200 response that was not a range body counted as "clean"; now "unavailable".
+- F6 (low): a password change/disable during login verification could still yield a session;
+  the session transaction now re-checks the stored hash and status.
+- F7 (low): the UI cleared its signed-in state even when the server rejected a logout, so a
+  user could believe they had signed out while the session stayed valid. State is now
+  cleared only on a confirmed logout, and a failure is shown.
+
 ## Open questions
 - Retention of platform security events (proposed 1 y), application logs (30 d), traces (14 d).
 - Org audit events after org deletion (needed before org deletion is built).
+- Production proxy chain must overwrite `X-Forwarded-For` at the edge and set
+  `FORWARDED_ALLOW_IPS` to the exact proxy addresses (never `*` when the backend is
+  reachable by anything other than the trusted proxy).
+- Production egress to `api.pwnedpasswords.com` must be allowed, otherwise breach screening
+  silently runs in local-denylist-only mode (observed in the development sandbox).
 - Whether org admins later see their members' login events.

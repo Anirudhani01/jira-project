@@ -30,10 +30,14 @@ psql_admin --dbname "${POSTGRES_DB:-postgres}" \
 SELECT 'CREATE ROLE app_owner' WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_owner') \gexec
 SELECT 'CREATE ROLE app_rw' WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_rw') \gexec
 SELECT 'CREATE ROLE app_worker' WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_worker') \gexec
+-- Read-only access to security.platform_security_events (plan V2.7). NOLOGIN: humans
+-- get it via a separate audited login role granted membership; never the app.
+SELECT 'CREATE ROLE platform_security_reader' WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'platform_security_reader') \gexec
 
 ALTER ROLE app_owner  LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION PASSWORD :'owner_pw';
 ALTER ROLE app_rw     LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION NOINHERIT PASSWORD :'rw_pw';
 ALTER ROLE app_worker LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION NOINHERIT PASSWORD :'worker_pw';
+ALTER ROLE platform_security_reader NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION;
 SQL
 
 for db in "${DB_NAMES[@]}"; do
@@ -51,4 +55,4 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 SQL
 done
 
-echo "Provisioned roles app_owner, app_rw, app_worker and databases: ${DB_NAMES[*]}"
+echo "Provisioned roles app_owner, app_rw, app_worker, platform_security_reader and databases: ${DB_NAMES[*]}"

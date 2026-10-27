@@ -56,6 +56,7 @@ class AppError(Exception):
         *,
         title: str | None = None,
         headers: Mapping[str, str] | None = None,
+        errors: Sequence[Mapping[str, str]] | None = None,
     ) -> None:
         super().__init__(code)
         self.status = status
@@ -63,6 +64,7 @@ class AppError(Exception):
         self.title = title or status_info(status)[1]
         self.detail = detail
         self.headers = dict(headers or {})
+        self.errors = list(errors) if errors is not None else None
 
 
 def problem_body(
@@ -134,7 +136,9 @@ async def _validation_exception_handler(_: Request, exc: Exception) -> JSONRespo
 async def _app_error_handler(_: Request, exc: Exception) -> JSONResponse:
     if not isinstance(exc, AppError):  # pragma: no cover
         raise TypeError(type(exc).__name__)
-    return problem_response(exc.status, exc.code, exc.detail, title=exc.title, headers=exc.headers)
+    return problem_response(
+        exc.status, exc.code, exc.detail, title=exc.title, errors=exc.errors, headers=exc.headers
+    )
 
 
 def register_exception_handlers(app: FastAPI) -> None:

@@ -24,4 +24,6 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
 USER app
 EXPOSE 8000
-CMD ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+# Client IPs (used for rate limits and security events) come from X-Forwarded-For only
+# when the peer is listed in FORWARDED_ALLOW_IPS (uvicorn default: 127.0.0.1).
+CMD ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--no-access-log", "--proxy-headers"]

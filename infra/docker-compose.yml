@@ -57,6 +57,11 @@ services:
       COOKIE_SECURE: "false"
       DATABASE_URL: postgresql+asyncpg://app_rw:${APP_RW_PASSWORD}@postgres:5432/jira
       REDIS_URL: redis://redis:6379/0
+      APP_SECRET_KEY: ${APP_SECRET_KEY:?set APP_SECRET_KEY in .env}
+      BREACH_CHECK_MODE: ${BREACH_CHECK_MODE:-hibp}
+      # Only nginx can reach the backend in this stack, so its X-Forwarded-For is trusted.
+      # Production must list the real load-balancer addresses instead of "*".
+      FORWARDED_ALLOW_IPS: "*"
     depends_on:
       migrate:
         condition: service_completed_successfully

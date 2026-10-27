@@ -15,12 +15,15 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from app.db.base import Base, import_all_models
+
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# M0 has no ORM models; later milestones set this to the declarative Base metadata.
-target_metadata = None
+import_all_models()
+target_metadata = Base.metadata
+MANAGED_SCHEMAS = frozenset({"public", "security"})
 
 MIGRATION_LOCK_TIMEOUT = "5s"
 
@@ -30,6 +33,12 @@ def _migration_url() -> str:
     if not url:
         raise RuntimeError("MIGRATION_DATABASE_URL is not set")
     return url
+
+
+def _include_name(name: str | None, type_: str, _parent_names: object) -> bool:
+    if type_ == "schema":
+        return name is None or name in MANAGED_SCHEMAS  # None = default (public)
+    return True
 
 
 def run_migrations_offline() -> None:
@@ -50,6 +59,8 @@ def _run_migrations(connection: Connection) -> None:
         target_metadata=target_metadata,
         transaction_per_migration=True,
         compare_type=True,
+        include_schemas=True,
+        include_name=_include_name,
     )
     with context.begin_transaction():
         context.run_migrations()

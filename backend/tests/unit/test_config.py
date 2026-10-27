@@ -12,6 +12,7 @@ SAFE_PROD: dict[str, Any] = {
     "database_url": SecretStr("postgresql+asyncpg://app_rw:s3cr3t-value@db:5432/jira"),
     "migration_database_url": SecretStr("postgresql+asyncpg://app_owner:other@db:5432/jira"),
     "redis_url": SecretStr("rediss://cache:6380/0"),
+    "app_secret_key": SecretStr("prod-secret-key-with-plenty-of-entropy-0123456789"),
 }
 
 
@@ -40,7 +41,7 @@ def test_dev_configuration_allows_local_defaults() -> None:
 @pytest.mark.parametrize(
     ("overrides", "expected"),
     [
-        ({"cookie_secure": False}, "COOKIE_SECURE must be true"),
+        ({"cookie_secure": False}, "COOKIE_SECURE=false is only allowed"),
         ({"app_base_url": "http://pm.example.com"}, "APP_BASE_URL must use https"),
         (
             {"database_url": SecretStr("postgresql+asyncpg://app_rw:change-me@db/jira")},
@@ -104,3 +105,54 @@ def test_connection_url_schemes_are_validated(field: str, value: str) -> None:
 def test_unknown_environment_is_rejected() -> None:
     with pytest.raises(ValidationError):
         build(environment="production")
+
+
+# ---------------------------------------------------------------------------- M1 rules
+@pytest.mark.parametrize(
+    ("overrides", "expected"),
+    [
+        ({"signup_enabled": True}, "SIGNUP_ENABLED requires EMAIL_DELIVERY_ENABLED"),
+        ({"breach_check_mode": "local_only"}, "BREACH_CHECK_MODE must be hibp"),
+        ({"hibp_base_url": "http://hibp.example"}, "HIBP_BASE_URL must use https"),
+        ({"password_hash_time_cost": 1}, "below OWASP minimums"),
+        ({"password_hash_memory_kib": 4096}, "below OWASP minimums"),
+        (
+            {"app_secret_key": SecretStr("change-me-but-long-enough-0123456789")},
+            "APP_SECRET_KEY contains a placeholder value",
+        ),
+    ],
+)
+def test_m1_production_rules(overrides: dict[str, Any], expected: str) -> None:
+    with pytest.raises(ValidationError, match=expected):
+        build(**overrides)
+
+
+@pytest.mark.parametrize("environment", ["dev", "test", "staging", "prod"])
+def test_email_delivery_cannot_be_enabled_before_m2(environment: str) -> None:
+    with pytest.raises(ValidationError, match="not available until milestone M2"):
+        build(environment=environment, email_delivery_enabled=True)
+
+
+@pytest.mark.parametrize("environment", ["dev", "test", "staging", "prod"])
+def test_short_secret_key_rejected_everywhere(environment: str) -> None:
+    with pytest.raises(ValidationError, match="APP_SECRET_KEY must be at least 32"):
+        build(environment=environment, app_secret_key=SecretStr("too-short"))
+
+
+def test_insecure_cookie_only_allowed_in_dev() -> None:
+    dev = build(environment="dev", app_base_url="http://localhost:5173", cookie_secure=False)
+    assert dev.session_cookie_name == "session"
+    with pytest.raises(ValidationError, match="COOKIE_SECURE=false is only allowed"):
+        build(environment="test", cookie_secure=False)
+
+
+def test_signup_defaults_off_in_prod_and_on_elsewhere() -> None:
+    assert not build().signup_is_enabled
+    assert build(environment="staging").signup_is_enabled
+    assert build(environment="dev", app_base_url="http://localhost:5173").signup_is_enabled
+
+
+def test_secure_cookie_uses_host_prefix_and_origin_is_derived() -> None:
+    settings = build()
+    assert settings.session_cookie_name == "__Host-session"
+    assert settings.allowed_origin == "https://pm.example.com"

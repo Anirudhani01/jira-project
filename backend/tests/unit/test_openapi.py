@@ -11,6 +11,22 @@ def test_committed_openapi_matches_application() -> None:
     assert committed == build_schema(), "openapi.json is stale; run `make openapi`"
 
 
-def test_openapi_has_only_m0_routes() -> None:
+M1_PATHS = {
+    "/healthz",
+    "/readyz",
+    "/api/v1/auth/signup",
+    "/api/v1/auth/login",
+    "/api/v1/auth/logout",
+    "/api/v1/auth/session",
+    "/api/v1/me",
+    "/api/v1/me/password",
+    "/api/v1/me/sessions",
+    "/api/v1/me/sessions/{session_id}",
+    "/api/v1/me/sessions/revoke-others",
+}
+
+
+def test_openapi_has_only_authorized_routes() -> None:
+    """Scope guard: routes beyond M1 must not appear before their milestone."""
     paths = set(json.loads(build_schema())["paths"])
-    assert paths == {"/healthz", "/readyz"}
+    assert paths == M1_PATHS
