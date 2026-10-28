@@ -45,6 +45,7 @@ from tests.integration.auth_support import (
 from tests.integration.email_support import (
     mailpit_messages,
     run_worker,
+    token_for,
     token_from,
     worker_settings,
 )
@@ -234,7 +235,7 @@ async def test_tokens_are_stored_hashed_with_configured_lifetimes(http: httpx.As
     token = await signup_and_get_verify_token(http, email)
     await request_reset(http, email)
     await run_worker()
-    reset_token = token_from((await mailpit_messages(email, expected=2))[-1], "/reset-password")
+    reset_token = token_for(await mailpit_messages(email, expected=2), "/reset-password")
     rows = await superuser_sql(
         "SELECT t.purpose, t.token_hash, extract(epoch FROM t.expires_at - t.created_at) AS ttl "
         "FROM user_tokens t JOIN users u ON u.id = t.user_id WHERE u.email = :e ORDER BY t.purpose",
@@ -303,9 +304,9 @@ async def test_reset_request_is_identical_for_known_and_unknown_emails(
     assert comparable(known_response) == comparable(unknown_response)
     assert "set-cookie" not in known_response.headers
     await run_worker()
-    assert [m["Subject"] for m in await mailpit_messages(known, expected=2)][-1] == (
-        "Reset your password"
-    )
+    assert "Reset your password" in [
+        m["Subject"] for m in await mailpit_messages(known, expected=2)
+    ]
     assert await mailpit_messages(unknown) == []
 
 
@@ -317,7 +318,7 @@ async def test_reset_revokes_every_session_and_does_not_sign_in(http: httpx.Asyn
         await login(other, email)
         await request_reset(http, email)
         await run_worker()
-        token = token_from((await mailpit_messages(email, expected=2))[-1], "/reset-password")
+        token = token_for(await mailpit_messages(email, expected=2), "/reset-password")
         async with auth_client() as anonymous:
             response = await confirm_reset(anonymous, token, NEW_PASSWORD)
         assert response.status_code == 204
@@ -347,7 +348,7 @@ async def test_reset_rejects_breached_password_and_keeps_token_usable() -> None:
         await signup(http, email)
         await request_reset(http, email)
         await run_worker()
-        token = token_from((await mailpit_messages(email, expected=2))[-1], "/reset-password")
+        token = token_for(await mailpit_messages(email, expected=2), "/reset-password")
         rejected = await confirm_reset(http, token, NEW_PASSWORD)
         assert rejected.status_code == 422
         assert rejected.json()["code"] == "password_rejected"
@@ -363,7 +364,7 @@ async def test_reset_token_cannot_verify_email_and_vice_versa(http: httpx.AsyncC
     assert (await confirm_reset(http, verify_token, NEW_PASSWORD)).status_code == 400
     await request_reset(http, email)
     await run_worker()
-    reset_token = token_from((await mailpit_messages(email, expected=2))[-1], "/reset-password")
+    reset_token = token_for(await mailpit_messages(email, expected=2), "/reset-password")
     assert (await verify(http, reset_token)).status_code == 400
 
 
@@ -401,7 +402,7 @@ async def test_outbox_payloads_and_logs_contain_no_tokens_or_passwords(
         await request_reset(http, email)
         await request_reset(http, unique_email())
         await run_worker()
-        reset_token = token_from((await mailpit_messages(email, expected=2))[-1], "/reset-password")
+        reset_token = token_for(await mailpit_messages(email, expected=2), "/reset-password")
         await confirm_reset(http, reset_token, NEW_PASSWORD)
 
     payloads = await superuser_sql("SELECT topic, payload::text AS payload FROM outbox")
@@ -516,7 +517,7 @@ async def test_expired_reset_token_is_rejected(http: httpx.AsyncClient) -> None:
     await signup(http, email)
     await request_reset(http, email)
     await run_worker()
-    token = token_from((await mailpit_messages(email, expected=2))[-1], "/reset-password")
+    token = token_for(await mailpit_messages(email, expected=2), "/reset-password")
     await superuser_sql(
         "UPDATE user_tokens SET expires_at = now() - interval '1 second' WHERE token_hash = :h",
         h=hashlib.sha256(token.encode()).digest(),

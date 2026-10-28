@@ -82,3 +82,15 @@ def token_from(message: dict[str, Any], path: str) -> str:
     assert match is not None, "no token link in message"
     assert match.group("path") == path
     return match.group("token")
+
+
+def token_for(messages: list[dict[str, Any]], path: str) -> str:
+    """Token of the single message linking to ``path``; delivery order is not relied on
+    (messages sent in the same instant share a Mailpit timestamp)."""
+    matching = [
+        m
+        for m in messages
+        if (link := TOKEN_IN_LINK.search(m["Text"])) and link.group("path") == path
+    ]
+    assert len(matching) == 1, f"expected one {path} message, found {len(matching)}"
+    return token_from(matching[0], path)
