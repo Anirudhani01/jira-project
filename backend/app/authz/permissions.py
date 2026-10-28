@@ -12,6 +12,10 @@ class Permission(StrEnum):
     ORG_MEMBERS_MANAGE = "org.members.manage"
     ORG_AUDIT_VIEW = "org.audit.view"
     PROJECT_CREATE = "project.create"
+    # Project-scoped (M5)
+    PROJECT_VIEW = "project.view"
+    PROJECT_MANAGE = "project.manage"
+    PROJECT_MEMBERS_MANAGE = "project.members.manage"
 
 
 _ADMIN: Final = frozenset(
@@ -47,3 +51,21 @@ def org_permissions(
     if can_create_projects:  # explicit, owner/admin-set grant (audited; endpoint in M4)
         granted.add(Permission.PROJECT_CREATE)
     return frozenset(granted)
+
+
+_PROJECT_ALL: Final = frozenset(
+    {Permission.PROJECT_VIEW, Permission.PROJECT_MANAGE, Permission.PROJECT_MEMBERS_MANAGE}
+)
+PROJECT_ROLE_PERMISSIONS: Final[dict[str, frozenset[Permission]]] = {
+    "admin": _PROJECT_ALL,
+    "member": frozenset({Permission.PROJECT_VIEW}),
+    "viewer": frozenset({Permission.PROJECT_VIEW}),
+}
+
+
+def project_permissions(org_role: str, project_role: str | None) -> frozenset[Permission]:
+    """Org owners/admins are implicit project admins on every project of their org (§1.1);
+    everyone else needs a project role. No project role confers org-wide rights (D9)."""
+    if org_role in ("owner", "admin"):
+        return _PROJECT_ALL
+    return PROJECT_ROLE_PERMISSIONS.get(project_role or "", frozenset())

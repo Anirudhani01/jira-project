@@ -81,6 +81,7 @@ ACCOUNT_ROUTES = {
     "/api/v1/me/sessions/{session_id}",
     "/api/v1/me/sessions/revoke-others",
     "/api/v1/orgs",
+    "/api/v1/invitations/accept",
 }
 
 

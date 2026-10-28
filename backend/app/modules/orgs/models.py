@@ -15,8 +15,10 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
+    LargeBinary,
     String,
     UniqueConstraint,
     text,
@@ -119,3 +121,56 @@ class Priority(Base):
     name: Mapped[str] = mapped_column(CITEXT)
     sort_order: Mapped[int] = mapped_column(Integer)
     color: Mapped[str] = mapped_column(String(7))
+
+
+INVITATION_TTL_DAYS = 7
+
+
+class OrgInvitation(Base):
+    """Pending/accepted/revoked invitations (M4). Only the token's SHA-256 hash is stored;
+    the worker mints the token when it sends the email."""
+
+    __tablename__ = "org_invitations"
+    __table_args__ = (
+        CheckConstraint("role IN ('owner', 'admin', 'member')", name="role_valid"),
+        ForeignKeyConstraint(
+            ["org_id", "invited_by"],
+            ["org_memberships.org_id", "org_memberships.user_id"],
+            name="fk_org_invitations_org_id_org_memberships",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["org_id", "accepted_by"],
+            ["org_memberships.org_id", "org_memberships.user_id"],
+            name="fk_org_invitations_org_id_accepted_by_org_memberships",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint("org_id", "id"),
+        UniqueConstraint("token_hash"),
+        Index(
+            "uq_org_invitations_org_id_email_pending",
+            "org_id",
+            "email",
+            unique=True,
+            postgresql_where=text("accepted_at IS NULL AND revoked_at IS NULL"),
+        ),
+        {"implicit_returning": False},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="RESTRICT")
+    )
+    email: Mapped[str] = mapped_column(CITEXT)
+    role: Mapped[str] = mapped_column(String(16))
+    token_hash: Mapped[bytes | None] = mapped_column(LargeBinary)
+    invited_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    accepted_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

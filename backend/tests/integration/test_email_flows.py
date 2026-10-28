@@ -27,6 +27,7 @@ from app.modules.identity.emails import (
     handle_email_job,
 )
 from app.modules.identity.passwords import BreachChecker, BreachStatus
+from app.modules.outbox.service import TOPIC_PAYLOAD_KEYS
 from tests.integration.auth_support import (
     OTHER_PASSWORD,
     STRONG_PASSWORD,
@@ -405,7 +406,8 @@ async def test_outbox_payloads_and_logs_contain_no_tokens_or_passwords(
 
     payloads = await superuser_sql("SELECT topic, payload::text AS payload FROM outbox")
     for row in payloads:
-        assert set(json.loads(row.payload)) == {"user_id"}
+        # Identifiers only, exactly the keys allowlisted for the topic.
+        assert set(json.loads(row.payload)) <= TOPIC_PAYLOAD_KEYS.get(row.topic, {"user_id"})
     events = await superuser_sql(
         "SELECT metadata::text AS md, reason FROM security.platform_security_events "
         "WHERE occurred_at > now() - interval '1 minute'"

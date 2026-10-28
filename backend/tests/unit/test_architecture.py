@@ -39,6 +39,18 @@ ALLOWED_TABLES = frozenset(
         "issue_types",
         "priorities",
         "audit_events",
+        # M4
+        "org_invitations",
+        # M5
+        "workflows",
+        "workflow_statuses",
+        "workflow_transitions",
+        "projects",
+        "project_issue_counters",
+        "project_memberships",
+        "boards",
+        "board_columns",
+        "board_column_statuses",
     }
 )
 

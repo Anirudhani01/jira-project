@@ -85,6 +85,19 @@ async def add_member(org_id: uuid.UUID, user_id: uuid.UUID, role: str = "member"
     )
 
 
+async def add_backup_owner(org_id: uuid.UUID) -> uuid.UUID:
+    """Fixture setup: a second owner, so tests can demote/remove the first one without
+    tripping the last-owner invariant (M4 ``org_keeps_owner`` trigger)."""
+    user_id = uuid.uuid4()
+    await superuser_sql(
+        "INSERT INTO users (id, email, display_name, password_hash) VALUES (:u, :e, 'Backup', 'x')",
+        u=user_id,
+        e=f"backup-{user_id.hex[:12]}@example.com",
+    )
+    await add_member(org_id, user_id, "owner")
+    return user_id
+
+
 @asynccontextmanager
 async def bound(
     engine: AsyncEngine, *, org_id: uuid.UUID | None, user_id: uuid.UUID | None

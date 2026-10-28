@@ -20,14 +20,15 @@ OUTBOX_TABLE = cast(Table, OutboxJob.__table__)
 PLATFORM_TOPICS: Final = frozenset(
     {"email.verify", "email.signup_existing", "email.password_reset"}
 )
-# Tenant topics must carry the bound org's id (RLS checks it). None exist before M4+.
-TENANT_TOPICS: Final[frozenset[str]] = frozenset()
+# Tenant topics must carry the bound org's id (RLS checks it); the worker binds that org.
+TENANT_TOPICS: Final[frozenset[str]] = frozenset({"email.org_invitation"})
 
 # topic -> allowed payload keys. Every value must be a UUID string or None.
 TOPIC_PAYLOAD_KEYS: Final[dict[str, frozenset[str]]] = {
     "email.verify": frozenset({"user_id"}),
     "email.signup_existing": frozenset({"user_id"}),
     "email.password_reset": frozenset({"user_id"}),
+    "email.org_invitation": frozenset({"invitation_id"}),
 }
 _UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 

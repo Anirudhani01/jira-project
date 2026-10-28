@@ -8,7 +8,11 @@ import { SignupPage } from '../features/auth/pages/SignupPage';
 import { VerifyEmailPage } from '../features/auth/pages/VerifyEmailPage';
 import { RequireAuth } from '../features/auth/RequireAuth';
 import { CreateOrgPage } from '../features/orgs/pages/CreateOrgPage';
+import { CreateProjectPage } from '../features/projects/CreateProjectPage';
+import { ProjectPage } from '../features/projects/ProjectPage';
+import { AcceptInvitationPage } from '../features/orgs/pages/AcceptInvitationPage';
 import { OrgHomePage } from '../features/orgs/pages/OrgHomePage';
+import { OrgMembersPage } from '../features/orgs/pages/OrgMembersPage';
 import { OrgSettingsPage } from '../features/orgs/pages/OrgSettingsPage';
 
 import { AppShell } from './AppShell';
@@ -28,6 +32,7 @@ export const routes: RouteObject[] = [
       { path: 'verify-email', element: <VerifyEmailPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
       { path: 'reset-password', element: <ResetPasswordPage /> },
+      { path: 'invitations/accept', element: <AcceptInvitationPage /> },
       {
         element: <RequireAuth />,
         children: [
@@ -35,6 +40,9 @@ export const routes: RouteObject[] = [
           { path: 'orgs/new', element: <CreateOrgPage /> },
           { path: 'o/:org', element: <OrgHomePage /> },
           { path: 'o/:org/settings', element: <OrgSettingsPage /> },
+          { path: 'o/:org/settings/members', element: <OrgMembersPage /> },
+          { path: 'o/:org/projects/new', element: <CreateProjectPage /> },
+          { path: 'o/:org/p/:key', element: <ProjectPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },

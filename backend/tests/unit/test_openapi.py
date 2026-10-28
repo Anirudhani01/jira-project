@@ -36,9 +36,25 @@ M3_PATHS = {
     "/api/v1/orgs/{org_slug}/priorities",
     "/api/v1/orgs/{org_slug}/audit-events",
 }
+M4_PATHS = {
+    "/api/v1/orgs/{org_slug}/members",
+    "/api/v1/orgs/{org_slug}/members/{user_id}",
+    "/api/v1/orgs/{org_slug}/invitations",
+    "/api/v1/orgs/{org_slug}/invitations/{invitation_id}",
+    "/api/v1/invitations/accept",
+}
+M5_PATHS = {
+    "/api/v1/orgs/{org_slug}/projects",
+    "/api/v1/orgs/{org_slug}/projects/{project_key}",
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/archive",
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/unarchive",
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/workflow",
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/members",
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/members/{user_id}",
+}
 
 
 def test_openapi_has_only_authorized_routes() -> None:
-    """Scope guard: routes beyond M3 must not appear before their milestone."""
+    """Scope guard: routes beyond M5 must not appear before their milestone."""
     paths = set(json.loads(build_schema())["paths"])
-    assert paths == M1_PATHS | M2_PATHS | M3_PATHS
+    assert paths == M1_PATHS | M2_PATHS | M3_PATHS | M4_PATHS | M5_PATHS

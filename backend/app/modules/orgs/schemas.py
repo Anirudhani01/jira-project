@@ -2,10 +2,11 @@
 
 import uuid
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
 
+from app.modules.identity.schemas import Email, EmailToken
 from app.modules.orgs.models import MAX_ORG_NAME_LENGTH
 from app.modules.orgs.slugs import is_well_formed_slug
 
@@ -99,3 +100,53 @@ class AuditEventResponse(BaseModel):
 class AuditEventListResponse(BaseModel):
     items: list[AuditEventResponse]
     next_cursor: str | None
+
+
+# ----------------------------------------------------------------------------- M4
+OrgRole = Literal["owner", "admin", "member"]
+
+
+class MemberResponse(BaseModel):
+    user_id: uuid.UUID
+    display_name: str
+    email: str
+    role: str
+    can_create_projects: bool
+    joined_at: datetime
+
+
+class MemberListResponse(BaseModel):
+    items: list[MemberResponse]
+
+
+class UpdateMemberRequest(_Request):
+    role: OrgRole | None = None
+    can_create_projects: bool | None = None
+
+
+class CreateInvitationRequest(_Request):
+    email: Email
+    role: OrgRole
+
+
+class InvitationResponse(BaseModel):
+    id: uuid.UUID
+    email: str
+    role: str
+    created_at: datetime
+    expires_at: datetime
+    expired: bool
+
+
+class InvitationListResponse(BaseModel):
+    items: list[InvitationResponse]
+
+
+class AcceptInvitationRequest(_Request):
+    token: EmailToken
+
+
+class JoinedOrgResponse(BaseModel):
+    slug: str
+    name: str
+    role: str
