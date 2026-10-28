@@ -155,6 +155,27 @@ Projects, project membership and seeded configuration (plan M5, R3.3 rows 4-8/19
 - Workflow view includes the board's default columns (board endpoint is M9).
 - Org-member removal deletes their project memberships in the same transaction.
 
+## M6 implementation record (pending review)
+Issues core (plan M6, R3.3 rows 9-15, R4, R7-M6), migration 0007. Decisions applied:
+- PATCH edits only summary, description, type and priority; assignee/parent editing (and
+  setting) waits for M7. Requests forbid unknown fields, so server-owned and M7 fields → 422.
+- Sub-task creation (and changing an issue to the sub-task type) → 422
+  `subtask_requires_parent` until M7 adds parents.
+- Interim rank: the issue number in base-62 over `0-9A-Za-z` (ASCII order), zero-padded
+  to 6 characters, in `rank text COLLATE "C"`. It appends in creation order, and M9's
+  base-62 between-neighbours keys use the same alphabet and column (no schema change).
+  `rank` never bumps `version`.
+- Project visibility on every issue route: org membership alone grants nothing; invisible
+  projects answer the same 404 as unknown ones. Unlike the M5 tables, issue RLS is
+  project-aware too (`app_can_view_project`, `app_can_write_issues`), and activity rows
+  follow their issue.
+- Idempotency keys are per (org, member, key), bound to a hash of route + project + body
+  (same key, different request → 422), kept 24 h, stored with the response in the same
+  transaction. A replay happens only after the in-transaction access re-check, so a caller
+  who lost access gets 404. The purge job is M12.
+- Org-member removal unassigns the member's live issues (version bump + activity) in the
+  same transaction. `sprint_id` has no foreign key until M10; the `search` column is M12.
+
 ## Open questions
 - Retention of platform security events (proposed 1 y), application logs (30 d), traces (14 d).
 - Org audit events after org deletion (needed before org deletion is built).

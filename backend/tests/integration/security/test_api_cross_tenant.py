@@ -28,6 +28,12 @@ def org_requests(slug: str) -> list[tuple[str, str, dict[str, object] | None]]:
         ("GET", f"/api/v1/orgs/{slug}/issue-types", None),
         ("GET", f"/api/v1/orgs/{slug}/priorities", None),
         ("GET", f"/api/v1/orgs/{slug}/audit-events", None),
+        ("GET", f"/api/v1/orgs/{slug}/issues", None),
+        ("GET", f"/api/v1/orgs/{slug}/issues/WEB-1", None),
+        ("PATCH", f"/api/v1/orgs/{slug}/issues/WEB-1", {"summary": "Taken over"}),
+        ("DELETE", f"/api/v1/orgs/{slug}/issues/WEB-1", None),
+        ("GET", f"/api/v1/orgs/{slug}/issues/WEB-1/activity", None),
+        ("POST", f"/api/v1/orgs/{slug}/projects/WEB/issues", {"summary": "x"}),
     ]
 
 

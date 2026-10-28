@@ -16,6 +16,17 @@ COUNT_B = {
     "issue_types": "SELECT id FROM issue_types WHERE org_id = :b",
     "priorities": "SELECT id FROM priorities WHERE org_id = :b",
     "audit_events": "SELECT id FROM audit_events WHERE org_id = :b",
+    "issues": "SELECT id FROM issues WHERE org_id = :b",
+    "issue_activity": "SELECT id FROM issue_activity WHERE org_id = :b",
+    "idempotency_keys": "SELECT key FROM idempotency_keys WHERE org_id = :b",
+}
+# Tables that org creation populates, so the bound tenant must still see its own rows.
+POPULATED_BY_ORG_CREATION = {
+    "organizations",
+    "org_memberships",
+    "issue_types",
+    "priorities",
+    "audit_events",
 }
 INSERT_INTO_B = {
     "org_invitations": (
@@ -36,6 +47,20 @@ INSERT_INTO_B = {
         "VALUES (:b, :me, 'org.updated', 'success')"
     ),
     "outbox": "INSERT INTO outbox (org_id, topic, payload) VALUES (:b, 'email.verify', '{}')",
+    "issues": (
+        "INSERT INTO issues (org_id, project_id, workflow_id, seq, type_id, status_id, "
+        "priority_id, reporter_id, summary, rank) VALUES (:b, gen_random_uuid(), "
+        "gen_random_uuid(), 1, gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), :me, "
+        "'x', '000001')"
+    ),
+    "issue_activity": (
+        "INSERT INTO issue_activity (org_id, issue_id, actor_id, action) "
+        "VALUES (:b, gen_random_uuid(), :me, 'created')"
+    ),
+    "idempotency_keys": (
+        "INSERT INTO idempotency_keys (org_id, user_id, key, request_hash, expires_at) "
+        "VALUES (:b, :me, 'k', '\\x00', now())"
+    ),
     # A new org whose id is not the bound org (and therefore not creatable).
     "organizations": (
         "INSERT INTO organizations (id, slug, name, created_by) VALUES (:b2, :slug, 'X', :me)"
@@ -44,6 +69,8 @@ INSERT_INTO_B = {
 UPDATE_B = {
     "organizations": "UPDATE organizations SET name = 'pwned' WHERE id = :b",
     "org_memberships": "UPDATE org_memberships SET role = 'member' WHERE org_id = :b",
+    "issues": "UPDATE issues SET summary = 'pwned' WHERE org_id = :b",
+    "idempotency_keys": "UPDATE idempotency_keys SET response_status = 500 WHERE org_id = :b",
 }
 
 
@@ -56,7 +83,7 @@ async def test_other_tenant_rows_are_invisible(
     assert (
         await rows(rw_engine, COUNT_B[table], org_id=a.org_id, user_id=a.user_id, b=b.org_id) == []
     )
-    if table != "org_invitations":  # tables populated by org creation: own rows visible
+    if table in POPULATED_BY_ORG_CREATION:  # own rows stay visible
         assert await rows(rw_engine, own, org_id=a.org_id, user_id=a.user_id, a=a.org_id)
 
 
@@ -115,7 +142,17 @@ async def test_own_rows_cannot_be_moved_into_another_tenant(
 
 @pytest.mark.parametrize(
     "table",
-    ["organizations", "org_memberships", "issue_types", "priorities", "audit_events", "outbox"],
+    [
+        "organizations",
+        "org_memberships",
+        "issue_types",
+        "priorities",
+        "audit_events",
+        "outbox",
+        "issues",
+        "issue_activity",
+        "idempotency_keys",
+    ],
 )
 async def test_runtime_role_cannot_delete_or_truncate_tenant_data(
     rw_engine: AsyncEngine, two_tenants: tuple[Tenant, Tenant], table: str

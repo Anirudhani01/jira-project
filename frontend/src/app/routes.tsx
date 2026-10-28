@@ -9,6 +9,8 @@ import { VerifyEmailPage } from '../features/auth/pages/VerifyEmailPage';
 import { RequireAuth } from '../features/auth/RequireAuth';
 import { CreateOrgPage } from '../features/orgs/pages/CreateOrgPage';
 import { CreateProjectPage } from '../features/projects/CreateProjectPage';
+import { IssueDetailPage } from '../features/issues/IssueDetailPage';
+import { IssueListPage } from '../features/issues/IssueListPage';
 import { ProjectPage } from '../features/projects/ProjectPage';
 import { AcceptInvitationPage } from '../features/orgs/pages/AcceptInvitationPage';
 import { OrgHomePage } from '../features/orgs/pages/OrgHomePage';
@@ -43,6 +45,8 @@ export const routes: RouteObject[] = [
           { path: 'o/:org/settings/members', element: <OrgMembersPage /> },
           { path: 'o/:org/projects/new', element: <CreateProjectPage /> },
           { path: 'o/:org/p/:key', element: <ProjectPage /> },
+          { path: 'o/:org/p/:key/issues', element: <IssueListPage /> },
+          { path: 'o/:org/issues/:issueKey', element: <IssueDetailPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },

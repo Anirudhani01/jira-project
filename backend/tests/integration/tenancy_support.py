@@ -29,7 +29,16 @@ from tests.integration.auth_support import (
 )
 
 # Tables holding tenant data in M3 (``organizations`` is the tenant root, keyed by id).
-TENANT_TABLES = ("org_memberships", "issue_types", "priorities", "audit_events", "outbox")
+TENANT_TABLES = (
+    "org_memberships",
+    "issue_types",
+    "priorities",
+    "audit_events",
+    "outbox",
+    "issues",
+    "issue_activity",
+    "idempotency_keys",
+)
 
 
 @dataclass
