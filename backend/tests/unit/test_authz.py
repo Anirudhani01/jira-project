@@ -7,6 +7,7 @@ from app.authz.permissions import (
     PROJECT_ROLE_ORG_PERMISSIONS,
     Permission,
     org_permissions,
+    project_permissions,
 )
 from app.modules.orgs.slugs import RESERVED_SLUGS, is_reserved, is_well_formed_slug
 
@@ -56,3 +57,16 @@ def test_reserved_slugs_are_exactly_the_revision_3_list() -> None:
 )  # fmt: skip
 def test_slug_format(slug: str, ok: bool) -> None:
     assert is_well_formed_slug(slug) is ok
+
+
+def test_issue_permissions_follow_project_roles() -> None:
+    """M6: viewers only read; members create/edit; admins (and org owners/admins) also
+    delete. Org membership without a project role grants nothing."""
+    issue = {Permission.ISSUE_CREATE, Permission.ISSUE_EDIT, Permission.ISSUE_DELETE}
+    assert project_permissions("member", "viewer") == {Permission.PROJECT_VIEW}
+    member = project_permissions("member", "member")
+    assert member & issue == {Permission.ISSUE_CREATE, Permission.ISSUE_EDIT}
+    assert issue <= project_permissions("member", "admin")
+    assert issue <= project_permissions("owner", None)
+    assert issue <= project_permissions("admin", None)
+    assert project_permissions("member", None) == frozenset()

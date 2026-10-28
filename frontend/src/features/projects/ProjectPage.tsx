@@ -1,4 +1,4 @@
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 
 import { NotFoundPage } from '../../app/pages/NotFoundPage';
 import { FormError } from '../../components/ui/Form';
@@ -52,6 +52,9 @@ export function ProjectPage() {
           </button>
         ) : null}
       </div>
+      <Link className="text-blue-700 underline" to={`/o/${org}/p/${p.key}/issues`}>
+        View issues
+      </Link>
       <FormError>{failure ? describeError(failure) : null}</FormError>
       <section aria-labelledby="workflow-title" className="space-y-2">
         <h2 id="workflow-title" className="text-lg font-semibold">

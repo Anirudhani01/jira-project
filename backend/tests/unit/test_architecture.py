@@ -51,6 +51,10 @@ ALLOWED_TABLES = frozenset(
         "boards",
         "board_columns",
         "board_column_statuses",
+        # M6
+        "issues",
+        "issue_activity",
+        "idempotency_keys",
     }
 )
 
