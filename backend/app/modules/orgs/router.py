@@ -14,19 +14,28 @@ from app.authz.deps import OrgAccess, require
 from app.authz.permissions import Permission
 from app.core.errors import AppError
 from app.modules.identity.deps import CsrfProtected, CurrentSession, Services, client_info
-from app.modules.orgs import service
+from app.modules.identity.schemas import AcceptedResponse
+from app.modules.orgs import members, service
 from app.modules.orgs.repository import AuditFilter, OrgRecord
 from app.modules.orgs.schemas import (
+    AcceptInvitationRequest,
     AuditEventListResponse,
     AuditEventResponse,
+    CreateInvitationRequest,
     CreateOrgRequest,
+    InvitationListResponse,
+    InvitationResponse,
     IssueTypeListResponse,
     IssueTypeResponse,
+    JoinedOrgResponse,
+    MemberListResponse,
+    MemberResponse,
     OrgListResponse,
     OrgResponse,
     OrgSummary,
     PriorityListResponse,
     PriorityResponse,
+    UpdateMemberRequest,
     UpdateOrgRequest,
 )
 
@@ -35,6 +44,7 @@ router = APIRouter(prefix="/api/v1", tags=["orgs"])
 ViewOrg = Annotated[OrgAccess, require(Permission.ORG_VIEW)]
 ManageOrg = Annotated[OrgAccess, require(Permission.ORG_MANAGE)]
 ViewAudit = Annotated[OrgAccess, require(Permission.ORG_AUDIT_VIEW)]
+ManageMembers = Annotated[OrgAccess, require(Permission.ORG_MEMBERS_MANAGE)]
 
 
 def _org_response(org: OrgRecord, access: OrgAccess) -> OrgResponse:
@@ -167,3 +177,115 @@ async def list_audit_events(
         ],
         next_cursor=next_cursor,
     )
+
+
+# ----------------------------------------------------------------------------- M4
+@router.get("/orgs/{org_slug}/members", response_model=MemberListResponse)
+async def list_members(access: ViewOrg, services: Services) -> MemberListResponse:
+    rows = await members.list_members(services, access)
+    return MemberListResponse(
+        items=[
+            MemberResponse(
+                user_id=m.user_id,
+                display_name=m.display_name,
+                email=m.email,
+                role=m.role,
+                can_create_projects=m.can_create_projects,
+                joined_at=m.created_at,
+            )
+            for m in rows
+        ]
+    )
+
+
+@router.patch(
+    "/orgs/{org_slug}/members/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[CsrfProtected],
+)
+async def update_member(
+    user_id: uuid.UUID,
+    body: UpdateMemberRequest,
+    request: Request,
+    access: ManageMembers,
+    services: Services,
+) -> Response:
+    """Change a member's role and/or the explicit project-creation grant (D9).
+    Only owners manage owners; the last owner cannot be demoted (409 last_owner)."""
+    await members.change_member(
+        services,
+        access,
+        user_id,
+        members.MemberChange(role=body.role, can_create_projects=body.can_create_projects),
+        client_info(request),
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete(
+    "/orgs/{org_slug}/members/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[CsrfProtected],
+)
+async def remove_member(
+    user_id: uuid.UUID, request: Request, access: ManageMembers, services: Services
+) -> Response:
+    await members.remove_member(services, access, user_id, client_info(request))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/orgs/{org_slug}/invitations", response_model=InvitationListResponse)
+async def list_invitations(access: ManageMembers, services: Services) -> InvitationListResponse:
+    rows = await members.list_invitations(services, access)
+    return InvitationListResponse(
+        items=[
+            InvitationResponse(
+                id=r.id,
+                email=r.email,
+                role=r.role,
+                created_at=r.created_at,
+                expires_at=r.expires_at,
+                expired=r.expired,
+            )
+            for r in rows
+        ]
+    )
+
+
+@router.post(
+    "/orgs/{org_slug}/invitations",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=AcceptedResponse,
+    dependencies=[CsrfProtected],
+)
+async def create_invitation(
+    body: CreateInvitationRequest, request: Request, access: ManageMembers, services: Services
+) -> AcceptedResponse:
+    """Queues the invitation email (the worker mints the token). 100 per org per day."""
+    await members.create_invitation(
+        services, access, email=body.email, role=body.role, client=client_info(request)
+    )
+    return AcceptedResponse()
+
+
+@router.delete(
+    "/orgs/{org_slug}/invitations/{invitation_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[CsrfProtected],
+)
+async def revoke_invitation(
+    invitation_id: uuid.UUID, request: Request, access: ManageMembers, services: Services
+) -> Response:
+    await members.revoke_invitation(services, access, invitation_id, client_info(request))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/invitations/accept", response_model=JoinedOrgResponse, dependencies=[CsrfProtected])
+async def accept_invitation(
+    body: AcceptInvitationRequest, request: Request, auth: CurrentSession, services: Services
+) -> JoinedOrgResponse:
+    """Requires signing in with the invited, verified email address (D1)."""
+    joined = await members.accept_invitation(
+        services, auth, token=body.token, client=client_info(request)
+    )
+    return JoinedOrgResponse(slug=joined.slug, name=joined.name, role=joined.role)

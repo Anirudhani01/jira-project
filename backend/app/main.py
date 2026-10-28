@@ -28,6 +28,7 @@ from app.modules.identity.deps import IdentityServices
 from app.modules.identity.passwords import BreachChecker, PasswordHashing
 from app.modules.identity.router import router as identity_router
 from app.modules.orgs.router import router as orgs_router
+from app.modules.projects.router import router as projects_router
 
 API_DOCS_PATH = "/api/docs"
 OPENAPI_PATH = "/api/openapi.json"
@@ -105,6 +106,7 @@ def create_app(
     app.include_router(health_router)
     app.include_router(identity_router)
     app.include_router(orgs_router)
+    app.include_router(projects_router)
 
     # add_middleware wraps: the last added is outermost.
     app.add_middleware(ErrorBoundaryMiddleware)

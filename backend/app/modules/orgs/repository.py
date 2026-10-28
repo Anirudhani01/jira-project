@@ -15,7 +15,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.tenant import require_org_context
 from app.modules.audit.models import AuditEvent
-from app.modules.orgs.models import IssueType, Organization, OrgMembership, Priority
+from app.modules.identity.directory import visible_users
+from app.modules.orgs.models import (
+    IssueType,
+    Organization,
+    OrgInvitation,
+    OrgMembership,
+    Priority,
+)
 from app.modules.orgs.seeds import ISSUE_TYPES, PRIORITIES
 
 
@@ -198,3 +205,213 @@ async def list_audit_events(
         .limit(limit)
     )
     return list(result.scalars())
+
+
+# ------------------------------------------------------------- M4: members (tenant)
+@dataclass(frozen=True, slots=True)
+class MemberRow:
+    user_id: uuid.UUID
+    display_name: str
+    email: str
+    role: str
+    can_create_projects: bool
+    created_at: datetime
+
+
+async def lock_org(session: AsyncSession) -> None:
+    """Per-org membership mutex (plan R4): serializes role changes and removals."""
+    context = require_org_context(session)
+    await session.execute(
+        select(Organization.id).where(Organization.id == context.org_id).with_for_update()
+    )
+
+
+async def list_members(session: AsyncSession) -> list[MemberRow]:
+    context = require_org_context(session)
+    memberships = list(
+        (
+            await session.execute(
+                select(OrgMembership)
+                .where(OrgMembership.org_id == context.org_id, OrgMembership.removed_at.is_(None))
+                .order_by(OrgMembership.created_at, OrgMembership.user_id)
+            )
+        ).scalars()
+    )
+    users = await visible_users(session, [m.user_id for m in memberships])
+    return [
+        MemberRow(
+            user_id=m.user_id,
+            display_name=users[m.user_id].display_name,
+            email=users[m.user_id].email,
+            role=m.role,
+            can_create_projects=m.can_create_projects,
+            created_at=m.created_at,
+        )
+        for m in memberships
+        if m.user_id in users
+    ]
+
+
+async def get_member(session: AsyncSession, user_id: uuid.UUID) -> OrgMembership | None:
+    """The membership row (active or removed) of ``user_id`` in the bound org."""
+    context = require_org_context(session)
+    return (
+        await session.execute(
+            select(OrgMembership).where(
+                OrgMembership.org_id == context.org_id, OrgMembership.user_id == user_id
+            )
+        )
+    ).scalar_one_or_none()
+
+
+async def count_active_owners(session: AsyncSession) -> int:
+    context = require_org_context(session)
+    return int(
+        (
+            await session.execute(
+                select(func.count()).where(
+                    OrgMembership.org_id == context.org_id,
+                    OrgMembership.role == "owner",
+                    OrgMembership.removed_at.is_(None),
+                )
+            )
+        ).scalar_one()
+    )
+
+
+async def update_member(session: AsyncSession, user_id: uuid.UUID, **values: Any) -> bool:
+    context = require_org_context(session)
+    result = await session.execute(
+        update(OrgMembership)
+        .where(OrgMembership.org_id == context.org_id, OrgMembership.user_id == user_id)
+        .values(**values)
+    )
+    return bool(result.rowcount)  # type: ignore[attr-defined]
+
+
+async def active_member_with_email(session: AsyncSession, email: str) -> bool:
+    return any(m.email.lower() == email.lower() for m in await list_members(session))
+
+
+async def insert_membership(session: AsyncSession, *, user_id: uuid.UUID, role: str) -> None:
+    context = require_org_context(session)
+    await session.execute(
+        insert(OrgMembership).values(org_id=context.org_id, user_id=user_id, role=role)
+    )
+
+
+# --------------------------------------------------------- M4: invitations (tenant)
+_PENDING = (OrgInvitation.accepted_at.is_(None), OrgInvitation.revoked_at.is_(None))
+
+
+async def revoke_expired_invitations(session: AsyncSession, email: str) -> None:
+    context = require_org_context(session)
+    await session.execute(
+        update(OrgInvitation)
+        .where(
+            OrgInvitation.org_id == context.org_id,
+            OrgInvitation.email == email,
+            OrgInvitation.expires_at <= func.now(),
+            *_PENDING,
+        )
+        .values(revoked_at=func.now())
+    )
+
+
+async def insert_invitation(
+    session: AsyncSession,
+    *,
+    invitation_id: uuid.UUID,
+    email: str,
+    role: str,
+    invited_by: uuid.UUID,
+    ttl_days: int,
+) -> None:
+    context = require_org_context(session)
+    await session.execute(
+        insert(OrgInvitation).values(
+            id=invitation_id,
+            org_id=context.org_id,
+            email=email,
+            role=role,
+            invited_by=invited_by,
+            expires_at=func.now() + func.make_interval(0, 0, 0, ttl_days),
+        )
+    )
+
+
+async def list_pending_invitations(session: AsyncSession) -> list[Any]:
+    context = require_org_context(session)
+    return list(
+        (
+            await session.execute(
+                select(
+                    OrgInvitation.id,
+                    OrgInvitation.email,
+                    OrgInvitation.role,
+                    OrgInvitation.created_at,
+                    OrgInvitation.expires_at,
+                    (OrgInvitation.expires_at <= func.now()).label("expired"),
+                )
+                .where(OrgInvitation.org_id == context.org_id, *_PENDING)
+                .order_by(OrgInvitation.created_at.desc())
+            )
+        ).all()
+    )
+
+
+async def revoke_invitation(session: AsyncSession, invitation_id: uuid.UUID) -> Any:
+    context = require_org_context(session)
+    target = (
+        await session.execute(
+            select(OrgInvitation.id, OrgInvitation.role).where(
+                OrgInvitation.id == invitation_id, OrgInvitation.org_id == context.org_id, *_PENDING
+            )
+        )
+    ).one_or_none()
+    if target is None:
+        return None
+    await session.execute(
+        update(OrgInvitation).where(OrgInvitation.id == invitation_id).values(revoked_at=func.now())
+    )
+    return target
+
+
+async def find_invitation_by_bound_token(session: AsyncSession) -> Any:
+    """Requires ``bind_invite_token``: RLS exposes only that invitation."""
+    return (
+        await session.execute(
+            select(
+                OrgInvitation.id,
+                OrgInvitation.org_id,
+                OrgInvitation.email,
+                OrgInvitation.role,
+                OrgInvitation.accepted_at,
+                OrgInvitation.revoked_at,
+                (OrgInvitation.expires_at <= func.now()).label("expired"),
+            ).where(OrgInvitation.token_hash == func.app_invite_token_hash())
+        )
+    ).one_or_none()
+
+
+async def mark_invitation_accepted(
+    session: AsyncSession, invitation_id: uuid.UUID, user_id: uuid.UUID
+) -> None:
+    require_org_context(session)
+    await session.execute(
+        update(OrgInvitation)
+        .where(OrgInvitation.id == invitation_id)
+        .values(accepted_at=func.now(), accepted_by=user_id)
+    )
+
+
+def now() -> Any:
+    return func.now()
+
+
+async def remove_member_effects(session: AsyncSession, user_id: uuid.UUID) -> None:
+    """Same-transaction effects of removing a member: their project memberships go (M5);
+    issue unassignment joins here in M6."""
+    from app.modules.projects.repository import remove_user_from_all_projects  # noqa: PLC0415
+
+    await remove_user_from_all_projects(session, user_id)

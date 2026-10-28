@@ -1,0 +1,76 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+import { apiFetch } from '../../lib/api/client';
+import type { Project, ProjectMember, ProjectSummary, Workflow } from '../../lib/api/types';
+
+const base = (org: string) => `/orgs/${encodeURIComponent(org)}/projects`;
+const projectPath = (org: string, key: string) => `${base(org)}/${encodeURIComponent(key)}`;
+export const projectsKey = (org: string) => ['org', org.toLowerCase(), 'projects'] as const;
+const projectKey = (org: string, key: string) => [...projectsKey(org), key.toUpperCase()] as const;
+
+export function useProjects(org: string) {
+  return useQuery({
+    queryKey: projectsKey(org),
+    queryFn: () => apiFetch<{ items: ProjectSummary[] }>(base(org)).then((r) => r.items),
+  });
+}
+
+export function useProject(org: string, key: string) {
+  return useQuery({
+    queryKey: projectKey(org, key),
+    queryFn: () => apiFetch<Project>(projectPath(org, key)),
+  });
+}
+
+export function useWorkflow(org: string, key: string) {
+  return useQuery({
+    queryKey: [...projectKey(org, key), 'workflow'],
+    queryFn: () => apiFetch<Workflow>(`${projectPath(org, key)}/workflow`),
+  });
+}
+
+export function useProjectMembers(org: string, key: string) {
+  return useQuery({
+    queryKey: [...projectKey(org, key), 'members'],
+    queryFn: () =>
+      apiFetch<{ items: ProjectMember[] }>(`${projectPath(org, key)}/members`).then((r) => r.items),
+  });
+}
+
+function useProjectsMutation<T, R>(org: string, fn: (vars: T) => Promise<R>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: projectsKey(org) });
+    },
+  });
+}
+
+export function useCreateProject(org: string) {
+  return useProjectsMutation(
+    org,
+    (body: { key: string; name: string; board_type: 'kanban' | 'scrum' }) =>
+      apiFetch<ProjectSummary>(base(org), { method: 'POST', json: body }),
+  );
+}
+
+export function useSetArchived(org: string, key: string) {
+  return useProjectsMutation(org, (archived: boolean) =>
+    apiFetch<undefined>(`${projectPath(org, key)}/${archived ? 'archive' : 'unarchive'}`, {
+      method: 'POST',
+    }),
+  );
+}
+
+export function useAddProjectMember(org: string, key: string) {
+  return useProjectsMutation(org, (body: { user_id: string; role: string }) =>
+    apiFetch<undefined>(`${projectPath(org, key)}/members`, { method: 'POST', json: body }),
+  );
+}
+
+export function useRemoveProjectMember(org: string, key: string) {
+  return useProjectsMutation(org, (userId: string) =>
+    apiFetch<undefined>(`${projectPath(org, key)}/members/${userId}`, { method: 'DELETE' }),
+  );
+}

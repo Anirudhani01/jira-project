@@ -16,7 +16,7 @@ from app.main import create_app
 from app.modules.orgs import service
 from app.modules.orgs.repository import AuditFilter
 from tests.integration.auth_support import integration_settings, running_app, superuser_sql
-from tests.integration.tenancy_support import Tenant, checksum
+from tests.integration.tenancy_support import Tenant, add_backup_owner, checksum
 
 VOLATILE = {"date", "x-request-id", "content-length"}
 
@@ -64,8 +64,11 @@ async def test_inaccessible_orgs_are_indistinguishable(two_tenants: tuple[Tenant
         for method, path, body in org_requests(slug):
             if method == "GET":
                 responses.append(await call(a, method, path, body))
+    await add_backup_owner(a.org_id)
     await superuser_sql(
-        "UPDATE org_memberships SET removed_at = now() WHERE org_id = :o", o=a.org_id
+        "UPDATE org_memberships SET removed_at = now() WHERE org_id = :o AND user_id = :u",
+        o=a.org_id,
+        u=a.user_id,
     )
     responses.append(await call(a, "GET", f"/api/v1/orgs/{a.slug}", None))
     assert {fingerprint(r) for r in responses} == {fingerprint(responses[0])}
@@ -77,6 +80,7 @@ async def test_removed_membership_loses_access_on_every_route(
 ) -> None:
     a, _ = two_tenants
     assert (await call(a, "GET", f"/api/v1/orgs/{a.slug}", None)).status_code == 200
+    await add_backup_owner(a.org_id)
     await superuser_sql(
         "UPDATE org_memberships SET removed_at = now() WHERE org_id = :o AND user_id = :u",
         o=a.org_id,
@@ -127,6 +131,7 @@ async def test_handler_transaction_rechecks_membership_after_resolution(
         can_create_projects=False,
         permissions=org_permissions("owner", can_create_projects=False),
     )
+    await add_backup_owner(a.org_id)
     await superuser_sql(
         "UPDATE org_memberships SET role = 'member' WHERE org_id = :o AND user_id = :u",
         o=a.org_id,

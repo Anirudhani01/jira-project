@@ -42,6 +42,8 @@ PASSWORD_RESET_PER_IP: Final = RateLimit("password-reset-ip", 20, 3600)
 TOKEN_FAILURES_PER_IP: Final = RateLimit("token-failures-ip", 30, 3600)
 # M3: organization creation attempts per user (every attempt counts).
 ORG_CREATE_PER_USER: Final = RateLimit("org-create-user", 10, 3600)
+# M4: invitations per organization (plan §4.5).
+INVITATIONS_PER_ORG: Final = RateLimit("invitations-org", 100, 86_400)
 
 # Atomic check-and-reserve: concurrent requests cannot all pass the check before any
 # of them is counted (the original check-then-hit design allowed parallel bursts).

@@ -48,8 +48,8 @@ async def test_mailer_refuses_to_send_while_delivery_is_disabled() -> None:
 
 
 def test_every_email_topic_has_an_identifier_only_payload_schema() -> None:
-    assert set(TOPIC_PAYLOAD_KEYS) == EMAIL_TOPICS
-    assert all(keys == {"user_id"} for keys in TOPIC_PAYLOAD_KEYS.values())
+    assert set(TOPIC_PAYLOAD_KEYS) == EMAIL_TOPICS | TENANT_TOPICS
+    assert all(keys == {"user_id"} for t, keys in TOPIC_PAYLOAD_KEYS.items() if t in EMAIL_TOPICS)
 
 
 @pytest.mark.parametrize(
@@ -141,11 +141,24 @@ def test_application_default_keeps_email_delivery_off() -> None:
 
 
 def test_tenant_topics_require_org_id() -> None:
-    """M3 adds outbox.org_id + RLS before any tenant-scoped topic exists. Identity emails
-    stay platform jobs (NULL org_id); no tenant topic is introduced in M3."""
-    assert set(TOPIC_PAYLOAD_KEYS) == PLATFORM_TOPICS
-    assert frozenset() == TENANT_TOPICS
+    """Identity emails stay platform jobs (NULL org_id); the only tenant topic (M4) is the
+    invitation email, which must carry its org and identifiers only."""
+    assert set(TOPIC_PAYLOAD_KEYS) == PLATFORM_TOPICS | TENANT_TOPICS
+    assert {"email.org_invitation"} == TENANT_TOPICS
     assert all("org_id" not in keys for keys in TOPIC_PAYLOAD_KEYS.values())
+
+
+async def test_tenant_topics_refuse_a_missing_org_id() -> None:
+    class NoSession:
+        async def execute(self, *args: object) -> None:
+            raise AssertionError("must be rejected before reaching the database")
+
+    with pytest.raises(ValueError, match="requires an org_id"):
+        await enqueue(
+            NoSession(),  # type: ignore[arg-type]
+            "email.org_invitation",
+            {"invitation_id": uuid.uuid4()},
+        )
 
 
 async def test_platform_topics_refuse_an_org_id() -> None:

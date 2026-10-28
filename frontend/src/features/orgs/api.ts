@@ -1,7 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { apiFetch } from '../../lib/api/client';
-import type { CreateOrgRequest, Org, OrgSummary } from '../../lib/api/types';
+import type {
+  CreateOrgRequest,
+  Invitation,
+  JoinedOrg,
+  Member,
+  Org,
+  OrgSummary,
+} from '../../lib/api/types';
 import { sessionKey } from '../auth/api';
 
 export const orgKey = (slug: string) => ['org', slug.toLowerCase()] as const;
@@ -51,6 +58,88 @@ export function useRenameOrg(slug: string) {
       apiFetch<Org>(`/orgs/${encodeURIComponent(slug)}`, { method: 'PATCH', json: { name } }),
     onSuccess: async (org) => {
       queryClient.setQueryData(orgKey(slug), org);
+      await queryClient.invalidateQueries({ queryKey: sessionKey });
+    },
+  });
+}
+
+// ----------------------------------------------------------------------------- M4
+export const membersKey = (slug: string) => ['org', slug.toLowerCase(), 'members'] as const;
+export const invitationsKey = (slug: string) => ['org', slug.toLowerCase(), 'invitations'] as const;
+
+export function useMembers(slug: string) {
+  return useQuery({
+    queryKey: membersKey(slug),
+    queryFn: () =>
+      apiFetch<{ items: Member[] }>(`/orgs/${encodeURIComponent(slug)}/members`).then(
+        (r) => r.items,
+      ),
+  });
+}
+
+export function useInvitations(slug: string, enabled: boolean) {
+  return useQuery({
+    queryKey: invitationsKey(slug),
+    enabled,
+    queryFn: () =>
+      apiFetch<{ items: Invitation[] }>(`/orgs/${encodeURIComponent(slug)}/invitations`).then(
+        (r) => r.items,
+      ),
+  });
+}
+
+function useOrgMutation<T>(slug: string, fn: (vars: T) => Promise<unknown>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['org', slug.toLowerCase()] });
+    },
+  });
+}
+
+export function useUpdateMember(slug: string) {
+  return useOrgMutation(
+    slug,
+    ({ userId, ...body }: { userId: string; role?: string; can_create_projects?: boolean }) =>
+      apiFetch<undefined>(`/orgs/${encodeURIComponent(slug)}/members/${userId}`, {
+        method: 'PATCH',
+        json: body,
+      }),
+  );
+}
+
+export function useRemoveMember(slug: string) {
+  return useOrgMutation(slug, (userId: string) =>
+    apiFetch<undefined>(`/orgs/${encodeURIComponent(slug)}/members/${userId}`, {
+      method: 'DELETE',
+    }),
+  );
+}
+
+export function useInvite(slug: string) {
+  return useOrgMutation(slug, (body: { email: string; role: string }) =>
+    apiFetch<{ status: string }>(`/orgs/${encodeURIComponent(slug)}/invitations`, {
+      method: 'POST',
+      json: body,
+    }),
+  );
+}
+
+export function useRevokeInvitation(slug: string) {
+  return useOrgMutation(slug, (id: string) =>
+    apiFetch<undefined>(`/orgs/${encodeURIComponent(slug)}/invitations/${id}`, {
+      method: 'DELETE',
+    }),
+  );
+}
+
+export function useAcceptInvitation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (token: string) =>
+      apiFetch<JoinedOrg>('/invitations/accept', { method: 'POST', json: { token } }),
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: sessionKey });
     },
   });

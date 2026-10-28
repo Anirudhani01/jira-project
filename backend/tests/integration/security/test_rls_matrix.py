@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from tests.integration.tenancy_support import Tenant, affected, checksum, denied, rows
 
 COUNT_B = {
+    "org_invitations": "SELECT id FROM org_invitations WHERE org_id = :b",
     "organizations": "SELECT id FROM organizations WHERE id = :b",
     "org_memberships": "SELECT org_id FROM org_memberships WHERE org_id = :b",
     "issue_types": "SELECT id FROM issue_types WHERE org_id = :b",
@@ -17,6 +18,10 @@ COUNT_B = {
     "audit_events": "SELECT id FROM audit_events WHERE org_id = :b",
 }
 INSERT_INTO_B = {
+    "org_invitations": (
+        "INSERT INTO org_invitations (org_id, email, role, invited_by, expires_at) "
+        "VALUES (:b, 'x@example.com', 'member', :me, now() + interval '1 day')"
+    ),
     "org_memberships": (
         "INSERT INTO org_memberships (org_id, user_id, role) VALUES (:b, :me, 'owner')"
     ),
@@ -51,7 +56,8 @@ async def test_other_tenant_rows_are_invisible(
     assert (
         await rows(rw_engine, COUNT_B[table], org_id=a.org_id, user_id=a.user_id, b=b.org_id) == []
     )
-    assert await rows(rw_engine, own, org_id=a.org_id, user_id=a.user_id, a=a.org_id)
+    if table != "org_invitations":  # tables populated by org creation: own rows visible
+        assert await rows(rw_engine, own, org_id=a.org_id, user_id=a.user_id, a=a.org_id)
 
 
 @pytest.mark.parametrize("table", sorted(INSERT_INTO_B))

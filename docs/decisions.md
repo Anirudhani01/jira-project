@@ -100,7 +100,7 @@ Deviations and additions:
 - Production delivery is still impossible by design: staging/prod require STARTTLS/TLS and
   SMTP credentials, and the provider is an open decision (D13; zero cost D14).
 
-## M3 implementation record (pending review)
+## M3 implementation record
 Implemented per plan M3 / R3.1–R3.5 / V2.6 / V2.9 / V3.6 and the M3 checklist approvals;
 design in [ADR 0010](adr/0010-orgs-authz-membership-audit.md). No approved decision changed.
 - Approved M3 decisions: D9 column + policy now, grant endpoint in M4; audit read API now
@@ -129,6 +129,31 @@ design in [ADR 0010](adr/0010-orgs-authz-membership-audit.md). No approved decis
   `fastapi.routing.iter_route_contexts`, a regression test asserts the route list is not
   empty, and a mutation check (removing CSRF from a route) makes them fail as intended.
   With real enumeration, all existing routes pass, i.e. no route was actually unprotected.
+
+## M4 implementation record (pending review)
+Invitations and member management (plan M4, R4, R7-M4, D1, V3.6). Deviations/additions:
+- Invitation acceptance requires a session whose **verified** email matches (D1 supersedes
+  §1.6 "accepting marks email verified"); enforced in the service and in RLS
+  (`app_invitation_allows`).
+- Invitation tokens are minted by the worker once per invitation (stored as SHA-256); a
+  redelivered job sends nothing, and a failed send clears the hash so the retry re-mints.
+  A crash between minting and sending leaves the invitation unsent (revoke and re-invite).
+- First tenant-scoped outbox topic: `email.org_invitation` (org_id set; worker binds it).
+- Last-owner rule: per-org lock + 409 `last_owner`, backed by the deferred `org_keeps_owner`
+  trigger. Members cannot leave on their own (no self-removal endpoint in M4).
+- The invitation accept page is public and keeps the token in `sessionStorage` (this tab)
+  across sign-in, so the token never appears in a URL query.
+
+## M5 implementation record (pending review)
+Projects, project membership and seeded configuration (plan M5, R3.3 rows 4-8/19-20, V3.6).
+- All composite foreign keys include `org_id` (stricter than the R3.3 wording for rows 7
+  and 20) so `test_rls_catalog` holds; board columns can only map statuses of the
+  board's workflow (DB-level).
+- Project-level visibility (org owners/admins + project members) is enforced in the
+  application; RLS enforces org membership for reads and project-admin/org-admin rights
+  for writes (SECURITY DEFINER helpers).
+- Workflow view includes the board's default columns (board endpoint is M9).
+- Org-member removal deletes their project memberships in the same transaction.
 
 ## Open questions
 - Retention of platform security events (proposed 1 y), application logs (30 d), traces (14 d).

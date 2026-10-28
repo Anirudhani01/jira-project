@@ -64,6 +64,16 @@ def require_org_context(session: AsyncSession) -> TenantContext:
     return context
 
 
+_BIND_INVITE_SQL = text("SELECT set_config('app.invite_token_hash', :token_hash, true)")
+
+
+async def bind_invite_token(session: AsyncSession, token_hash: bytes) -> None:
+    """Expose the single invitation with this token hash (accept flow, plan R3.2)."""
+    if not session.in_transaction():
+        raise TenantContextError("invite context must be bound inside an explicit transaction")
+    await session.execute(_BIND_INVITE_SQL, {"token_hash": token_hash.hex()})
+
+
 async def bind_job_context(session: AsyncSession, org_id: UUID) -> None:
     """Worker: bind the org recorded on an outbox job (never taken from its payload)."""
     await bind_tenant(session, TenantContext(org_id=org_id, user_id=None))

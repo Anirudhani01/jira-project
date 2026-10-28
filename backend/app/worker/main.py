@@ -22,6 +22,8 @@ from app.db.engine import create_db_engine
 from app.db.role_check import verify_runtime_role
 from app.db.session import create_sessionmaker
 from app.modules.identity.emails import EMAIL_TOPICS, EmailJob, handle_email_job
+from app.modules.orgs.emails import handle_invitation_job
+from app.modules.orgs.members import TOPIC_ORG_INVITATION
 from app.modules.outbox import repository as outbox
 from app.modules.outbox.repository import ClaimedJob
 
@@ -56,7 +58,10 @@ class Worker:
         self.settings = settings
         self.sessionmaker = sessionmaker
         self.mailer = mailer
-        self.handlers: dict[str, Handler] = handlers or dict.fromkeys(EMAIL_TOPICS, self._email)
+        self.handlers: dict[str, Handler] = handlers or {
+            **dict.fromkeys(EMAIL_TOPICS, self._email),
+            TOPIC_ORG_INVITATION: self._invitation,
+        }
         self.stopping = asyncio.Event()
 
     async def _email(self, job: ClaimedJob) -> str:
@@ -68,6 +73,25 @@ class Worker:
             return "skipped_delivery_disabled"
         return await handle_email_job(
             EmailJob(job_id=job.id, topic=job.topic, user_id=_user_id(job)),
+            settings=self.settings,
+            sessionmaker=self.sessionmaker,
+            mailer=self.mailer,
+        )
+
+    async def _invitation(self, job: ClaimedJob) -> str:
+        if job.org_id is None:
+            raise PermanentJobError("tenant job without org_id")
+        if not self.settings.email_delivery_enabled:
+            return "skipped_delivery_disabled"
+        value = job.payload.get("invitation_id")
+        try:
+            invitation_id = uuid.UUID(str(value))
+        except ValueError as exc:
+            raise PermanentJobError("invalid invitation_id") from exc
+        return await handle_invitation_job(
+            job_id=job.id,
+            org_id=job.org_id,
+            invitation_id=invitation_id,
             settings=self.settings,
             sessionmaker=self.sessionmaker,
             mailer=self.mailer,
