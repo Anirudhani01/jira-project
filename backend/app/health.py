@@ -30,6 +30,7 @@ def _database_failure_log_extra(exc: Exception, *, timeout_seconds: float) -> di
         extra["timeout_seconds"] = str(timeout_seconds)
     return extra
 
+
 DatabaseState = Literal["ok", "unavailable", "misconfigured"]
 RedisState = Literal["ok", "degraded"]
 OverallState = Literal["ready", "degraded", "unavailable"]
