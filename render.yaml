@@ -20,7 +20,10 @@ services:
     plan: free
     rootDir: backend
     dockerfilePath: ./Dockerfile
-    dockerContext: .
+    # Repo-root-relative (Blueprint spec): must be `backend`, not `.`. The Dockerfile
+    # COPY paths assume the build context is the backend tree; a root context breaks
+    # COPY and (with rootDir) can yield a nearly empty context on Render.
+    dockerContext: backend
     # Render injects $PORT; the committed Dockerfile hardcodes 8000 for the local
     # compose stack, so override the start command here instead of editing the image.
     # UVICORN_FORWARDED_ALLOW_IPS=* trusts X-Forwarded-* from Render's own edge proxy
@@ -97,7 +100,7 @@ services:
 #   plan: starter
 #   rootDir: backend
 #   dockerfilePath: ./Dockerfile
-#   dockerContext: .
+#   dockerContext: backend
 #   dockerCommand: python -m app.worker
 #   envVars: [... same DATABASE_URL/WORKER_DATABASE_URL/REDIS_URL/APP_SECRET_KEY,
 #             plus EMAIL_DELIVERY_ENABLED=true and SMTP_* once a provider is chosen ...]
