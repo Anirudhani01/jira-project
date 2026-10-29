@@ -102,4 +102,5 @@ services:
 #   dockerContext: backend
 #   dockerCommand: python -m app.worker
 #   envVars: [... same DATABASE_URL/WORKER_DATABASE_URL/REDIS_URL/APP_SECRET_KEY,
+#             RETENTION_DATABASE_URL (app_retention role; enables the purge job),
 #             plus EMAIL_DELIVERY_ENABLED=true and SMTP_* once a provider is chosen ...]

@@ -82,14 +82,16 @@ No application code, migrations, CORS, or roadmap files were changed.
    CREATE ROLE app_owner  LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION PASSWORD '<strong-password>';
    CREATE ROLE app_rw     LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION NOINHERIT PASSWORD '<strong-password>';
    CREATE ROLE app_worker LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION NOINHERIT PASSWORD '<strong-password>';
+   -- Retention purge (migration 0015 requires this role to exist):
+   CREATE ROLE app_retention LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION NOINHERIT PASSWORD '<strong-password>';
    GRANT app_owner TO CURRENT_USER;  -- so the Supabase dashboard/SQL editor user can hand off ownership
    REVOKE CREATE ON SCHEMA public FROM PUBLIC;
-   GRANT CONNECT ON DATABASE postgres TO app_rw, app_worker;
+   GRANT CONNECT ON DATABASE postgres TO app_rw, app_worker, app_retention;
    ```
-   Use three different strong passwords. Do **not** reuse Supabase's own admin password.
+   Use four different strong passwords. Do **not** reuse Supabase's own admin password.
 3. Build each role's connection string:
    `postgresql+asyncpg://app_owner:<pw>@db.<ref>.supabase.co:5432/postgres?ssl=require`
-   (same pattern for `app_rw`, `app_worker`).
+   (same pattern for `app_rw`, `app_worker`, `app_retention`).
 4. Run migrations **once**, before the backend's first deploy and again only when a new
    migration ships — never automatically on every instance boot (the Makefile's own
    `migrate` target and CI's `migrate-roundtrip` already follow this convention; keep
@@ -118,7 +120,8 @@ No application code, migrations, CORS, or roadmap files were changed.
    `sync: false` values before the first deploy).
 2. On `jira-backend`, set (Dashboard → Environment, all as **secrets**):
    - `DATABASE_URL`, `WORKER_DATABASE_URL`, `MIGRATION_DATABASE_URL` — the three
-     Supabase connection strings from above.
+     Supabase connection strings from above. `RETENTION_DATABASE_URL` (the
+     `app_retention` string) goes on the worker only; without it nothing is purged.
    - `REDIS_URL` — your Upstash (or other free-tier) `rediss://` URL.
    - `APP_BASE_URL` — `https://jira-frontend.onrender.com` (or your custom domain on
      the frontend), **after** the frontend service's URL is known.
