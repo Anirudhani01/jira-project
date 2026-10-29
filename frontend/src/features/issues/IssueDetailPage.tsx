@@ -16,7 +16,6 @@ import {
   useChildren,
   useDeleteIssue,
   useIssue,
-  useIssueActivity,
   useIssueTypes,
   useLabels,
   usePriorities,
@@ -84,7 +83,6 @@ function IssueView({
   const labels = useLabels(org, issue.project_key);
   const transitions = useTransitions(org, issue.key);
   const children = useChildren(org, issue.key);
-  const activity = useIssueActivity(org, issue.key);
   const update = useUpdateIssue(org, issue.key);
   const transition = useApplyTransition(org, issue.key);
   const remove = useDeleteIssue(org, issue.key);
@@ -474,7 +472,6 @@ function IssueView({
       <CommentsSection
         org={org}
         issueKey={issue.key}
-        activity={activity.data ?? []}
         currentUserId={session.data?.user.id ?? ''}
         canComment={canComment}
         canDeleteAny={canDeleteAnyComment}

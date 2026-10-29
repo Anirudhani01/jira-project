@@ -27,6 +27,7 @@ export type ProjectMember = Schemas['ProjectMemberResponse'];
 export type Issue = Schemas['IssueResponse'];
 export type IssueList = Schemas['IssueListResponse'];
 export type IssueActivity = Schemas['ActivityResponse'];
+export type IssueActivityList = Schemas['ActivityListResponse'];
 export type IssueType = Schemas['IssueTypeResponse'];
 export type Priority = Schemas['PriorityResponse'];
 export type Label = Schemas['LabelResponse'];

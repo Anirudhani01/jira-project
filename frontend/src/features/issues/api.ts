@@ -4,7 +4,7 @@ import { apiFetch } from '../../lib/api/client';
 import type {
   ChildrenList,
   Issue,
-  IssueActivity,
+  IssueActivityList,
   IssueList,
   IssueType,
   Label,
@@ -50,11 +50,23 @@ export function useIssue(org: string, key: string, enabled = true) {
   });
 }
 
+/** Cursor-paginated, same pattern as `useComments`/`useIssues`: the issue detail page
+ * merges this with comments into one timeline (`features/comments/timeline.ts`). Each
+ * `fetchNextPage` requests the next API page (forward in `created_at` / activity-id order)
+ * using the prior response's `next_cursor`. */
 export function useIssueActivity(org: string, key: string) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: [...issueKey(org, key), 'activity'],
-    queryFn: () =>
-      apiFetch<{ items: IssueActivity[] }>(`${issuePath(org, key)}/activity`).then((r) => r.items),
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) => {
+      const params = new URLSearchParams();
+      if (pageParam) params.set('cursor', pageParam);
+      const query = params.toString();
+      return apiFetch<IssueActivityList>(
+        `${issuePath(org, key)}/activity${query ? `?${query}` : ''}`,
+      );
+    },
+    getNextPageParam: (last) => last.next_cursor,
   });
 }
 

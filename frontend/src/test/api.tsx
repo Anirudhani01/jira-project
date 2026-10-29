@@ -9,6 +9,8 @@ import { createQueryClient } from '../lib/queryClient';
 export interface MockCall {
   method: string;
   path: string;
+  /** Query string including leading `?`, or empty when absent. */
+  search: string;
   headers: Headers;
   body: unknown;
 }
@@ -42,7 +44,13 @@ export function mockApi(handlers: Record<string, Handler>): MockCall[] {
       const method = (init?.method ?? 'GET').toUpperCase();
       const path = url.pathname.replace(/^\/api\/v1/, '');
       const body: unknown = typeof init?.body === 'string' ? JSON.parse(init.body) : undefined;
-      const call = { method, path, headers: new Headers(init?.headers), body };
+      const call = {
+        method,
+        path,
+        search: url.search,
+        headers: new Headers(init?.headers),
+        body,
+      };
       calls.push(call);
       const handler = handlers[`${method} ${path}`];
       return handler ? handler(call) : problem(404, 'not_found');
