@@ -28,3 +28,7 @@ frontend/coverage/
 .vscode/
 *.log
 .tmp/
+
+# Playwright
+test-results/
+playwright-report/

@@ -236,6 +236,38 @@ In-app notifications (plan M11, R3.3 row 22), migration 0012. Decisions applied:
 - UI: a bell in the top bar with an unread badge polled every 30 s and a panel; opening an
   item marks it read.
 
+## M12 implementation record (pending review)
+Search, audit viewer and release hardening (plan M12), migrations 0013-0015. Decisions applied:
+- Search: `issues.search` is a generated `tsvector` (summary weight A, description B,
+  `english`), indexed by a GIN index built `CONCURRENTLY` in its own non-transactional
+  revision (0014). `q` on `GET /issues` matches the text or an exact issue key (`WEB-12`),
+  combines with the other filters, and respects project visibility. Results keep the normal
+  recency order; relevance ranking is not implemented.
+- Retention: the dedicated `app_retention` login role (created by `01-roles.sh` or your IaC;
+  migration 0015 refuses to run without it) may only SELECT/DELETE the purged tables. For the
+  RLS tables the age rule is also in the policy. The worker purges hourly (when
+  `RETENTION_DATABASE_URL` is set) under a Postgres advisory lock, in batches. Periods:
+  idempotency keys at expiry, tokens and sessions 30 days after expiry, notifications 90 days,
+  org audit events and platform security events 1 year. Outbox rows are not purged yet.
+- Rate limiting: one global budget per signed-in user, `API_RATE_LIMIT_PER_MINUTE` (default
+  600, 0 disables), counted in `require_session`; 429 with `Retry-After`. If Redis is down the
+  existing in-process fallback applies.
+- Audit viewer: UI at `/o/:org/settings/audit` over the existing endpoint (owners/admins).
+- Security headers reviewed, no change: the API sends nosniff, a locked-down CSP,
+  frame-ancestors none, COOP/CORP, a referrer policy and (in prod) HSTS; nginx sends the SPA's
+  CSP with `default-src 'self'`.
+- Docs: runbooks for backup/PITR, break-glass access, retention and log/trace retention
+  (`docs/runbooks/`), and a k6 baseline (`infra/k6/baseline.js`, thresholds p95 < 300 ms
+  reads and < 500 ms writes; not run in CI).
+- E2E: a Playwright journey (`frontend/e2e`, `make e2e`) covers signup, email verification,
+  organization, project, issue, search, board move and the audit log, with axe checks on the
+  board and audit pages. It found and fixed a real accessibility defect (the drag handle
+  wrapped the issue link). It needs the local stack; it is **not wired into GitHub Actions**.
+- Not done in M12: OpenTelemetry traces and metrics (nothing is instrumented yet), the k6
+  baseline has not been run against a seeded environment, the drag-and-drop gesture itself is
+  covered by component tests only (the E2E uses the card menu), and the NFR latency targets
+  have not been measured.
+
 ## Open questions
 - Retention of platform security events (proposed 1 y), application logs (30 d), traces (14 d).
 - Org audit events after org deletion (needed before org deletion is built).

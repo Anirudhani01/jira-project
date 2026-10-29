@@ -108,6 +108,10 @@ backend-test-unit:
 frontend-test: node-version-check
 	$(PNPM) test
 
+.PHONY: e2e
+e2e: node-version-check ## Playwright journeys against a running stack (make dev: API, worker, UI, Mailpit)
+	$(PNPM) e2e
+
 .PHONY: openapi openapi-check
 openapi: node-version-check ## Regenerate backend/openapi.json and frontend API types
 	$(UV) run python -m app.scripts.export_openapi

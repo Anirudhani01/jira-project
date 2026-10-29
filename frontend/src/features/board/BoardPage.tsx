@@ -81,16 +81,24 @@ function Card({ card, org, board, canMove, onMoveTo }: CardProps) {
       }}
       className={`rounded border bg-white p-2 text-sm shadow-sm ${isDragging ? 'opacity-50' : ''} ${isOver ? 'border-blue-500' : 'border-slate-200'}`}
     >
-      <div
-        {...attributes}
-        {...listeners}
-        aria-label={`${card.key}: ${card.summary}. Press space to pick up.`}
-        className={canMove ? 'cursor-grab' : ''}
-      >
-        <Link className="text-blue-700 underline" to={`/o/${org}/issues/${card.key}`}>
-          {card.key}
-        </Link>{' '}
-        {card.summary}
+      <div className="flex items-start gap-2">
+        {canMove ? (
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            aria-label={`Drag ${card.key}: ${card.summary}. Press space to pick up.`}
+            className="cursor-grab rounded px-1 text-slate-500 hover:bg-slate-100"
+          >
+            <span aria-hidden="true">⠿</span>
+          </button>
+        ) : null}
+        <div>
+          <Link className="text-blue-700 underline" to={`/o/${org}/issues/${card.key}`}>
+            {card.key}
+          </Link>{' '}
+          {card.summary}
+        </div>
       </div>
       <div className="mt-1 flex items-center justify-between text-xs text-slate-600">
         <span>{card.assignee?.display_name ?? 'Unassigned'}</span>

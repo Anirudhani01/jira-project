@@ -48,17 +48,25 @@ function IssueRow({ issue, org, canPlan, targets, onMove }: RowProps) {
       ref={setNodeRef}
       className={`flex items-center justify-between gap-2 rounded border border-slate-200 bg-white px-2 py-1 text-sm ${isDragging ? 'opacity-50' : ''}`}
     >
-      <span
-        {...attributes}
-        {...listeners}
-        aria-label={`${issue.key}: ${issue.summary}. Press space to pick up.`}
-        className={canPlan ? 'cursor-grab' : ''}
-      >
-        <Link className="text-blue-700 underline" to={`/o/${org}/issues/${issue.key}`}>
-          {issue.key}
-        </Link>{' '}
-        {issue.summary}
-        <span className="ml-2 text-xs text-slate-600">{issue.status.name}</span>
+      <span className="flex items-center gap-2">
+        {canPlan ? (
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            aria-label={`Drag ${issue.key}: ${issue.summary}. Press space to pick up.`}
+            className="cursor-grab rounded px-1 text-slate-500 hover:bg-slate-100"
+          >
+            <span aria-hidden="true">⠿</span>
+          </button>
+        ) : null}
+        <span>
+          <Link className="text-blue-700 underline" to={`/o/${org}/issues/${issue.key}`}>
+            {issue.key}
+          </Link>{' '}
+          {issue.summary}
+          <span className="ml-2 text-xs text-slate-600">{issue.status.name}</span>
+        </span>
       </span>
       {canPlan ? (
         <label className="text-xs">
