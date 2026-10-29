@@ -4,7 +4,7 @@ import sys
 
 import pytest
 
-from app.core.logging import JsonFormatter, redact, request_id_var
+from app.core.logging import JsonFormatter, redact, request_id_var, sanitized_error_extra
 
 
 def _record(message: str, *args: object, **extra: object) -> logging.LogRecord:
@@ -66,6 +66,20 @@ def test_exception_text_is_redacted() -> None:
     payload = json.loads(JsonFormatter().format(record))
     assert "topsecret" not in payload["exception"]
     assert "RuntimeError" in payload["exception"]
+
+
+def test_sanitized_error_extra_redacts_secrets_and_includes_driver_type() -> None:
+    fake_db_password = "unit-test-password-not-real"
+    driver = TimeoutError("timed out waiting for connection")
+    exc = RuntimeError(f"postgresql+asyncpg://app_rw:{fake_db_password}@host:5432/db")
+    exc.__cause__ = driver
+    extra = sanitized_error_extra(exc)
+    record = _record("db down", **extra)
+    payload = json.loads(JsonFormatter().format(record))
+    assert payload["error_type"] == "builtins.RuntimeError"
+    assert "driver_error_type" not in payload
+    assert fake_db_password not in payload["error_message"]
+    assert fake_db_password not in json.dumps(payload)
 
 
 def test_non_primitive_extra_values_are_stringified_and_redacted() -> None:

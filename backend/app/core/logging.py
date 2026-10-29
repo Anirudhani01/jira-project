@@ -24,6 +24,8 @@ ALLOWED_EXTRA_FIELDS: Final = frozenset(
         "status",
         "duration_ms",
         "error_type",
+        "driver_error_type",
+        "error_message",
         "component",
         "check",
         "outcome",
@@ -60,6 +62,26 @@ def redact(text: str) -> str:
     for pattern, replacement in _REDACTION_PATTERNS:
         text = pattern.sub(replacement, text)
     return text
+
+
+def exception_type_name(exc: BaseException) -> str:
+    cls = type(exc)
+    return f"{cls.__module__}.{cls.__qualname__}"
+
+
+def sanitized_error_extra(exc: BaseException) -> dict[str, str]:
+    """Structured ``extra=`` fields for an exception without leaking secrets."""
+    driver: BaseException = exc
+    orig = getattr(exc, "orig", None)
+    if isinstance(orig, BaseException):
+        driver = orig
+    extra: dict[str, str] = {
+        "error_type": exception_type_name(exc),
+        "error_message": redact(str(exc)),
+    }
+    if driver is not exc:
+        extra["driver_error_type"] = exception_type_name(driver)
+    return extra
 
 
 def _safe_value(value: Any) -> Any:

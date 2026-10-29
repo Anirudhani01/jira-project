@@ -1,11 +1,90 @@
+import json
+import logging
 from collections.abc import Callable
+from typing import cast
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import asyncpg
 import httpx
 import pytest
 from fastapi import FastAPI
+from sqlalchemy.exc import OperationalError
 
-from app.health import ReadinessChecks, ReadinessResponse
+from app.core.logging import JsonFormatter
+from app.health import DependencyReadinessProbe, ReadinessChecks, ReadinessResponse
 from tests.conftest import StaticReadiness
+
+DB_PASSWORD = "unit-test-db-password-not-real"
+
+
+def _wrapped_db_error() -> OperationalError:
+    driver = asyncpg.exceptions.ConnectionDoesNotExistError("connection refused")
+    return OperationalError(
+        f"connection to postgresql+asyncpg://app_rw:{DB_PASSWORD}@db.example:5432/jira failed",
+        {},
+        driver,
+    )
+
+
+def _probe() -> DependencyReadinessProbe:
+    return DependencyReadinessProbe(
+        engine=MagicMock(),
+        redis=AsyncMock(),
+        timeout_seconds=1.0,
+        enforce_role_checks=True,
+    )
+
+
+def _json_payload(record: logging.LogRecord) -> dict[str, object]:
+    return cast(dict[str, object], json.loads(JsonFormatter().format(record)))
+
+
+async def test_verify_role_at_startup_logs_sanitized_db_diagnostics(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    probe = _probe()
+    with (
+        patch("app.health.verify_runtime_role", side_effect=_wrapped_db_error()),
+        caplog.at_level(logging.WARNING, logger="app.health"),
+    ):
+        await probe.verify_role_at_startup()
+
+    record = next(r for r in caplog.records if "runtime role check deferred" in r.message)
+    payload = _json_payload(record)
+    assert payload["event"] == "db.role_check"
+    assert payload["outcome"] == "deferred"
+    assert payload["error_type"] == "sqlalchemy.exc.OperationalError"
+    assert payload["driver_error_type"] == "asyncpg.exceptions.ConnectionDoesNotExistError"
+    error_message = payload["error_message"]
+    assert isinstance(error_message, str)
+    assert "connection refused" in error_message
+    assert DB_PASSWORD not in error_message
+    assert DB_PASSWORD not in json.dumps(payload)
+
+
+async def test_readiness_database_check_logs_sanitized_db_diagnostics(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    probe = _probe()
+    probe._role_verified = True
+    engine = MagicMock()
+    connection = MagicMock()
+    connection.__aenter__ = AsyncMock(return_value=connection)
+    connection.__aexit__ = AsyncMock(return_value=None)
+    connection.execute = AsyncMock(side_effect=_wrapped_db_error())
+    engine.connect.return_value = connection
+    probe._engine = engine
+
+    with caplog.at_level(logging.WARNING, logger="app.health"):
+        state = await probe._check_database()
+
+    assert state == "unavailable"
+    record = next(r for r in caplog.records if r.message == "readiness: database unavailable")
+    payload = _json_payload(record)
+    assert payload["check"] == "database"
+    assert payload["error_type"] == "sqlalchemy.exc.OperationalError"
+    assert payload["driver_error_type"] == "asyncpg.exceptions.ConnectionDoesNotExistError"
+    assert DB_PASSWORD not in json.dumps(payload)
 
 
 async def test_healthz_is_ok(client: httpx.AsyncClient) -> None:
