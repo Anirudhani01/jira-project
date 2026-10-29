@@ -191,7 +191,8 @@ describe('home redirect and switcher', () => {
     });
     const { router } = renderApp('/o/acme');
     const user = userEvent.setup();
-    await user.selectOptions(await screen.findByLabelText('Organization'), 'beta');
+    await user.click(await screen.findByRole('button', { name: /Acme/i }));
+    await user.click(await screen.findByRole('menuitem', { name: /^Beta/ }));
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/o/beta');
     });

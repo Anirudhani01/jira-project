@@ -214,10 +214,30 @@ screenshots; `make lint test` stays green.
 
 ## 8c. Progress
 
-| PR | Status |
-|---|---|
-| 1 Foundations | **done, merged (#31)** — tokens (violet), Inter/JetBrains Mono, Radix primitives, toasts, theme provider, `/__design` gallery (dev only), axe light+dark in E2E. Dark mode is opt-in until PR 12 (legacy pages still use fixed light colours). |
-| 2-18 | fully specified in section 8d; not started |
+| PR | UI status | Backend | Notes |
+|---|---|---|---|
+| 1 Foundations | **Done (#31)** — tokens (violet), fonts, Radix primitives, toasts, theme provider, `/__design` (dev), axe E2E light+dark | **OK — none needed** | Dark mode is opt-in until PR 12; product pages still use legacy light markup until later PRs. |
+| 2 App shell | **Done (local)** — top bar, sidebar, breadcrumbs, drawer; legacy org `<select>` removed | **OK — none** | Screenshots: add to `docs/ui-redesign/after/` before merge. |
+| 3 Auth + org home + account | **Pending** — split auth layout, project cards, skeletons | **OK — none** | Open-issue count on cards only if cheap from existing APIs. |
+| 4 Board | **Pending** — rich cards, filters, sprint header, dnd polish | **OK — none** | Quick filters client-side on loaded cards (≤500). |
+| 5 Issue detail | **Pending** — modal + page, inline edit, activity tabs | **Needed (PR 5)** — additive `done`/`total` on `GET …/issues/{key}/children` | Rest uses existing issue/comment/transition APIs + `If-Match`. |
+| 6 Create issue + comboboxes | **Pending** — modal, cmdk comboboxes, idempotency | **OK — none** | Members, labels, issues search already exist. |
+| 7 Backlog | **Pending** — panels, row grid, multi-select, drag | **OK — none** | Sprint/backlog mutations already exist. |
+| 8 Issue list + search | **Pending** — sortable table, filter chips, column picker | **Needed (PR 8)** — additive `sort` for `key`, `priority`, `status`; `label` filter on `GET /issues` | Today: sort is `updated_at` / `created_at` only; no label filter param. |
+| 9 Command palette + shortcuts | **Pending** — `⌘K`, `C`, `/`, `G B/L/I`, help dialog | **OK — none** | |
+| 10 Notifications + settings + audit | **Pending** — popover, tabbed settings, column editor | **Needed (PR 10)** — additive `comment_id` on `issue_commented` notification payload | Today payload is e.g. `{"summary": …}` only; no comment deep link id. |
+| 11 Story points | **Pending** — estimate on create/detail/board/backlog | **Needed (PR 11)** — migration `issues.story_points`, create/update/activity, sprint `points_total` / `points_done` | Not in backend yet. |
+| 12 Responsive + visual QA | **Pending** — breakpoints, system theme default, screenshot CI | **OK — none** | Depends on 3–11 UI complete. |
+| 13 Swimlanes | **Pending** — group by assignee/epic (view only) | **OK — none** | Client grouping. |
+| 14 Saved filters | **Pending** — save/apply filters per user | **Needed (PR 14)** — `saved_filters` table + CRUD endpoints | Not in backend yet. |
+| 15 Bulk actions | **Pending** — assign / sprint / priority / delete bar | **Needed (PR 15)** — `POST …/issues/bulk` with per-item results | Not in backend yet. |
+| 16 Sprint reports | **Pending** — burndown, velocity, sprint report | **Needed (PR 16)** — report/burndown/velocity read endpoints | Derived from activity + sprints; no new tables. |
+| 17 Roadmap / timeline | **Pending** — epic timeline view | **Needed (PR 17)** — `GET …/roadmap` aggregation | Not in backend yet. |
+| 18 Final QA + release | **Pending** — CI screenshots, docs, cross-browser | **OK — none** | After 13–17. |
+
+**Backend today (before UI PRs 5+):** API, auth, board, backlog, sprints, notifications (M11), search column (M12), retention role, etc. are in place for local/prod — **no backend blockers for starting PR 2–4, 6, 7, or 9**. Server work is **scoped to the PRs marked “Needed” above** (additive fields/endpoints only; contract in section 0 unchanged).
+
+Full build/test specs for each UI PR: section 8d.
 
 ## 8d. PR-by-PR specification (PRs 2-18)
 
