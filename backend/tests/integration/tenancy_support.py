@@ -40,6 +40,7 @@ TENANT_TABLES = (
     "idempotency_keys",
     "labels",
     "issue_labels",
+    "comments",
 )
 
 

@@ -34,3 +34,5 @@ export type LabelList = Schemas['LabelListResponse'];
 export type Transition = Schemas['TransitionRef'];
 export type TransitionList = Schemas['TransitionListResponse'];
 export type ChildrenList = Schemas['ChildrenResponse'];
+export type Comment = Schemas['CommentResponse'];
+export type CommentList = Schemas['CommentListResponse'];
