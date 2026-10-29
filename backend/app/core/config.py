@@ -63,7 +63,9 @@ class Settings(BaseSettings):
     db_lock_timeout_ms: int = Field(default=5_000, ge=100, le=600_000)
     db_idle_in_transaction_timeout_ms: int = Field(default=60_000, ge=1_000)
     readiness_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
-    redis_timeout_seconds: float = Field(default=1.0, gt=0, le=30)
+    # First ``ping()`` opens the connection; remote TLS (e.g. Upstash ``rediss://``) needs
+    # more than 1s from cloud hosts — keep in line with ``db_connect_timeout_seconds``.
+    redis_timeout_seconds: float = Field(default=5.0, gt=0, le=30)
 
     max_request_body_bytes: int = Field(default=1_048_576, ge=1_024, le=104_857_600)
 

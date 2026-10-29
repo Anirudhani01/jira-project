@@ -23,7 +23,7 @@ from app.db.role_check import UnsafeDatabaseRoleError, verify_runtime_role
 logger = logging.getLogger("app.health")
 
 
-def _database_failure_log_extra(exc: Exception, *, timeout_seconds: float) -> dict[str, str]:
+def _readiness_failure_log_extra(exc: Exception, *, timeout_seconds: float) -> dict[str, str]:
     extra = sanitized_error_extra(exc)
     if isinstance(exc, TimeoutError):
         extra["timeout_scope"] = "readiness_deadline"
@@ -89,7 +89,7 @@ class DependencyReadinessProbe:
                 extra={
                     "event": "db.role_check",
                     "outcome": "deferred",
-                    **_database_failure_log_extra(exc, timeout_seconds=self._timeout),
+                    **_readiness_failure_log_extra(exc, timeout_seconds=self._timeout),
                 },
             )
 
@@ -114,7 +114,7 @@ class DependencyReadinessProbe:
                 extra={
                     "event": "readiness",
                     "check": "database",
-                    **_database_failure_log_extra(exc, timeout_seconds=self._timeout),
+                    **_readiness_failure_log_extra(exc, timeout_seconds=self._timeout),
                 },
             )
             return "unavailable"
@@ -127,7 +127,11 @@ class DependencyReadinessProbe:
         except Exception as exc:
             logger.warning(
                 "readiness: redis degraded",
-                extra={"event": "readiness", "check": "redis", "error_type": type(exc).__name__},
+                extra={
+                    "event": "readiness",
+                    "check": "redis",
+                    **_readiness_failure_log_extra(exc, timeout_seconds=self._timeout),
+                },
             )
             return "degraded"
         return "ok"
