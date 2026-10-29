@@ -62,6 +62,8 @@ ALLOWED_TABLES = frozenset(
         "comments",
         # M10
         "sprints",
+        # M11
+        "notifications",
     }
 )
 

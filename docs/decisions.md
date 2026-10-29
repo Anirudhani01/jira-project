@@ -218,6 +218,24 @@ Sprints and backlog (plan M10, R3.3 rows 15/21, R4), migration 0011. Decisions a
   (cap 500); closed sprints' issues are history.
 - Audit: `sprint.started` and `sprint.completed` (project, sprint name, moved count).
 
+## M11 implementation record (pending review)
+In-app notifications (plan M11, R3.3 row 22), migration 0012. Decisions applied:
+- `notifications`: recipient and actor are org members (composite FKs), the issue is in the
+  org. RLS: a recipient reads and updates (`read_at` only) their own rows; INSERT requires the
+  bound org and `actor_id = app_current_user()` (stricter than the plan, so a row cannot be
+  forged for someone else's action). `app_rw` has no DELETE; the 90-day purge is M12.
+- Generated in the triggering transaction by `notifications.service.notify`: issue assigned
+  (create or reassignment, to the new assignee), issue commented, issue status changed
+  (transition or board move), the last two to reporter and assignee. The actor is always
+  excluded, and recipients must be active org members who can view the project (org
+  owner/admin or project member), so a removed project member stops being notified.
+- Payloads carry the issue summary (and from/to status names) only, never comment text.
+- API: `GET /notifications?unread=&cursor=&limit=`, `GET /notifications/unread-count`,
+  `POST /notifications/{id}/read` (404 for someone else's, same as unknown), `POST
+  /notifications/read-all`. Any active org member may use them (own rows only).
+- UI: a bell in the top bar with an unread badge polled every 30 s and a panel; opening an
+  item marks it read.
+
 ## Open questions
 - Retention of platform security events (proposed 1 y), application logs (30 d), traces (14 d).
 - Org audit events after org deletion (needed before org deletion is built).

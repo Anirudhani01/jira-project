@@ -22,6 +22,7 @@ def import_all_models() -> None:
     from app.modules.comments import models as comment_models  # noqa: F401, PLC0415
     from app.modules.identity import models as identity_models  # noqa: F401, PLC0415
     from app.modules.issues import models as issue_models  # noqa: F401, PLC0415
+    from app.modules.notifications import models as notification_models  # noqa: F401, PLC0415
     from app.modules.orgs import models as org_models  # noqa: F401, PLC0415
     from app.modules.outbox import models as outbox_models  # noqa: F401, PLC0415
     from app.modules.projects import models as project_models  # noqa: F401, PLC0415

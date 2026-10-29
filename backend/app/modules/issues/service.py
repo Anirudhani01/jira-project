@@ -64,6 +64,7 @@ from app.modules.issues.schemas import (
     UpdateIssueRequest,
     UserRef,
 )
+from app.modules.notifications import service as notifications
 from app.modules.orgs import repository as orgs
 from app.modules.projects import repository as projects
 from app.modules.projects.models import Project
@@ -333,6 +334,14 @@ async def create_issue(
             await repository.add_activity(
                 session,
                 [{"issue_id": issue_id, "action": "created", "new_value": {"type": type_ref}}],
+            )
+            await notifications.notify(
+                session,
+                project_id=project.id,
+                issue_id=issue_id,
+                kind="issue_assigned",
+                candidates=[body.assignee_id],
+                payload={"summary": body.summary},
             )
             response = await _issue_response(session, issue_id)
             if idempotency_key is not None:
@@ -608,6 +617,16 @@ async def update_issue(
                     }
                 )
             await repository.add_activity(session, entries)
+            for column, new_value, *_ in changes:
+                if column == "assignee_id":
+                    await notifications.notify(
+                        session,
+                        project_id=project.id,
+                        issue_id=issue.id,
+                        kind="issue_assigned",
+                        candidates=[new_value],
+                        payload={"summary": issue.summary},
+                    )
         return await _issue_response(session, issue.id)
 
 
@@ -702,6 +721,19 @@ async def list_available_transitions(
     ]
 
 
+async def _notify_status_change(
+    session: AsyncSession, project: Project, issue: Any, old_name: str | None, new_name: str
+) -> None:
+    await notifications.notify(
+        session,
+        project_id=project.id,
+        issue_id=issue.id,
+        kind="issue_status_changed",
+        candidates=[issue.reporter_id, issue.assignee_id],
+        payload={"summary": issue.summary, "from": old_name, "to": new_name},
+    )
+
+
 def invalid_transition() -> AppError:
     return AppError(422, "invalid_transition", "Unknown transition for this issue.")
 
@@ -761,6 +793,9 @@ async def apply_transition(
                     "new_value": {"id": str(transition.to_status_id), "name": new_status.name},
                 }
             ],
+        )
+        await _notify_status_change(
+            session, project, issue, old_status.name if old_status else None, new_status.name
         )
         return await _issue_response(session, issue.id)
 
@@ -922,6 +957,15 @@ async def move_issue(
             ):
                 raise version_conflict()
             await repository.add_activity(session, activity)
+            if changes_status:
+                old_status = statuses.get(issue.status_id)
+                await _notify_status_change(
+                    session,
+                    project,
+                    issue,
+                    old_status.name if old_status else None,
+                    statuses[target_id].name,
+                )
         elif not await repository.set_rank(session, issue.id, new_rank):
             raise not_found()
         if ranking.needs_rebalance(new_rank):

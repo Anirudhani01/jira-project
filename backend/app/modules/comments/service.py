@@ -48,6 +48,7 @@ from app.modules.comments.schemas import (
 from app.modules.identity.deps import IdentityServices
 from app.modules.identity.directory import visible_users
 from app.modules.issues import repository as issues
+from app.modules.notifications import service as notifications
 from app.modules.projects.service import project_archived
 
 FORMER_MEMBER = "Former member"
@@ -143,6 +144,14 @@ async def create_comment(
         comment_id = uuid.uuid4()
         await repository.insert_comment(
             session, comment_id, issue.id, current.org.user_id, body.body
+        )
+        await notifications.notify(
+            session,
+            project_id=project.id,
+            issue_id=issue.id,
+            kind="issue_commented",
+            candidates=[issue.reporter_id, issue.assignee_id],
+            payload={"summary": issue.summary},
         )
         response = await _comment_response(session, comment_id)
         if idempotency_key is not None:

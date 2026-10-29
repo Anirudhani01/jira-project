@@ -40,5 +40,7 @@ export type BoardColumn = Schemas['BoardColumn'];
 export type Sprint = Schemas['SprintResponse'];
 export type Backlog = Schemas['BacklogResponse'];
 export type CompleteSprintResult = Schemas['CompleteSprintResponse'];
+export type Notification = Schemas['NotificationResponse'];
+export type NotificationList = Schemas['NotificationListResponse'];
 export type Comment = Schemas['CommentResponse'];
 export type CommentList = Schemas['CommentListResponse'];

@@ -1,6 +1,7 @@
 import { Link, Outlet, useNavigate } from 'react-router';
 
 import { useLogout, useSession } from '../features/auth/api';
+import { OrgNotificationBell } from '../features/notifications/NotificationBell';
 import { OrgSwitcher } from '../features/orgs/OrgSwitcher';
 
 function UserNav() {
@@ -24,6 +25,7 @@ function UserNav() {
   return (
     <div className="flex items-center gap-4 text-sm">
       <OrgSwitcher />
+      <OrgNotificationBell />
       <Link to="/account" className="hover:underline">
         {session.data.user.display_name}
       </Link>

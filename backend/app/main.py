@@ -30,6 +30,7 @@ from app.modules.identity.deps import IdentityServices
 from app.modules.identity.passwords import BreachChecker, PasswordHashing
 from app.modules.identity.router import router as identity_router
 from app.modules.issues.router import router as issues_router
+from app.modules.notifications.router import router as notifications_router
 from app.modules.orgs.router import router as orgs_router
 from app.modules.projects.router import router as projects_router
 from app.modules.sprints.router import router as sprints_router
@@ -114,6 +115,7 @@ def create_app(
     app.include_router(issues_router)
     app.include_router(boards_router)
     app.include_router(sprints_router)
+    app.include_router(notifications_router)
     app.include_router(comments_router)
 
     # add_middleware wraps: the last added is outermost.
