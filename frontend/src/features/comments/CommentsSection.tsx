@@ -1,30 +1,34 @@
 import { useState, type SyntheticEvent } from 'react';
 
+import { ErrorState, LoadingState } from '../../components/ui/States';
 import { FormError } from '../../components/ui/Form';
 import { ApiError } from '../../lib/api/errors';
-import type { IssueActivity } from '../../lib/api/types';
 import { describeError } from '../../lib/forms';
+import { useIssueActivity } from '../issues/api';
 
 import { useComments, useCreateComment, useDeleteComment, useUpdateComment } from './api';
+import { mergeTimeline } from './timeline';
 
 /** Comments + field-change activity, merged into one chronological timeline (plan M8 AC).
- * Ties at the same instant are broken by putting activity entries first -- a fixed,
- * deterministic rule, not insertion order from two independently-fetched lists. */
+ * Both lists are independently cursor-paginated (same contract as `GET .../comments` and
+ * `GET .../activity`); `mergeTimeline` combines whatever pages have been loaded so far,
+ * so "Load more" on either list fetches the next chronological page (via `next_cursor`)
+ * and extends the merged view without losing or duplicating entries. See `./timeline.ts`
+ * for the ordering/dedup rules. */
 export function CommentsSection({
   org,
   issueKey,
-  activity,
   currentUserId,
   canComment,
   canDeleteAny,
 }: {
   org: string;
   issueKey: string;
-  activity: IssueActivity[];
   currentUserId: string;
   canComment: boolean;
   canDeleteAny: boolean;
 }) {
+  const activity = useIssueActivity(org, issueKey);
   const comments = useComments(org, issueKey);
   const create = useCreateComment(org, issueKey);
   const update = useUpdateComment(org, issueKey);
@@ -34,15 +38,9 @@ export function CommentsSection({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
 
+  const activityItems = (activity.data?.pages ?? []).flatMap((page) => page.items);
   const items = (comments.data?.pages ?? []).flatMap((page) => page.items);
-
-  type Entry =
-    | { kind: 'activity'; at: string; activity: IssueActivity }
-    | { kind: 'comment'; at: string; comment: (typeof items)[number] };
-  const timeline: Entry[] = [
-    ...activity.map((a): Entry => ({ kind: 'activity', at: a.created_at, activity: a })),
-    ...items.map((c): Entry => ({ kind: 'comment', at: c.created_at, comment: c })),
-  ].sort((a, b) => a.at.localeCompare(b.at));
+  const timeline = mergeTimeline(activityItems, items);
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
@@ -69,10 +67,17 @@ export function CommentsSection({
       <h2 id="activity-title" className="text-lg font-semibold">
         Activity
       </h2>
+      {activity.isPending || comments.isPending ? <LoadingState label="Loading activity" /> : null}
+      {activity.isError ? (
+        <ErrorState error={activity.error} onRetry={() => void activity.refetch()} />
+      ) : null}
+      {comments.isError ? (
+        <ErrorState error={comments.error} onRetry={() => void comments.refetch()} />
+      ) : null}
       <ol className="space-y-3 text-sm">
         {timeline.map((entry) =>
           entry.kind === 'activity' ? (
-            <li key={`activity-${entry.activity.id}`}>
+            <li key={entry.key}>
               {entry.activity.actor?.display_name ?? 'System'}{' '}
               {entry.activity.action === 'updated'
                 ? `changed ${entry.activity.field ?? ''}`
@@ -85,7 +90,7 @@ export function CommentsSection({
               </time>
             </li>
           ) : (
-            <li key={entry.comment.id} className="rounded border border-slate-200 p-3">
+            <li key={entry.key} className="rounded border border-slate-200 p-3">
               <div className="flex items-center justify-between">
                 <span className="font-medium">{entry.comment.author.display_name}</span>
                 <time dateTime={entry.comment.created_at} className="text-xs text-slate-500">
@@ -176,15 +181,28 @@ export function CommentsSection({
           ),
         )}
       </ol>
-      {comments.hasNextPage ? (
-        <button
-          type="button"
-          className="text-sm text-blue-700 underline"
-          onClick={() => void comments.fetchNextPage()}
-        >
-          Load earlier comments
-        </button>
-      ) : null}
+      <div className="flex gap-4">
+        {activity.hasNextPage ? (
+          <button
+            type="button"
+            className="text-sm text-blue-700 underline"
+            disabled={activity.isFetchingNextPage}
+            onClick={() => void activity.fetchNextPage()}
+          >
+            Load more activity
+          </button>
+        ) : null}
+        {comments.hasNextPage ? (
+          <button
+            type="button"
+            className="text-sm text-blue-700 underline"
+            disabled={comments.isFetchingNextPage}
+            onClick={() => void comments.fetchNextPage()}
+          >
+            Load more comments
+          </button>
+        ) : null}
+      </div>
       {canComment ? (
         <form onSubmit={submit} className="space-y-2">
           <label className="block text-sm font-medium" htmlFor="new-comment">
