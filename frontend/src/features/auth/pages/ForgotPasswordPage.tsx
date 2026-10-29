@@ -3,9 +3,11 @@ import { useForm } from 'react-hook-form';
 import { Link } from 'react-router';
 import { z } from 'zod';
 
+import { Button } from '../../../components/ui/Button';
 import { FormError, SubmitButton, TextField } from '../../../components/ui/Form';
 import { ApiError } from '../../../lib/api/errors';
 import { applyServerErrors, describeError } from '../../../lib/forms';
+import { AuthLayout } from '../AuthLayout';
 import { useRequestPasswordReset } from '../api';
 
 const schema = z.object({ email: z.email('Enter a valid email address.').max(254) });
@@ -32,15 +34,19 @@ export function ForgotPasswordPage() {
 
   if (request.isSuccess) {
     return (
-      <section aria-labelledby="forgot-done" className="mx-auto max-w-sm space-y-4">
-        <h1 id="forgot-done" className="text-2xl font-semibold">
-          Check your email
-        </h1>
-        <p role="status">{RESET_REQUESTED_MESSAGE}</p>
-        <Link to="/login" className="text-blue-700 underline">
-          Back to sign in
-        </Link>
-      </section>
+      <AuthLayout>
+        <section aria-labelledby="forgot-done" className="space-y-4">
+          <h1 id="forgot-done" className="text-2xl font-semibold text-fg">
+            Check your email
+          </h1>
+          <p role="status" className="text-fg-muted">
+            {RESET_REQUESTED_MESSAGE}
+          </p>
+          <Button variant="link" size="sm" className="h-auto p-0" asChild>
+            <Link to="/login">Back to sign in</Link>
+          </Button>
+        </section>
+      </AuthLayout>
     );
   }
 
@@ -54,21 +60,23 @@ export function ForgotPasswordPage() {
         : null;
 
   return (
-    <section aria-labelledby="forgot-title" className="mx-auto max-w-sm space-y-6">
-      <h1 id="forgot-title" className="text-2xl font-semibold">
-        Reset your password
-      </h1>
-      <form onSubmit={(e) => void onSubmit(e)} noValidate className="space-y-4">
-        <FormError>{failure}</FormError>
-        <TextField
-          label="Email"
-          type="email"
-          autoComplete="email"
-          error={form.formState.errors.email?.message}
-          {...form.register('email')}
-        />
-        <SubmitButton pending={request.isPending}>Send reset link</SubmitButton>
-      </form>
-    </section>
+    <AuthLayout>
+      <section aria-labelledby="forgot-title" className="space-y-6">
+        <h1 id="forgot-title" className="text-2xl font-semibold text-fg">
+          Reset your password
+        </h1>
+        <form onSubmit={(e) => void onSubmit(e)} noValidate className="space-y-4">
+          <FormError>{failure}</FormError>
+          <TextField
+            label="Email"
+            type="email"
+            autoComplete="email"
+            error={form.formState.errors.email?.message}
+            {...form.register('email')}
+          />
+          <SubmitButton pending={request.isPending}>Send reset link</SubmitButton>
+        </form>
+      </section>
+    </AuthLayout>
   );
 }

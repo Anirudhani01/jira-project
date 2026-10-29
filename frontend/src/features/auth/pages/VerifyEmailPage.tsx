@@ -1,8 +1,10 @@
 import { Link } from 'react-router';
 
+import { Button } from '../../../components/ui/Button';
 import { FormError, SubmitButton } from '../../../components/ui/Form';
 import { ApiError } from '../../../lib/api/errors';
 import { describeError } from '../../../lib/forms';
+import { AuthLayout } from '../AuthLayout';
 import { useSession, useVerifyEmail } from '../api';
 import { useFragmentToken } from '../useFragmentToken';
 
@@ -20,18 +22,22 @@ export function VerifyEmailPage() {
 
   if (verify.isSuccess) {
     return (
-      <section aria-labelledby="verify-done" className="mx-auto max-w-sm space-y-4">
-        <h1 id="verify-done" className="text-2xl font-semibold">
-          Email verified
-        </h1>
-        <p role="status">
-          Your email address is verified. For your security, any other signed-in sessions were
-          signed out.
-        </p>
-        <Link to={session.data ? '/account' : '/login'} className="text-blue-700 underline">
-          {session.data ? 'Go to your account' : 'Continue to sign in'}
-        </Link>
-      </section>
+      <AuthLayout>
+        <section aria-labelledby="verify-done" className="space-y-4">
+          <h1 id="verify-done" className="text-2xl font-semibold text-fg">
+            Email verified
+          </h1>
+          <p role="status" className="text-fg-muted">
+            Your email address is verified. For your security, any other signed-in sessions were
+            signed out.
+          </p>
+          <Button variant="link" size="sm" className="h-auto p-0" asChild>
+            <Link to={session.data ? '/account' : '/login'}>
+              {session.data ? 'Go to your account' : 'Continue to sign in'}
+            </Link>
+          </Button>
+        </section>
+      </AuthLayout>
     );
   }
 
@@ -43,23 +49,25 @@ export function VerifyEmailPage() {
         : null;
 
   return (
-    <section aria-labelledby="verify-title" className="mx-auto max-w-sm space-y-6">
-      <h1 id="verify-title" className="text-2xl font-semibold">
-        Verify your email address
-      </h1>
-      <FormError>{failure}</FormError>
-      {token ? (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            verify.mutate({ token });
-          }}
-        >
-          <SubmitButton pending={verify.isPending || session.isPending}>
-            Verify email address
-          </SubmitButton>
-        </form>
-      ) : null}
-    </section>
+    <AuthLayout>
+      <section aria-labelledby="verify-title" className="space-y-6">
+        <h1 id="verify-title" className="text-2xl font-semibold text-fg">
+          Verify your email address
+        </h1>
+        <FormError>{failure}</FormError>
+        {token ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              verify.mutate({ token });
+            }}
+          >
+            <SubmitButton pending={verify.isPending || session.isPending}>
+              Verify email address
+            </SubmitButton>
+          </form>
+        ) : null}
+      </section>
+    </AuthLayout>
   );
 }

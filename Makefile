@@ -133,6 +133,12 @@ frontend-test: node-version-check
 e2e: node-version-check ## Playwright journeys against a running stack (make dev: API, worker, UI, Mailpit)
 	$(PNPM) e2e
 
+.PHONY: e2e-pr3
+e2e-pr3: node-version-check ## Axe + light/dark screenshots for PR 3 routes (requires make dev)
+	$(PNPM) exec playwright test \
+		e2e/login.spec.ts e2e/signup.spec.ts e2e/org-home.spec.ts \
+		e2e/template-overview.spec.ts e2e/create-project.spec.ts e2e/account.spec.ts
+
 .PHONY: openapi openapi-check
 openapi: node-version-check ## Regenerate backend/openapi.json and frontend API types
 	$(UV) run python -m app.scripts.export_openapi

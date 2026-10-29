@@ -3,9 +3,11 @@ import { useForm } from 'react-hook-form';
 import { Link } from 'react-router';
 import { z } from 'zod';
 
+import { Button } from '../../../components/ui/Button';
 import { FormError, SubmitButton, TextField } from '../../../components/ui/Form';
 import { ApiError } from '../../../lib/api/errors';
 import { applyServerErrors, describeError } from '../../../lib/forms';
+import { AuthLayout } from '../AuthLayout';
 import { useConfirmPasswordReset } from '../api';
 import { useFragmentToken } from '../useFragmentToken';
 
@@ -43,18 +45,20 @@ export function ResetPasswordPage() {
 
   if (confirm.isSuccess) {
     return (
-      <section aria-labelledby="reset-done" className="mx-auto max-w-sm space-y-4">
-        <h1 id="reset-done" className="text-2xl font-semibold">
-          Password changed
-        </h1>
-        <p role="status">
-          Your password was changed and you were signed out everywhere. Sign in with your new
-          password.
-        </p>
-        <Link to="/login" className="text-blue-700 underline">
-          Continue to sign in
-        </Link>
-      </section>
+      <AuthLayout>
+        <section aria-labelledby="reset-done" className="space-y-4">
+          <h1 id="reset-done" className="text-2xl font-semibold text-fg">
+            Password changed
+          </h1>
+          <p role="status" className="text-fg-muted">
+            Your password was changed and you were signed out everywhere. Sign in with your new
+            password.
+          </p>
+          <Button variant="link" size="sm" className="h-auto p-0" asChild>
+            <Link to="/login">Continue to sign in</Link>
+          </Button>
+        </section>
+      </AuthLayout>
     );
   }
 
@@ -66,38 +70,41 @@ export function ResetPasswordPage() {
       : null;
 
   return (
-    <section aria-labelledby="reset-title" className="mx-auto max-w-sm space-y-6">
-      <h1 id="reset-title" className="text-2xl font-semibold">
-        Choose a new password
-      </h1>
-      {invalidLink ? (
-        <div className="space-y-3">
-          <FormError>{INVALID_RESET_LINK_MESSAGE}</FormError>
-          <Link to="/forgot-password" className="text-blue-700 underline">
-            Request a new link
-          </Link>
-        </div>
-      ) : (
-        <form onSubmit={(e) => void onSubmit(e)} noValidate className="space-y-4">
-          <FormError>{failure}</FormError>
-          <TextField
-            label="New password"
-            type="password"
-            autoComplete="new-password"
-            hint="At least 12 characters. Common or breached passwords are rejected."
-            error={errors.new_password?.message}
-            {...form.register('new_password')}
-          />
-          <TextField
-            label="Confirm new password"
-            type="password"
-            autoComplete="new-password"
-            error={errors.confirm_password?.message}
-            {...form.register('confirm_password')}
-          />
-          <SubmitButton pending={confirm.isPending}>Change password</SubmitButton>
-        </form>
-      )}
-    </section>
+    <AuthLayout>
+      <section aria-labelledby="reset-title" className="space-y-6">
+        <h1 id="reset-title" className="text-2xl font-semibold text-fg">
+          Choose a new password
+        </h1>
+        {invalidLink ? (
+          <div className="space-y-3">
+            <FormError>{INVALID_RESET_LINK_MESSAGE}</FormError>
+            <Button variant="link" size="sm" className="h-auto p-0" asChild>
+              <Link to="/forgot-password">Request a new link</Link>
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={(e) => void onSubmit(e)} noValidate className="space-y-4">
+            <FormError>{failure}</FormError>
+            <TextField
+              label="New password"
+              type="password"
+              autoComplete="new-password"
+              showStrength
+              hint="At least 12 characters. Common or breached passwords are rejected."
+              error={errors.new_password?.message}
+              {...form.register('new_password')}
+            />
+            <TextField
+              label="Confirm new password"
+              type="password"
+              autoComplete="new-password"
+              error={errors.confirm_password?.message}
+              {...form.register('confirm_password')}
+            />
+            <SubmitButton pending={confirm.isPending}>Change password</SubmitButton>
+          </form>
+        )}
+      </section>
+    </AuthLayout>
   );
 }

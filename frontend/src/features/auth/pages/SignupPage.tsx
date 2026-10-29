@@ -3,9 +3,11 @@ import { useForm } from 'react-hook-form';
 import { Link } from 'react-router';
 import { z } from 'zod';
 
+import { Button } from '../../../components/ui/Button';
 import { FormError, SubmitButton, TextField } from '../../../components/ui/Form';
 import { ApiError } from '../../../lib/api/errors';
 import { applyServerErrors, describeError } from '../../../lib/forms';
+import { AuthLayout } from '../AuthLayout';
 import { useSignup } from '../api';
 
 // Mirrors the server's limits for fast feedback; the server remains authoritative
@@ -45,15 +47,19 @@ export function SignupPage() {
 
   if (signup.isSuccess) {
     return (
-      <section aria-labelledby="signup-done" className="mx-auto max-w-sm space-y-4">
-        <h1 id="signup-done" className="text-2xl font-semibold">
-          Check your email
-        </h1>
-        <p role="status">{SIGNUP_ACCEPTED_MESSAGE}</p>
-        <Link to="/login" className="text-blue-700 underline">
-          Continue to sign in
-        </Link>
-      </section>
+      <AuthLayout>
+        <section aria-labelledby="signup-done" className="space-y-4">
+          <h1 id="signup-done" className="text-2xl font-semibold text-fg">
+            Check your email
+          </h1>
+          <p role="status" className="text-fg-muted">
+            {SIGNUP_ACCEPTED_MESSAGE}
+          </p>
+          <Button variant="link" size="sm" className="h-auto p-0" asChild>
+            <Link to="/login">Continue to sign in</Link>
+          </Button>
+        </section>
+      </AuthLayout>
     );
   }
 
@@ -63,41 +69,44 @@ export function SignupPage() {
       : null;
 
   return (
-    <section aria-labelledby="signup-title" className="mx-auto max-w-sm space-y-6">
-      <h1 id="signup-title" className="text-2xl font-semibold">
-        Create an account
-      </h1>
-      <form onSubmit={(e) => void onSubmit(e)} noValidate className="space-y-4">
-        <FormError>{failure}</FormError>
-        <TextField
-          label="Name"
-          autoComplete="name"
-          error={errors.display_name?.message}
-          {...form.register('display_name')}
-        />
-        <TextField
-          label="Email"
-          type="email"
-          autoComplete="email"
-          error={errors.email?.message}
-          {...form.register('email')}
-        />
-        <TextField
-          label="Password"
-          type="password"
-          autoComplete="new-password"
-          hint="At least 12 characters. Common or breached passwords are rejected."
-          error={errors.password?.message}
-          {...form.register('password')}
-        />
-        <SubmitButton pending={signup.isPending}>Create account</SubmitButton>
-      </form>
-      <p className="text-sm text-slate-600">
-        Already have an account?{' '}
-        <Link to="/login" className="text-blue-700 underline">
-          Sign in
-        </Link>
-      </p>
-    </section>
+    <AuthLayout>
+      <section aria-labelledby="signup-title" className="space-y-6">
+        <h1 id="signup-title" className="text-2xl font-semibold text-fg">
+          Create an account
+        </h1>
+        <form onSubmit={(e) => void onSubmit(e)} noValidate className="space-y-4">
+          <FormError>{failure}</FormError>
+          <TextField
+            label="Name"
+            autoComplete="name"
+            error={errors.display_name?.message}
+            {...form.register('display_name')}
+          />
+          <TextField
+            label="Email"
+            type="email"
+            autoComplete="email"
+            error={errors.email?.message}
+            {...form.register('email')}
+          />
+          <TextField
+            label="Password"
+            type="password"
+            autoComplete="new-password"
+            showStrength
+            hint="At least 12 characters. Common or breached passwords are rejected."
+            error={errors.password?.message}
+            {...form.register('password')}
+          />
+          <SubmitButton pending={signup.isPending}>Create account</SubmitButton>
+        </form>
+        <p className="text-sm text-fg-muted">
+          Already have an account?{' '}
+          <Button variant="link" size="sm" className="h-auto p-0" asChild>
+            <Link to="/login">Sign in</Link>
+          </Button>
+        </p>
+      </section>
+    </AuthLayout>
   );
 }

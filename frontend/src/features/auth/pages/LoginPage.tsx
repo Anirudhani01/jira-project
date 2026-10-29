@@ -3,9 +3,11 @@ import { useForm } from 'react-hook-form';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
 import { z } from 'zod';
 
+import { Button } from '../../../components/ui/Button';
 import { FormError, SubmitButton, TextField } from '../../../components/ui/Form';
 import { ApiError } from '../../../lib/api/errors';
 import { applyServerErrors, describeError } from '../../../lib/forms';
+import { AuthLayout } from '../AuthLayout';
 import { useLogin, useSession } from '../api';
 import { safeNext } from '../safeNext';
 
@@ -43,39 +45,44 @@ export function LoginPage() {
         : null;
 
   return (
-    <section aria-labelledby="login-title" className="mx-auto max-w-sm space-y-6">
-      <h1 id="login-title" className="text-2xl font-semibold">
-        Sign in
-      </h1>
-      <form onSubmit={(e) => void onSubmit(e)} noValidate className="space-y-4">
-        <FormError>{failure}</FormError>
-        <TextField
-          label="Email"
-          type="email"
-          autoComplete="username"
-          error={errors.email?.message}
-          {...form.register('email')}
-        />
-        <TextField
-          label="Password"
-          type="password"
-          autoComplete="current-password"
-          error={errors.password?.message}
-          {...form.register('password')}
-        />
-        <SubmitButton pending={login.isPending}>Sign in</SubmitButton>
-      </form>
-      <p className="text-sm text-slate-600">
-        <Link to="/forgot-password" className="text-blue-700 underline">
-          Forgot password?
-        </Link>
-      </p>
-      <p className="text-sm text-slate-600">
-        No account?{' '}
-        <Link to="/signup" className="text-blue-700 underline">
-          Create one
-        </Link>
-      </p>
-    </section>
+    <AuthLayout>
+      <section aria-labelledby="login-title" className="space-y-6">
+        <div className="space-y-1">
+          <h1 id="login-title" className="text-2xl font-semibold text-fg">
+            Sign in
+          </h1>
+          <p className="text-sm text-fg-muted">Use the email and password for your account.</p>
+        </div>
+        <form onSubmit={(e) => void onSubmit(e)} noValidate className="space-y-4">
+          <FormError>{failure}</FormError>
+          <TextField
+            label="Email"
+            type="email"
+            autoComplete="username"
+            error={errors.email?.message}
+            {...form.register('email')}
+          />
+          <TextField
+            label="Password"
+            type="password"
+            autoComplete="current-password"
+            error={errors.password?.message}
+            {...form.register('password')}
+          />
+          <SubmitButton pending={login.isPending}>Sign in</SubmitButton>
+        </form>
+        <p className="text-sm text-fg-muted">
+          <Button variant="link" size="sm" className="h-auto p-0" asChild>
+            <Link to="/forgot-password">Forgot password?</Link>
+          </Button>
+        </p>
+        <p className="text-sm text-fg-muted">
+          No account?{' '}
+          <Button variant="link" size="sm" className="h-auto p-0" asChild>
+            <Link to="/signup">Create one</Link>
+          </Button>
+        </p>
+      </section>
+    </AuthLayout>
   );
 }

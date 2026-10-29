@@ -1,51 +1,6 @@
-import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-const MAILPIT = process.env.E2E_MAILPIT_URL ?? 'http://localhost:8025';
-const PASSWORD = 'Tr0ub4dour-Staple-Quartz-81!';
-
-/** The verification link from the newest mail to `email` (the worker delivers within seconds). */
-async function verificationLink(request: APIRequestContext, email: string): Promise<string> {
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    const found = await request.get(
-      `${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`,
-    );
-    const messages = ((await found.json()) as { messages: { ID: string }[] }).messages;
-    if (messages[0]) {
-      const message = await request.get(`${MAILPIT}/api/v1/message/${messages[0].ID}`);
-      const text = ((await message.json()) as { Text: string }).Text;
-      const match = /https?:\/\/\S+\/verify-email\S*/.exec(text);
-      if (match) return match[0];
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
-  throw new Error(`no verification email for ${email}`);
-}
-
-async function signUpAndSignIn(page: Page, request: APIRequestContext, email: string) {
-  await page.goto('/signup');
-  await page.getByLabel('Name').fill('E2E User');
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(PASSWORD);
-  await page.getByRole('button', { name: /sign up|create account/i }).click();
-  await expect(page.getByText(/check your email/i)).toBeVisible();
-  await page.goto(await verificationLink(request, email));
-  await page.getByRole('button', { name: /verify/i }).click();
-  await expect(page.getByText(/verified/i).first()).toBeVisible();
-  await page.goto('/login');
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(PASSWORD);
-  await page.getByRole('button', { name: /sign in|log in/i }).click();
-  await expect(page.getByRole('button', { name: /E2E User/i })).toBeVisible();
-}
-
-async function expectNoSeriousViolations(page: Page) {
-  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
-  const serious = results.violations.filter((v) =>
-    ['serious', 'critical'].includes(v.impact ?? ''),
-  );
-  expect(serious.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
-}
+import { expectNoSeriousViolations, signUpAndSignIn } from './helpers';
 
 test('sign up, plan a project and move a card on the board', async ({ page, request }) => {
   const suffix = Date.now().toString(36);
@@ -65,7 +20,7 @@ test('sign up, plan a project and move a card on the board', async ({ page, requ
   await page.getByRole('button', { name: 'Create organization' }).click();
   await expect(page).toHaveURL(new RegExp(`/o/${slug}`));
 
-  await page.goto(`/o/${slug}/projects/new`);
+  await page.goto(`/o/${slug}/projects/new?board_type=kanban&step=create`);
   await page.getByLabel('Name').fill('Website');
   await page.getByLabel('Key').fill(key);
   await page.getByRole('button', { name: 'Create project' }).click();

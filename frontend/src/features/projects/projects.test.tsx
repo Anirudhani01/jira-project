@@ -60,7 +60,7 @@ describe('org home project list', () => {
     renderApp('/o/acme');
     expect(await screen.findByRole('link', { name: 'WEB — Website' })).toHaveAttribute(
       'href',
-      '/o/acme/p/WEB',
+      '/o/acme/p/WEB/board',
     );
     expect(screen.queryByRole('link', { name: 'Create project' })).toBeNull();
   });
@@ -80,6 +80,19 @@ describe('org home project list', () => {
 });
 
 describe('CreateProjectPage', () => {
+  it('shows template overview before the create form', async () => {
+    mockApi({ 'GET /auth/session': () => json(SESSION) });
+    renderApp('/o/acme/projects/new?board_type=kanban');
+    expect(await screen.findByRole('heading', { name: 'Kanban template' })).toBeInTheDocument();
+    expect(screen.getByText('Template overview')).toBeInTheDocument();
+    expect(screen.getByText('Preview')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Name')).toBeNull();
+    expect(screen.getByRole('link', { name: 'Use this template' })).toHaveAttribute(
+      'href',
+      '/o/acme/projects/new?board_type=kanban&step=create',
+    );
+  });
+
   it('creates a project with an uppercased key and opens it', async () => {
     const calls = mockApi({
       'GET /auth/session': () => json(SESSION),
@@ -92,13 +105,13 @@ describe('CreateProjectPage', () => {
       'GET /orgs/acme/projects/WEB/workflow': () => json(WORKFLOW),
       'GET /orgs/acme/projects/WEB/members': () => json({ items: [] }),
     });
-    const { router } = renderApp('/o/acme/projects/new');
+    const { router } = renderApp('/o/acme/projects/new?board_type=kanban&step=create');
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText('Name'), 'Website');
     await user.type(screen.getByLabelText('Key'), 'web');
     await user.click(screen.getByRole('button', { name: 'Create project' }));
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/o/acme/p/WEB');
+      expect(router.state.location.pathname).toBe('/o/acme/p/WEB/board');
     });
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
       name: 'Website',
@@ -115,7 +128,7 @@ describe('CreateProjectPage', () => {
           errors: [{ field: 'body.key', message: 'is already used' }],
         }),
     });
-    renderApp('/o/acme/projects/new');
+    renderApp('/o/acme/projects/new?board_type=kanban&step=create');
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText('Name'), 'Website');
     await user.type(screen.getByLabelText('Key'), 'WEB');

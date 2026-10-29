@@ -1,9 +1,12 @@
 import { Link } from 'react-router';
 
+import { Button } from '../../../components/ui/Button';
 import { FormError, SubmitButton } from '../../../components/ui/Form';
+import { SimpleFormPage } from '../../../components/ui/SimpleFormPage';
 import { LoadingState } from '../../../components/ui/States';
 import { ApiError } from '../../../lib/api/errors';
 import { describeError } from '../../../lib/forms';
+import { AuthLayout } from '../../auth/AuthLayout';
 import { useSession } from '../../auth/api';
 import { useFragmentToken } from '../../auth/useFragmentToken';
 import { rememberOrg, useAcceptInvitation } from '../api';
@@ -47,20 +50,24 @@ export function AcceptInvitationPage() {
   const acceptInvitation = useAcceptInvitation();
 
   if (session.isPending) return <LoadingState label="Checking your session" />;
+
   if (!session.data) {
     return (
-      <section aria-labelledby="accept-title" className="mx-auto max-w-sm space-y-4">
-        <h1 id="accept-title" className="text-2xl font-semibold">
-          Join organization
-        </h1>
-        <p>Sign in with the email address the invitation was sent to, then accept it here.</p>
-        <Link
-          to={`/login?next=${encodeURIComponent('/invitations/accept')}`}
-          className="text-blue-700 underline"
-        >
-          Sign in to accept
-        </Link>
-      </section>
+      <AuthLayout>
+        <section aria-labelledby="accept-title" className="space-y-4">
+          <h1 id="accept-title" className="text-2xl font-semibold text-fg">
+            Join organization
+          </h1>
+          <p className="text-fg-muted">
+            Sign in with the email address the invitation was sent to, then accept it here.
+          </p>
+          <Button variant="primary" asChild>
+            <Link to={`/login?next=${encodeURIComponent('/invitations/accept')}`}>
+              Sign in to accept
+            </Link>
+          </Button>
+        </section>
+      </AuthLayout>
     );
   }
 
@@ -69,14 +76,11 @@ export function AcceptInvitationPage() {
     rememberOrg(joined.slug);
     forgetPendingToken();
     return (
-      <section aria-labelledby="joined-title" className="mx-auto max-w-sm space-y-4">
-        <h1 id="joined-title" className="text-2xl font-semibold">
-          Welcome to {joined.name}
-        </h1>
-        <Link to={`/o/${joined.slug}`} className="text-blue-700 underline">
-          Open {joined.name}
-        </Link>
-      </section>
+      <SimpleFormPage title={`Welcome to ${joined.name}`} titleId="joined-title">
+        <Button variant="primary" asChild>
+          <Link to={`/o/${joined.slug}`}>Open {joined.name}</Link>
+        </Button>
+      </SimpleFormPage>
     );
   }
 
@@ -90,10 +94,7 @@ export function AcceptInvitationPage() {
         : null;
 
   return (
-    <section aria-labelledby="accept-title" className="mx-auto max-w-sm space-y-6">
-      <h1 id="accept-title" className="text-2xl font-semibold">
-        Join organization
-      </h1>
+    <SimpleFormPage title="Join organization" titleId="accept-title">
       <FormError>{failure}</FormError>
       {token ? (
         <form
@@ -105,6 +106,6 @@ export function AcceptInvitationPage() {
           <SubmitButton pending={acceptInvitation.isPending}>Accept invitation</SubmitButton>
         </form>
       ) : null}
-    </section>
+    </SimpleFormPage>
   );
 }

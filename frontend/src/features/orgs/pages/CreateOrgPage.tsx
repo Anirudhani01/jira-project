@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 import { z } from 'zod';
 
 import { FormError, SubmitButton, TextField } from '../../../components/ui/Form';
+import { SimpleFormPage } from '../../../components/ui/SimpleFormPage';
 import { ApiError } from '../../../lib/api/errors';
 import { applyServerErrors, describeError } from '../../../lib/forms';
 import { useSession } from '../../auth/api';
@@ -36,14 +37,11 @@ export function CreateOrgPage() {
 
   if (session.data && !session.data.user.email_verified) {
     return (
-      <section aria-labelledby="new-org-title" className="mx-auto max-w-sm space-y-4">
-        <h1 id="new-org-title" className="text-2xl font-semibold">
-          Create an organization
-        </h1>
-        <p role="status" className="rounded border border-amber-200 bg-amber-50 p-3 text-sm">
+      <SimpleFormPage title="Create an organization" titleId="new-org-title">
+        <p role="status" className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">
           {VERIFY_FIRST_MESSAGE}
         </p>
-      </section>
+      </SimpleFormPage>
     );
   }
 
@@ -66,10 +64,7 @@ export function CreateOrgPage() {
         : null;
 
   return (
-    <section aria-labelledby="new-org-title" className="mx-auto max-w-sm space-y-6">
-      <h1 id="new-org-title" className="text-2xl font-semibold">
-        Create an organization
-      </h1>
+    <SimpleFormPage title="Create an organization" titleId="new-org-title">
       <form onSubmit={(e) => void onSubmit(e)} noValidate className="space-y-4">
         <FormError>{failure}</FormError>
         <TextField label="Name" error={errors.name?.message} {...form.register('name')} />
@@ -83,6 +78,6 @@ export function CreateOrgPage() {
         />
         <SubmitButton pending={create.isPending}>Create organization</SubmitButton>
       </form>
-    </section>
+    </SimpleFormPage>
   );
 }
