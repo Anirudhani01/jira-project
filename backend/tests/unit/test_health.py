@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from collections.abc import Callable
@@ -37,6 +38,30 @@ def _probe() -> DependencyReadinessProbe:
 
 def _json_payload(record: logging.LogRecord) -> dict[str, object]:
     return cast(dict[str, object], json.loads(JsonFormatter().format(record)))
+
+
+async def test_verify_role_at_startup_logs_readiness_deadline_timeout(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    async def hang_forever(*_: object, **__: object) -> None:
+        await asyncio.sleep(60)
+
+    probe = _probe()
+    probe._timeout = 0.05
+    with (
+        patch("app.health.verify_runtime_role", side_effect=hang_forever),
+        caplog.at_level(logging.WARNING, logger="app.health"),
+    ):
+        await probe.verify_role_at_startup()
+
+    record = next(r for r in caplog.records if "runtime role check deferred" in r.message)
+    payload = _json_payload(record)
+    assert payload["error_type"] == "builtins.TimeoutError"
+    assert payload["timeout_scope"] == "readiness_deadline"
+    assert payload["timeout_seconds"] == "0.05"
+    error_message = payload["error_message"]
+    assert isinstance(error_message, str)
+    assert error_message
 
 
 async def test_verify_role_at_startup_logs_sanitized_db_diagnostics(
