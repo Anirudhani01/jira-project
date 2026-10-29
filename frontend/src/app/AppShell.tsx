@@ -16,7 +16,10 @@ function UserNav() {
         <Link to="/login" className="hover:underline">
           Sign in
         </Link>
-        <Link to="/signup" className="rounded bg-blue-700 px-3 py-1.5 text-white hover:bg-blue-800">
+        <Link
+          to="/signup"
+          className="rounded-md bg-accent px-3 py-1.5 text-accent-fg no-underline hover:bg-accent-hover"
+        >
           Sign up
         </Link>
       </div>
@@ -35,12 +38,12 @@ function UserNav() {
         onClick={() => {
           logout.mutate(undefined, { onSuccess: () => void navigate('/login') });
         }}
-        className="text-slate-700 hover:underline disabled:opacity-60"
+        className="text-fg-muted hover:underline disabled:opacity-60"
       >
         Sign out
       </button>
       {logout.isError ? (
-        <span role="alert" className="text-red-700">
+        <span role="alert" className="text-danger">
           Sign-out failed. Try again.
         </span>
       ) : null}
@@ -50,14 +53,14 @@ function UserNav() {
 
 export function AppShell() {
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
+    <div className="flex min-h-screen flex-col bg-bg text-fg">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:shadow"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:rounded focus:bg-surface focus:px-3 focus:py-2 focus:shadow"
       >
         Skip to content
       </a>
-      <header className="border-b border-slate-200 bg-white">
+      <header className="border-b border-line bg-surface">
         <nav
           aria-label="Primary"
           className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4"

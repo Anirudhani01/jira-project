@@ -1,1 +1,142 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
+
+/* Design tokens (docs/ui-redesign-plan.md §3). Components use these roles, never raw
+   colours, so light/dark and any future rebrand are a one-file change. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #eef1f5; /* sunken: columns, wells */
+  --surface-hover: #f3f5f8;
+  --line: #dfe3e8;
+  --line-strong: #c3cad4;
+  --fg: #172033;
+  --fg-muted: #4f5a6d;
+  --fg-subtle: #657085;
+  --accent: #6a45d6;
+  --accent-hover: #5632c0;
+  --accent-soft: #efeaff;
+  --accent-fg: #ffffff;
+  --danger: #c81e1e;
+  --danger-soft: #fdecec;
+  --warning: #a35a00;
+  --warning-soft: #fff3df;
+  --success: #17703a;
+  --success-soft: #e3f5ea;
+  --info: #0b6fa8;
+  --info-soft: #e1f2fb;
+  --epic: #b4308a;
+  --story: #17803d;
+  --task: #2563eb;
+  --bug: #c81e1e;
+  --subtask: #0e7490;
+  --p-highest: #c81e1e;
+  --p-high: #d9480f;
+  --p-medium: #b7791f;
+  --p-low: #2563eb;
+  --p-lowest: #657085;
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
+  --shadow-md: 0 4px 12px rgb(16 24 40 / 0.1);
+  --shadow-lg: 0 12px 32px rgb(16 24 40 / 0.18);
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: #0e1320;
+  --surface: #161c2b;
+  --surface-2: #111726;
+  --surface-hover: #1c2335;
+  --line: #28324a;
+  --line-strong: #3a4664;
+  --fg: #e7eaf2;
+  --fg-muted: #aab3c5;
+  --fg-subtle: #8791a6;
+  --accent: #b69cff;
+  --accent-hover: #cbb8ff;
+  --accent-soft: #2a2150;
+  --accent-fg: #130d2b;
+  --danger: #ff8a8a;
+  --danger-soft: #3a1c22;
+  --warning: #f5b351;
+  --warning-soft: #3a2a12;
+  --success: #6dd49a;
+  --success-soft: #14301f;
+  --info: #6cc3f0;
+  --info-soft: #12303f;
+  --epic: #f08ccb;
+  --story: #6dd49a;
+  --task: #7aa7ff;
+  --bug: #ff8a8a;
+  --subtask: #5fd3ea;
+  --p-highest: #ff8a8a;
+  --p-high: #ff9a62;
+  --p-medium: #f5b351;
+  --p-low: #7aa7ff;
+  --p-lowest: #8791a6;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, monospace;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-hover: var(--surface-hover);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+}
+
+@layer base {
+  html {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    min-height: 100vh;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  a {
+    color: var(--accent);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

@@ -212,6 +212,13 @@ screenshots; `make lint test` stays green.
 | 17 | Roadmap/timeline | epic timeline by sprint/date | none (uses sprint dates, epics) |
 | 18 | Final QA | full screenshot baseline in CI, a11y and performance budget sweep, docs | none |
 
+## 8c. Progress
+
+| PR | Status |
+|---|---|
+| 1 Foundations | **done** — tokens (violet), Inter/JetBrains Mono, Radix primitives, toasts, theme provider, `/__design` gallery (dev only), axe light+dark in E2E. Dark mode is opt-in until PR 12 (legacy pages still use fixed light colours). |
+| 2-18 | not started |
+
 ## 9. Decisions (resolved — see section 0)
 
 These were the open questions; the answers are recorded in section 0:

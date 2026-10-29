@@ -10,6 +10,7 @@ export default tseslint.config(
       'coverage',
       'node_modules',
       'src/lib/api/schema.d.ts',
+      'public',
       'e2e',
       'playwright.config.ts',
       'test-results',
