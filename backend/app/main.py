@@ -77,7 +77,7 @@ def create_app(
         keys=keys,
         hashing=PasswordHashing(settings),
         breach_checker=breach_checker or BreachChecker(settings),
-        limiter=RateLimiter(redis, keys),
+        limiter=RateLimiter(redis, keys, enabled=settings.rate_limit_enabled),
     )
 
     @asynccontextmanager

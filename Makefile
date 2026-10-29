@@ -10,13 +10,15 @@ ENV_FILE ?= $(if $(wildcard .env),.env,.env.example)
 include $(ENV_FILE)
 export
 
-COMPOSE := docker compose -f infra/docker-compose.yml --env-file $(ENV_FILE)
+# Prefer standalone docker-compose when `docker compose` is unavailable (some Colima setups).
+COMPOSE := $(shell if docker compose version >/dev/null 2>&1; then echo 'docker compose'; else echo docker-compose; fi) -f infra/docker-compose.yml --env-file $(ENV_FILE)
 GITLEAKS_IMAGE := zricethezav/gitleaks:v8.28.0
 TMP_DIR := $(CURDIR)/.tmp
 # Ignore a stale VIRTUAL_ENV from another repo; uv installs into backend/venv (UV_PROJECT_ENVIRONMENT).
 UV := cd backend && env -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT=venv uv
 PNPM := cd frontend && pnpm
-NODE_PIN := $(strip $(file < .nvmrc))
+# `$(file < …)` needs GNU Make 4.x; macOS ships 3.81, so read .nvmrc via the shell.
+NODE_PIN := $(strip $(shell tr -d ' \n\r' < .nvmrc))
 
 .PHONY: help
 help: ## List targets

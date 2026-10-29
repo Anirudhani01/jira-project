@@ -69,10 +69,10 @@ def password_rejected(message: str, field: str) -> AppError:
 
 async def reserve_rate_limit(
     services: IdentityServices, rule: RateLimit, subject: str, client: ClientInfo
-) -> Reservation:
+) -> Reservation | None:
     """Atomically take a rate-limit slot or fail with 429 (no check-then-act race)."""
     acquired = await services.limiter.acquire(rule, subject)
-    if acquired.reservation is not None:
+    if not acquired.blocked:
         return acquired.reservation
     await events.record_isolated(
         services.sessionmaker, "auth.rate_limited", "failure", client, metadata={"rule": rule.name}

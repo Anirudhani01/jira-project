@@ -111,6 +111,8 @@ class Settings(BaseSettings):
     breach_check_mode: BreachCheckMode = "hibp"
     hibp_base_url: str = "https://api.pwnedpasswords.com"
     hibp_timeout_ms: int = Field(default=2_000, ge=100, le=10_000)
+    # Auth/org rate limits (Redis sliding windows). Off only for local dev/test debugging.
+    rate_limit_enabled: bool = True
 
     @field_validator("database_url", "migration_database_url", "worker_database_url")
     @classmethod
@@ -222,6 +224,8 @@ class Settings(BaseSettings):
         ):
             problems.append("SIGNUP_ENABLED requires EMAIL_DELIVERY_ENABLED in prod (D1)")
         problems += self._production_email_problems()
+        if not self.rate_limit_enabled:
+            problems.append("RATE_LIMIT_ENABLED must be true")
         if self.breach_check_mode != "hibp":
             problems.append("BREACH_CHECK_MODE must be hibp")
         if not self.hibp_base_url.startswith("https://"):

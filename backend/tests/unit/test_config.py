@@ -112,6 +112,7 @@ def test_unknown_environment_is_rejected() -> None:
     ("overrides", "expected"),
     [
         ({"signup_enabled": True}, "SIGNUP_ENABLED requires EMAIL_DELIVERY_ENABLED"),
+        ({"rate_limit_enabled": False}, "RATE_LIMIT_ENABLED must be true"),
         ({"breach_check_mode": "local_only"}, "BREACH_CHECK_MODE must be hibp"),
         ({"hibp_base_url": "http://hibp.example"}, "HIBP_BASE_URL must use https"),
         ({"password_hash_time_cost": 1}, "below OWASP minimums"),
