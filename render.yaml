@@ -80,11 +80,10 @@ services:
     routes:
       # Proxied through the same origin the browser sees, so the session cookie
       # (SameSite=Lax, __Host- prefixed) and the absence of CORS both keep working
-      # exactly as in local/dev. Replace the destination with jira-backend's actual
-      # Render URL (or a custom domain) before deploying.
+      # exactly as in local/dev.
       - type: rewrite
         source: /api/*
-        destination: https://jira-backend.onrender.com/api/*
+        destination: https://jira-project.onrender.com/api/*
       - type: rewrite
         source: /*
         destination: /index.html
