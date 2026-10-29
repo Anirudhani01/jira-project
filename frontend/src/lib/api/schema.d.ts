@@ -424,6 +424,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orgs/{org_slug}/issues/{issue_key}/children": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Children
+         * @description Direct children only: a sub-task has none; a standard issue's are sub-tasks; an
+         *     epic's are standard issues (plan M7).
+         */
+        get: operations["list_children_api_v1_orgs__org_slug__issues__issue_key__children_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/issues/{issue_key}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Transitions
+         * @description Transitions permitted from the issue's current status.
+         */
+        get: operations["list_transitions_api_v1_orgs__org_slug__issues__issue_key__transitions_get"];
+        put?: never;
+        /**
+         * Apply Transition
+         * @description Requires ``If-Match: "v<version>"``, exactly like ``PATCH`` (428/412).
+         */
+        post: operations["apply_transition_api_v1_orgs__org_slug__issues__issue_key__transitions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orgs/{org_slug}/members": {
         parameters: {
             query?: never;
@@ -555,6 +600,41 @@ export interface paths {
          */
         post: operations["create_issue_api_v1_orgs__org_slug__projects__project_key__issues_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Labels */
+        get: operations["list_labels_api_v1_orgs__org_slug__projects__project_key__labels_get"];
+        put?: never;
+        /** Create Label */
+        post: operations["create_label_api_v1_orgs__org_slug__projects__project_key__labels_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/labels/{label_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Label */
+        delete: operations["delete_label_api_v1_orgs__org_slug__projects__project_key__labels__label_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -724,6 +804,14 @@ export interface components {
              */
             user_id: string;
         };
+        /** ApplyTransitionRequest */
+        ApplyTransitionRequest: {
+            /**
+             * Transition Id
+             * Format: uuid
+             */
+            transition_id: string;
+        };
         /** AuditEventListResponse */
         AuditEventListResponse: {
             /** Items */
@@ -768,6 +856,11 @@ export interface components {
             /** New Password */
             new_password: string;
         };
+        /** ChildrenResponse */
+        ChildrenResponse: {
+            /** Items */
+            items: components["schemas"]["IssueResponse"][];
+        };
         /** ColumnResponse */
         ColumnResponse: {
             /** Name */
@@ -789,8 +882,14 @@ export interface components {
         };
         /** CreateIssueRequest */
         CreateIssueRequest: {
+            /** Assignee Id */
+            assignee_id?: string | null;
             /** Description */
             description?: string | null;
+            /** Label Ids */
+            label_ids?: string[] | null;
+            /** Parent Id */
+            parent_id?: string | null;
             /**
              * Priority Id
              * Format: uuid
@@ -803,6 +902,13 @@ export interface components {
              * Format: uuid
              */
             type_id: string;
+        };
+        /** CreateLabelRequest */
+        CreateLabelRequest: {
+            /** Color */
+            color: string;
+            /** Name */
+            name: string;
         };
         /** CreateOrgRequest */
         CreateOrgRequest: {
@@ -867,6 +973,18 @@ export interface components {
             /** Next Cursor */
             next_cursor: string | null;
         };
+        /** IssueRefShort */
+        IssueRefShort: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Summary */
+            summary: string;
+        };
         /** IssueResponse */
         IssueResponse: {
             assignee: components["schemas"]["UserRef"] | null;
@@ -884,6 +1002,9 @@ export interface components {
             id: string;
             /** Key */
             key: string;
+            /** Labels */
+            labels: components["schemas"]["LabelRef"][];
+            parent: components["schemas"]["IssueRefShort"] | null;
             priority: components["schemas"]["PriorityRef"];
             /** Project Key */
             project_key: string;
@@ -927,6 +1048,35 @@ export interface components {
             role: string;
             /** Slug */
             slug: string;
+        };
+        /** LabelListResponse */
+        LabelListResponse: {
+            /** Items */
+            items: components["schemas"]["LabelResponse"][];
+        };
+        /** LabelRef */
+        LabelRef: {
+            /** Color */
+            color: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** LabelResponse */
+        LabelResponse: {
+            /** Color */
+            color: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
         };
         /** LivenessResponse */
         LivenessResponse: {
@@ -1233,6 +1383,22 @@ export interface components {
             /** Position */
             position: number;
         };
+        /** TransitionListResponse */
+        TransitionListResponse: {
+            /** Items */
+            items: components["schemas"]["TransitionRef"][];
+        };
+        /** TransitionRef */
+        TransitionRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            to_status: components["schemas"]["StatusRef"];
+        };
         /** TransitionResponse */
         TransitionResponse: {
             /** From Status Id */
@@ -1264,11 +1430,17 @@ export interface components {
         };
         /**
          * UpdateIssueRequest
-         * @description M6: summary, description, type and priority only (assignee/parent arrive in M7).
+         * @description Status changes go through the transitions endpoints, not here.
          */
         UpdateIssueRequest: {
+            /** Assignee Id */
+            assignee_id?: string | null;
             /** Description */
             description?: string | null;
+            /** Label Ids */
+            label_ids?: string[] | null;
+            /** Parent Id */
+            parent_id?: string | null;
             /** Priority Id */
             priority_id?: string | null;
             /** Summary */
@@ -2206,6 +2378,108 @@ export interface operations {
             };
         };
     };
+    list_children_api_v1_orgs__org_slug__issues__issue_key__children_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChildrenResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_transitions_api_v1_orgs__org_slug__issues__issue_key__transitions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransitionListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_transition_api_v1_orgs__org_slug__issues__issue_key__transitions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
+            path: {
+                issue_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_members_api_v1_orgs__org_slug__members_get: {
         parameters: {
             query?: never;
@@ -2524,6 +2798,105 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["IssueResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_labels_api_v1_orgs__org_slug__projects__project_key__labels_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_label_api_v1_orgs__org_slug__projects__project_key__labels_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateLabelRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_label_api_v1_orgs__org_slug__projects__project_key__labels__label_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                label_id: string;
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

@@ -1,4 +1,4 @@
-"""Issue HTTP API (M6). All routes are org-scoped and permission-tagged; issue routes
+"""Issue HTTP API (M6/M7). All routes are org-scoped and permission-tagged; issue routes
 resolve the project through the caller's access, so invisible projects are 404."""
 
 import re
@@ -18,11 +18,17 @@ from app.modules.issues import service
 from app.modules.issues.repository import IssueFilter
 from app.modules.issues.schemas import (
     ActivityListResponse,
+    ApplyTransitionRequest,
+    ChildrenResponse,
     CreateIssueRequest,
+    CreateLabelRequest,
     IssueListResponse,
     IssueResponse,
+    LabelListResponse,
+    LabelResponse,
     SortOrder,
     StatusCategory,
+    TransitionListResponse,
     UpdateIssueRequest,
 )
 
@@ -30,9 +36,12 @@ router = APIRouter(prefix="/api/v1/orgs/{org_slug}", tags=["issues"])
 
 ViewOrg = Annotated[OrgAccess, require(Permission.ORG_VIEW)]
 CreateIssues = Annotated[ProjectAccess, require_project(Permission.ISSUE_CREATE)]
+ViewProjectLabels = Annotated[ProjectAccess, require_project(Permission.PROJECT_VIEW)]
+ManageProjectLabels = Annotated[ProjectAccess, require_project(Permission.PROJECT_MANAGE)]
 ViewIssue = Annotated[IssueRef, require_issue(Permission.PROJECT_VIEW)]
 EditIssue = Annotated[IssueRef, require_issue(Permission.ISSUE_EDIT)]
 DeleteIssue = Annotated[IssueRef, require_issue(Permission.ISSUE_DELETE)]
+TransitionIssue = Annotated[IssueRef, require_issue(Permission.ISSUE_TRANSITION)]
 
 IDEMPOTENCY_KEY = re.compile(r"[A-Za-z0-9_.:-]{1,64}")
 ETAG = re.compile(r'"v([1-9][0-9]{0,9})"')
@@ -159,3 +168,73 @@ async def list_activity(
 ) -> ActivityListResponse:
     items, next_cursor = await service.list_activity(services, ref, cursor, limit)
     return ActivityListResponse(items=items, next_cursor=next_cursor)
+
+
+@router.get("/issues/{issue_key}/children", response_model=ChildrenResponse)
+async def list_children(ref: ViewIssue, services: Services) -> ChildrenResponse:
+    """Direct children only: a sub-task has none; a standard issue's are sub-tasks; an
+    epic's are standard issues (plan M7)."""
+    return ChildrenResponse(items=await service.list_children(services, ref))
+
+
+@router.get("/issues/{issue_key}/transitions", response_model=TransitionListResponse)
+async def list_transitions(ref: ViewIssue, services: Services) -> TransitionListResponse:
+    """Transitions permitted from the issue's current status."""
+    return TransitionListResponse(items=await service.list_available_transitions(services, ref))
+
+
+@router.post(
+    "/issues/{issue_key}/transitions",
+    response_model=IssueResponse,
+    dependencies=[CsrfProtected],
+)
+async def apply_transition(
+    body: ApplyTransitionRequest,
+    ref: TransitionIssue,
+    response: Response,
+    services: Services,
+    if_match: Annotated[str | None, Header()] = None,
+) -> IssueResponse:
+    """Requires ``If-Match: "v<version>"``, exactly like ``PATCH`` (428/412)."""
+    if if_match is None:
+        raise AppError(
+            428, "precondition_required", 'Send If-Match with the issue\'s ETag ("v<version>").'
+        )
+    match = ETAG.fullmatch(if_match.strip())
+    if match is None:
+        raise service.version_conflict()
+    issue = await service.apply_transition(services, ref, body, int(match.group(1)))
+    response.headers["ETag"] = _etag(issue)
+    return issue
+
+
+@router.get("/projects/{project_key}/labels", response_model=LabelListResponse)
+async def list_labels(access: ViewProjectLabels, services: Services) -> LabelListResponse:
+    items = await service.list_labels(services, access)
+    return LabelListResponse(
+        items=[LabelResponse(id=label.id, name=label.name, color=label.color) for label in items]
+    )
+
+
+@router.post(
+    "/projects/{project_key}/labels",
+    status_code=status.HTTP_201_CREATED,
+    response_model=LabelResponse,
+    dependencies=[CsrfProtected],
+)
+async def create_label(
+    body: CreateLabelRequest, access: ManageProjectLabels, services: Services
+) -> LabelResponse:
+    return await service.create_label(services, access, name=body.name, color=body.color)
+
+
+@router.delete(
+    "/projects/{project_key}/labels/{label_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[CsrfProtected],
+)
+async def delete_label(
+    label_id: uuid.UUID, access: ManageProjectLabels, services: Services
+) -> Response:
+    await service.delete_label(services, access, label_id=label_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -1,6 +1,7 @@
 """Issue request/response models. Requests forbid unknown fields, so server-owned fields
-(key, reporter, status, version, org, ...) and M7 fields (assignee, parent) are rejected
-with 422 (mass-assignment protection)."""
+(key, reporter, status, version, org, ...) are rejected with 422 (mass-assignment
+protection). Status changes only through the transitions endpoints (M7); ``status_id`` is
+never accepted on create or update."""
 
 import uuid
 from datetime import datetime
@@ -23,15 +24,21 @@ class CreateIssueRequest(_Request):
     priority_id: uuid.UUID
     summary: Summary
     description: Description | None = None
+    assignee_id: uuid.UUID | None = None
+    parent_id: uuid.UUID | None = None
+    label_ids: list[uuid.UUID] | None = None
 
 
 class UpdateIssueRequest(_Request):
-    """M6: summary, description, type and priority only (assignee/parent arrive in M7)."""
+    """Status changes go through the transitions endpoints, not here."""
 
     summary: Summary | None = None
     description: Description | None = None
     type_id: uuid.UUID | None = None
     priority_id: uuid.UUID | None = None
+    assignee_id: uuid.UUID | None = None
+    parent_id: uuid.UUID | None = None
+    label_ids: list[uuid.UUID] | None = None
 
 
 class TypeRef(BaseModel):
@@ -57,6 +64,18 @@ class UserRef(BaseModel):
     display_name: str
 
 
+class IssueRefShort(BaseModel):
+    id: uuid.UUID
+    key: str
+    summary: str
+
+
+class LabelRef(BaseModel):
+    id: uuid.UUID
+    name: str
+    color: str
+
+
 class IssueResponse(BaseModel):
     id: uuid.UUID
     key: str
@@ -68,6 +87,8 @@ class IssueResponse(BaseModel):
     priority: PriorityRef
     reporter: UserRef
     assignee: UserRef | None
+    parent: IssueRefShort | None
+    labels: list[LabelRef]
     version: int
     created_at: datetime
     updated_at: datetime
@@ -91,3 +112,36 @@ class ActivityResponse(BaseModel):
 class ActivityListResponse(BaseModel):
     items: list[ActivityResponse]
     next_cursor: str | None
+
+
+class ChildrenResponse(BaseModel):
+    items: list[IssueResponse]
+
+
+class TransitionRef(BaseModel):
+    id: uuid.UUID
+    name: str
+    to_status: StatusRef
+
+
+class TransitionListResponse(BaseModel):
+    items: list[TransitionRef]
+
+
+class ApplyTransitionRequest(_Request):
+    transition_id: uuid.UUID
+
+
+class CreateLabelRequest(_Request):
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
+    color: Annotated[str, StringConstraints(pattern=r"^#[0-9A-Fa-f]{6}$")]
+
+
+class LabelResponse(BaseModel):
+    id: uuid.UUID
+    name: str
+    color: str
+
+
+class LabelListResponse(BaseModel):
+    items: list[LabelResponse]

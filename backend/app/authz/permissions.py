@@ -16,10 +16,12 @@ class Permission(StrEnum):
     PROJECT_VIEW = "project.view"
     PROJECT_MANAGE = "project.manage"
     PROJECT_MEMBERS_MANAGE = "project.members.manage"
-    # Issue-scoped (M6); issue.assign / issue.transition arrive in M7
+    # Issue-scoped (M6, M7)
     ISSUE_CREATE = "issue.create"
     ISSUE_EDIT = "issue.edit"
     ISSUE_DELETE = "issue.delete"
+    ISSUE_ASSIGN = "issue.assign"
+    ISSUE_TRANSITION = "issue.transition"
 
 
 _ADMIN: Final = frozenset(
@@ -65,11 +67,21 @@ _PROJECT_ALL: Final = frozenset(
         Permission.ISSUE_CREATE,
         Permission.ISSUE_EDIT,
         Permission.ISSUE_DELETE,
+        Permission.ISSUE_ASSIGN,
+        Permission.ISSUE_TRANSITION,
     }
 )
 PROJECT_ROLE_PERMISSIONS: Final[dict[str, frozenset[Permission]]] = {
     "admin": _PROJECT_ALL,
-    "member": frozenset({Permission.PROJECT_VIEW, Permission.ISSUE_CREATE, Permission.ISSUE_EDIT}),
+    "member": frozenset(
+        {
+            Permission.PROJECT_VIEW,
+            Permission.ISSUE_CREATE,
+            Permission.ISSUE_EDIT,
+            Permission.ISSUE_ASSIGN,
+            Permission.ISSUE_TRANSITION,
+        }
+    ),
     "viewer": frozenset({Permission.PROJECT_VIEW}),
 }
 
