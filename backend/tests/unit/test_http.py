@@ -156,6 +156,48 @@ async def test_hsts_enabled_in_production_like_environments(
 async def test_docs_disabled_outside_dev(client: httpx.AsyncClient) -> None:
     assert (await client.get("/api/docs")).status_code == 404
     assert (await client.get("/api/openapi.json")).status_code == 404
+    # FastAPI defaults are not registered; only /api/* paths are used when enabled.
+    assert (await client.get("/docs")).status_code == 404
+    assert (await client.get("/openapi.json")).status_code == 404
+
+
+async def test_docs_disabled_in_production_like_environment(
+    app_factory: Callable[..., FastAPI],
+) -> None:
+    application = app_factory(
+        environment="prod",
+        app_base_url="https://pm.example.com",
+        cookie_secure=True,
+        database_url=SecretStr("postgresql+asyncpg://app_rw:s3cret@db:5432/jira"),
+        migration_database_url=SecretStr("postgresql+asyncpg://app_owner:other@db:5432/jira"),
+        redis_url=SecretStr("rediss://cache:6380/0"),
+        app_secret_key=SecretStr("prod-secret-key-with-plenty-of-entropy-0123456789"),
+        breach_check_mode="hibp",
+        password_hash_time_cost=2,
+        password_hash_memory_kib=19_456,
+    )
+    transport = httpx.ASGITransport(app=application)
+    async with httpx.AsyncClient(transport=transport, base_url="http://t") as http:
+        for path in ("/api/docs", "/api/openapi.json", "/docs", "/openapi.json"):
+            assert (await http.get(path)).status_code == 404
+
+
+async def test_docs_enabled_only_in_dev(app_factory: Callable[..., FastAPI]) -> None:
+    application = app_factory(
+        environment="dev",
+        app_base_url="http://localhost:5173",
+        cookie_secure=False,
+        database_url=SecretStr("postgresql+asyncpg://app_rw:change-me-app-rw@localhost/jira"),
+    )
+    transport = httpx.ASGITransport(app=application)
+    async with httpx.AsyncClient(transport=transport, base_url="http://t") as http:
+        openapi = await http.get("/api/openapi.json")
+        assert openapi.status_code == 200
+        assert openapi.json()["openapi"].startswith("3.")
+        docs = await http.get("/api/docs")
+        assert docs.status_code == 200
+        assert (await http.get("/docs")).status_code == 404
+        assert (await http.get("/openapi.json")).status_code == 404
 
 
 async def test_oversized_body_rejected_by_content_length(client: httpx.AsyncClient) -> None:
