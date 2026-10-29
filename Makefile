@@ -188,7 +188,10 @@ ci-secrets-scan: ## Full history on main; worktree-only on PRs (CI_GITLEAKS_FULL
 	fi
 
 # ------------------------------------------------------------------------------- CI
-.PHONY: ci ci-docs
+.PHONY: test-ci-path-classify ci ci-docs
+test-ci-path-classify: ## Unit tests for PR path classification (.github/scripts)
+	python3 .github/scripts/classify_pr_paths.py
+
 ci: install infra-up lint typecheck test-parallel ci-migrate-roundtrip openapi-check build audit ci-secrets-scan ## Everything CI runs
 	@echo "make ci: all checks passed"
 

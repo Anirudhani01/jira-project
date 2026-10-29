@@ -80,7 +80,7 @@ make reset-db  # DESTRUCTIVE: also deletes the local database volume
 | `make test-parallel` | Backend unit + integration + frontend tests in parallel |
 | `make images` | Build backend and frontend container images locally (never pushed) |
 
-CI (`.github/workflows/ci.yml`) runs `make ci` then `make images` when applicable. **`main`** always gets the full gate. **Pull requests** skip heavy steps unless paths change; **docs-only** PRs run **`make ci-docs`** (gitleaks) instead of full CI. See [`docs/ci.md`](docs/ci.md).
+CI (`.github/workflows/ci.yml`) runs `make ci` then `make images` when applicable. **`main`** always gets the full gate. **Docs-only** PRs (explicit allowlist in `docs/ci.md`) run **`make ci-docs`**; require the **`CI`** check on PRs. See [`docs/ci.md`](docs/ci.md).
 
 ## Identity (M1, M2) at a glance
 
