@@ -75,10 +75,12 @@ make reset-db  # DESTRUCTIVE: also deletes the local database volume
 | `make openapi` / `make openapi-check` | regenerate / drift-check `backend/openapi.json` |
 | `make audit` | pip-audit + pnpm audit |
 | `make secrets-scan` | gitleaks over git history and the working tree (Docker) |
-| `make ci` | Install, infra, lint, typecheck, tests, migration round trip, OpenAPI drift, build, audit, secret scan |
+| `make ci` | Install, infra, lint, typecheck, parallel tests, migration round trip, OpenAPI drift, build, audit, secret scan |
+| `make ci-docs` | Docs-only PRs: gitleaks only (no app tests or Docker) |
+| `make test-parallel` | Backend unit + integration + frontend tests in parallel |
 | `make images` | Build backend and frontend container images locally (never pushed) |
 
-CI (`.github/workflows/ci.yml`) runs `make ci` then `make images` when applicable. **`main`** always gets the full gate (migration round-trip, full gitleaks history, image builds). **Pull requests** skip heavy steps unless the relevant paths change; docs-only PRs skip full CI. See [`docs/ci.md`](docs/ci.md).
+CI (`.github/workflows/ci.yml`) runs `make ci` then `make images` when applicable. **`main`** always gets the full gate. **Pull requests** skip heavy steps unless paths change; **docs-only** PRs run **`make ci-docs`** (gitleaks) instead of full CI. See [`docs/ci.md`](docs/ci.md).
 
 ## Identity (M1, M2) at a glance
 

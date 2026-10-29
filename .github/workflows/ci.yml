@@ -50,12 +50,22 @@ jobs:
               - '.gitignore'
 
   docs-only:
-    name: Docs-only (CI skipped)
+    name: Docs only (secrets scan)
     needs: changes
     if: github.event_name == 'pull_request' && needs.changes.outputs.code != 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - run: echo "Docs/markdown-only change; full CI skipped."
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: make ci-docs
+        env:
+          CI_GITLEAKS_FULL_HISTORY: "0"
+        run: make ci-docs
 
   ci:
     name: make ci
