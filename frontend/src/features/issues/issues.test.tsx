@@ -82,6 +82,21 @@ describe('issue list', () => {
     expect(post?.body).toEqual({ type_id: TASK.id, priority_id: MEDIUM.id, summary: 'New issue' });
   });
 
+  it('searches by text and sends q to the API', async () => {
+    const calls = mockApi({
+      ...CONFIG,
+      'GET /orgs/acme/issues': () => json({ items: [ISSUE], next_cursor: null }),
+    });
+    renderApp('/o/acme/p/WEB/issues');
+    await screen.findByText('Login button misaligned');
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search issues' }), 'login{enter}');
+    await waitFor(() => {
+      expect(
+        calls.some((c) => c.path === '/orgs/acme/issues' && c.search.includes('q=login')),
+      ).toBe(true);
+    });
+  });
+
   it('hides creation without the permission', async () => {
     mockApi({
       ...CONFIG,

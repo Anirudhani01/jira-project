@@ -2798,6 +2798,7 @@ export interface operations {
                 priority?: string | null;
                 assignee?: string | null;
                 updated_since?: string | null;
+                q?: string | null;
                 sort?: "-updated_at" | "updated_at" | "-created_at" | "created_at";
                 cursor?: string | null;
                 limit?: number;

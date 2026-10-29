@@ -25,6 +25,7 @@ export interface IssueFilters {
   type?: string;
   priority?: string;
   assignee?: string;
+  q?: string;
 }
 
 export function useIssues(org: string, filters: IssueFilters) {

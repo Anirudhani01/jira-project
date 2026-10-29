@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
+    Computed,
     DateTime,
     ForeignKeyConstraint,
     Identity,
@@ -22,7 +23,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.dialects.postgresql import CITEXT, JSONB, UUID
+from sqlalchemy.dialects.postgresql import CITEXT, JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -120,6 +121,7 @@ class Issue(Base):
             postgresql_where=_NOT_DELETED,
         ),
         Index("ix_issues_parent_id", "parent_id"),
+        Index("ix_issues_search", "search", postgresql_using="gin"),
         Index("ix_issues_project_id_updated_at", "project_id", text("updated_at DESC")),
         Index("ix_issues_org_id_updated_at", "org_id", text("updated_at DESC"), "id"),
         _NO_RETURNING,
@@ -142,6 +144,16 @@ class Issue(Base):
     summary: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(Text)
     rank: Mapped[str] = mapped_column(Text(collation="C"))
+    # Generated full-text vector (M12); never written, and not loaded with the row.
+    search: Mapped[Any] = mapped_column(
+        TSVECTOR,
+        Computed(
+            "setweight(to_tsvector('english'::regconfig, coalesce(summary, '')), 'A') || "
+            "setweight(to_tsvector('english'::regconfig, coalesce(description, '')), 'B')",
+            persisted=True,
+        ),
+        deferred=True,
+    )
     version: Mapped[int] = mapped_column(Integer, server_default=text("1"))
     done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(

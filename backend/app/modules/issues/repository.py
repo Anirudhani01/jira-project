@@ -4,6 +4,7 @@ All functions require a bound org context (``require_org_context``) and run unde
 which additionally hides issues of projects the caller cannot view.
 """
 
+import re
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -555,6 +556,7 @@ class IssueFilter:
     assignee: uuid.UUID | None = None
     unassigned: bool = False
     updated_since: datetime | None = None
+    q: str | None = None
 
 
 def _view_query() -> Any:
@@ -592,6 +594,44 @@ async def issue_view(session: AsyncSession, issue_id: uuid.UUID) -> Any:
     ).one()
 
 
+_KEY_QUERY = re.compile(r"([A-Za-z][A-Za-z0-9]{1,9})-([1-9][0-9]{0,8})")
+
+
+def _search_condition(query: str) -> ColumnElement[bool]:
+    """Full-text match on summary/description, or an exact issue-key match (``WEB-12``)."""
+    text_match = Issue.search.op("@@")(func.websearch_to_tsquery("english", query))
+    key = _KEY_QUERY.fullmatch(query.strip())
+    if key is None:
+        return text_match
+    return or_(
+        text_match,
+        and_(Project.key == key.group(1).upper(), Issue.seq == int(key.group(2))),
+    )
+
+
+def _filter_conditions(filters: IssueFilter) -> list[ColumnElement[bool]]:
+    conditions: list[ColumnElement[bool]] = []
+    if filters.project_id is not None:
+        conditions.append(Issue.project_id == filters.project_id)
+    if filters.status_id is not None:
+        conditions.append(Issue.status_id == filters.status_id)
+    if filters.status_category is not None:
+        conditions.append(WorkflowStatus.category == filters.status_category)
+    if filters.type_id is not None:
+        conditions.append(Issue.type_id == filters.type_id)
+    if filters.priority_id is not None:
+        conditions.append(Issue.priority_id == filters.priority_id)
+    if filters.unassigned:
+        conditions.append(Issue.assignee_id.is_(None))
+    elif filters.assignee is not None:
+        conditions.append(Issue.assignee_id == filters.assignee)
+    if filters.updated_since is not None:
+        conditions.append(Issue.updated_at >= filters.updated_since)
+    if filters.q:
+        conditions.append(_search_condition(filters.q))
+    return conditions
+
+
 async def list_issue_views(
     session: AsyncSession,
     filters: IssueFilter,
@@ -619,22 +659,7 @@ async def list_issue_views(
                 )
             )
         )
-    if filters.project_id is not None:
-        conditions.append(Issue.project_id == filters.project_id)
-    if filters.status_id is not None:
-        conditions.append(Issue.status_id == filters.status_id)
-    if filters.status_category is not None:
-        conditions.append(WorkflowStatus.category == filters.status_category)
-    if filters.type_id is not None:
-        conditions.append(Issue.type_id == filters.type_id)
-    if filters.priority_id is not None:
-        conditions.append(Issue.priority_id == filters.priority_id)
-    if filters.unassigned:
-        conditions.append(Issue.assignee_id.is_(None))
-    elif filters.assignee is not None:
-        conditions.append(Issue.assignee_id == filters.assignee)
-    if filters.updated_since is not None:
-        conditions.append(Issue.updated_at >= filters.updated_since)
+    conditions.extend(_filter_conditions(filters))
     if after is not None:
         value, last_id = after
         if descending:

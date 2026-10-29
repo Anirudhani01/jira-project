@@ -9,7 +9,7 @@ import { useProject } from '../projects/api';
 import { useIssues, useIssueTypes, usePriorities } from './api';
 import { CreateIssueDialog } from './CreateIssueDialog';
 
-const FILTERS = ['status_category', 'type', 'priority', 'assignee'] as const;
+const FILTERS = ['status_category', 'type', 'priority', 'assignee', 'q'] as const;
 
 /** Project issue list: filters live in the URL; "Load more" follows the cursor. */
 export function IssueListPage() {
@@ -72,6 +72,31 @@ export function IssueListPage() {
           </button>
         ) : null}
       </div>
+      <form
+        role="search"
+        className="flex gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const value = new FormData(event.currentTarget).get('q');
+          setFilter('q', typeof value === 'string' ? value.trim() : '');
+        }}
+      >
+        <label className="text-sm">
+          <span className="sr-only">Search issues</span>
+          <input
+            key={search.get('q') ?? ''}
+            name="q"
+            type="search"
+            maxLength={200}
+            placeholder="Search by text or key (e.g. WEB-12)"
+            defaultValue={search.get('q') ?? ''}
+            className="w-72 rounded border border-slate-300 px-2 py-1"
+          />
+        </label>
+        <button type="submit" className="rounded border border-slate-300 px-3 py-1 text-sm">
+          Search
+        </button>
+      </form>
       <div className="flex flex-wrap gap-4" role="group" aria-label="Filters">
         {select('status_category', 'Status', [
           { value: 'todo', label: 'To do' },
