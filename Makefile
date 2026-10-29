@@ -33,7 +33,8 @@ node-version-check: ## Fail unless the active Node.js major matches .nvmrc
 	  echo "Use e.g. 'nvm use' or 'fnm use' in the repository root." >&2; exit 1; \
 	fi
 
-install: backend-install frontend-install ## Install backend and frontend dependencies from lockfiles
+install: ## Install backend and frontend dependencies from lockfiles
+	$(MAKE) -j2 backend-install frontend-install
 
 backend-install:
 	$(UV) sync --frozen
@@ -78,8 +79,9 @@ migrate-roundtrip: ## Upgrade -> downgrade base -> upgrade on the test database
 	$(UV) run env MIGRATION_DATABASE_URL="$(TEST_MIGRATION_DATABASE_URL)" alembic upgrade head
 
 # -------------------------------------------------------------------------- quality
-.PHONY: lint backend-lint frontend-lint typecheck fmt
-lint: backend-lint frontend-lint ## Lint and check formatting
+.PHONY: lint backend-lint frontend-lint typecheck backend-typecheck frontend-typecheck fmt
+lint: ## Lint and check formatting
+	$(MAKE) -j2 backend-lint frontend-lint
 
 backend-lint:
 	$(UV) run ruff check .
@@ -89,9 +91,14 @@ frontend-lint: node-version-check
 	$(PNPM) lint
 	$(PNPM) format:check
 
-typecheck: node-version-check ## Static type checks (mypy, tsc)
+backend-typecheck:
 	$(UV) run mypy
+
+frontend-typecheck: node-version-check
 	$(PNPM) typecheck
+
+typecheck: ## Static type checks (mypy, tsc)
+	$(MAKE) -j2 backend-typecheck frontend-typecheck
 
 fmt: node-version-check ## Auto-format backend and frontend
 	$(UV) run ruff format .
@@ -99,7 +106,8 @@ fmt: node-version-check ## Auto-format backend and frontend
 	$(PNPM) format
 
 .PHONY: test backend-test backend-test-unit frontend-test
-test: backend-test frontend-test ## All tests (backend integration tests require infra-up)
+test: ## All tests (backend integration tests require infra-up)
+	$(MAKE) -j2 backend-test frontend-test
 
 backend-test:
 	$(UV) run env REQUIRE_INTEGRATION=1 pytest
@@ -132,11 +140,12 @@ frontend-build: node-version-check
 	$(PNPM) build
 
 images: ## Build backend and frontend container images locally (never pushed)
-	$(COMPOSE) --profile app build backend frontend
+	DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 $(COMPOSE) --profile app build backend frontend
 
 # ------------------------------------------------------------------------- security
-.PHONY: audit backend-audit frontend-audit secrets-scan
-audit: backend-audit frontend-audit ## Dependency vulnerability audit
+.PHONY: audit backend-audit frontend-audit secrets-scan secrets-scan-worktree ci-secrets-scan ci-migrate-roundtrip
+audit: ## Dependency vulnerability audit
+	$(MAKE) -j2 backend-audit frontend-audit
 
 backend-audit:
 	@mkdir -p $(TMP_DIR)
@@ -150,7 +159,24 @@ secrets-scan: ## Scan git history and the working tree for secrets (gitleaks)
 	docker run --rm -v "$(CURDIR):/repo:ro" $(GITLEAKS_IMAGE) git /repo --no-banner --redact --config /repo/.gitleaks.toml
 	docker run --rm -v "$(CURDIR):/repo:ro" $(GITLEAKS_IMAGE) dir /repo --no-banner --redact --config /repo/.gitleaks.toml
 
+secrets-scan-worktree: ## Scan the working tree only (PR CI; no full git history)
+	docker run --rm -v "$(CURDIR):/repo:ro" $(GITLEAKS_IMAGE) dir /repo --no-banner --redact --config /repo/.gitleaks.toml
+
+ci-migrate-roundtrip: ## migrate-roundtrip unless SKIP_MIGRATE_ROUNDTRIP=1 (PR path scoping)
+	@if [ "$(SKIP_MIGRATE_ROUNDTRIP)" = "1" ]; then \
+	  echo "Skipping migrate-roundtrip (SKIP_MIGRATE_ROUNDTRIP=1)"; \
+	else \
+	  $(MAKE) migrate-roundtrip; \
+	fi
+
+ci-secrets-scan: ## Full history on main; worktree-only on PRs (CI_GITLEAKS_FULL_HISTORY=1)
+	@if [ "$(CI_GITLEAKS_FULL_HISTORY)" = "1" ]; then \
+	  $(MAKE) secrets-scan; \
+	else \
+	  $(MAKE) secrets-scan-worktree; \
+	fi
+
 # ------------------------------------------------------------------------------- CI
 .PHONY: ci
-ci: install infra-up lint typecheck test migrate-roundtrip openapi-check build audit secrets-scan ## Everything CI runs
+ci: install infra-up lint typecheck test ci-migrate-roundtrip openapi-check build audit ci-secrets-scan ## Everything CI runs
 	@echo "make ci: all checks passed"

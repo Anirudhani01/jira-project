@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -14,15 +14,63 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-24.04
+    outputs:
+      migrations: ${{ steps.filter.outputs.migrations }}
+      docker: ${{ steps.filter.outputs.docker }}
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            migrations:
+              - 'backend/migrations/**'
+            docker:
+              - 'backend/Dockerfile'
+              - 'backend/.dockerignore'
+              - 'frontend/Dockerfile'
+              - 'frontend/.dockerignore'
+              - 'infra/docker-compose.yml'
+            code:
+              - 'backend/**'
+              - 'frontend/**'
+              - 'infra/**'
+              - 'Makefile'
+              - '.github/**'
+              - '.env.example'
+              - '.gitleaks.toml'
+              - '.gitignore'
+
+  docs-only:
+    name: Docs-only (CI skipped)
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.code != 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "Docs/markdown-only change; full CI skipped."
+
   ci:
     name: make ci
+    needs: changes
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main' ||
+      (github.event_name == 'pull_request' && needs.changes.outputs.code == 'true')
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - name: Checkout (full history for secret scanning)
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: ${{ github.event_name == 'pull_request' && 1 || 0 }}
           persist-credentials: false
 
       - name: Set up Python
@@ -34,6 +82,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           version: "0.11.32"
+          enable-cache: true
 
       - name: Set up pnpm (version from frontend/package.json packageManager)
         uses: pnpm/action-setup@v4
@@ -47,15 +96,21 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      # Identical to running `make ci` locally: installs from lockfiles, starts
-      # Postgres/Redis via docker compose, then lint, typecheck, tests, migration
-      # round trip, OpenAPI drift, build, dependency audit and secret scan.
       - name: make ci
+        env:
+          SKIP_MIGRATE_ROUNDTRIP: ${{ (github.ref == 'refs/heads/main' || needs.changes.outputs.migrations == 'true') && '0' || '1' }}
+          CI_GITLEAKS_FULL_HISTORY: ${{ github.event_name == 'pull_request' && '0' || '1' }}
         run: make ci
 
-      # Builds both production images on the runner to prove the Dockerfiles work.
-      # Nothing is pushed: no registry login, no credentials, no paid services.
+      - name: Set up Docker Buildx
+        if: github.ref == 'refs/heads/main' || needs.changes.outputs.docker == 'true'
+        uses: docker/setup-buildx-action@v3
+
       - name: Build container images (local only, not pushed)
+        if: github.ref == 'refs/heads/main' || needs.changes.outputs.docker == 'true'
+        env:
+          DOCKER_BUILDKIT: 1
+          COMPOSE_DOCKER_CLI_BUILD: 1
         run: make images
 
       - name: Stop services
