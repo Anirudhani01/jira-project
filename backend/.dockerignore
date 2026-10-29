@@ -7,3 +7,4 @@ tests
 openapi.json
 .env
 .env.*
+venv

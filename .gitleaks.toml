@@ -8,6 +8,7 @@ description = "Dependency, build and cache directories"
 paths = [
   '''(^|/)node_modules/''',
   '''(^|/)\.venv/''',
+  '''(^|/)venv/''',
   '''(^|/)frontend/dist/''',
   '''(^|/)\.tmp/''',
   '''(^|/)\.(mypy|ruff|pytest)_cache/''',
