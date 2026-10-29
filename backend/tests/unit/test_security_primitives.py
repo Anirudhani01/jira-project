@@ -1,13 +1,16 @@
 import asyncio
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 from pydantic import SecretStr
 from starlette.requests import Request
 
 from app.core.logging import redact
-from app.core.rate_limit import LOGIN_PER_IP_EMAIL, RateLimiter
+from app.core.rate_limit import LOGIN_PER_IP_EMAIL, SIGNUP_PER_IP, RateLimiter
+from app.modules.identity.service import reserve_rate_limit
+from app.modules.security_events.service import ClientInfo
 from app.core.security import KeyPurpose, SecretKeys, hash_token, new_session_token
 from app.main import create_redis
 from app.modules.identity.deps import client_info
@@ -43,6 +46,35 @@ def test_email_hmac_is_normalized_and_not_reversible() -> None:
     assert SecretKeys(SecretStr("z" * 40)).email_hmac("ann@example.com") != k.email_hmac(
         "ann@example.com"
     )
+
+
+async def test_rate_limiter_can_be_disabled() -> None:
+    redis = create_redis(make_settings())
+    limiter = RateLimiter(redis, keys(), enabled=False)
+    try:
+        for _ in range(50):
+            assert not (await limiter.acquire(LOGIN_PER_IP_EMAIL, "1.2.3.4|a@x.io")).blocked
+    finally:
+        await redis.aclose()
+
+
+async def test_reserve_rate_limit_is_noop_when_limiter_disabled() -> None:
+    redis = create_redis(make_settings())
+    limiter = RateLimiter(redis, keys(), enabled=False)
+    services = MagicMock()
+    services.limiter = limiter
+    try:
+        for _ in range(10):
+            assert (
+                await reserve_rate_limit(
+                    services,
+                    SIGNUP_PER_IP,
+                    "127.0.0.1",
+                    ClientInfo(ip="127.0.0.1", user_agent=None),
+                )
+            ) is None
+    finally:
+        await redis.aclose()
 
 
 async def test_rate_limiter_falls_back_in_process_when_redis_down() -> None:

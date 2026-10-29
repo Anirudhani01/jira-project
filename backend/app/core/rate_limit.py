@@ -104,9 +104,17 @@ class _LocalWindow:
 
 
 class RateLimiter:
-    def __init__(self, redis: Redis, keys: SecretKeys, *, fallback_max_keys: int = 100_000):
+    def __init__(
+        self,
+        redis: Redis,
+        keys: SecretKeys,
+        *,
+        enabled: bool = True,
+        fallback_max_keys: int = 100_000,
+    ):
         self._redis = redis
         self._keys = keys
+        self._enabled = enabled
         self._local = _LocalWindow(fallback_max_keys)
         self._acquire_script: Any = redis.register_script(_ACQUIRE_SCRIPT)
 
@@ -125,6 +133,8 @@ class RateLimiter:
 
     async def acquire(self, rule: RateLimit, subject: str) -> Acquired:
         """Atomically reserve a slot, or report how long until one frees up."""
+        if not self._enabled:
+            return Acquired(reservation=None, retry_after=None)
         key, member, now = self._key(rule, subject), uuid.uuid4().hex, time.time()
         try:
             result = await self._acquire_script(
