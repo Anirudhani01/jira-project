@@ -1,5 +1,6 @@
-"""Issues, issue activity and idempotency keys (M6). Mirrors migration 0007: every tenant
-foreign key is composite and includes ``org_id`` (plan R3.3 rows 9-15)."""
+"""Issues, issue activity, idempotency keys (M6) and labels (M7). Mirrors migrations 0007
+and 0008: every tenant foreign key is composite and includes ``org_id`` (plan R3.3 rows
+9-16)."""
 
 import uuid
 from datetime import datetime
@@ -21,7 +22,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import CITEXT, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -127,8 +128,8 @@ class Issue(Base):
     type_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     status_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     priority_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
-    parent_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))  # written from M7
-    assignee_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))  # set from M7
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    assignee_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     reporter_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     sprint_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))  # FK in M10
     summary: Mapped[str] = mapped_column(String(255))
@@ -187,3 +188,70 @@ class IdempotencyKey(Base):
         DateTime(timezone=True), server_default=text("now()")
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class Label(Base):
+    """Per-project label definitions (M7). Mirrors migration 0008 (plan R3.3 row 16)."""
+
+    __tablename__ = "labels"
+    __table_args__ = (
+        CheckConstraint(
+            "name = btrim(name) AND char_length(name) BETWEEN 1 AND 50", name="name_valid"
+        ),
+        CheckConstraint("color ~ '^#[0-9A-Fa-f]{6}$'", name="color_valid"),
+        _fk(
+            "fk_labels_org_id_projects",
+            ["org_id", "project_id"],
+            "projects",
+            ["org_id", "id"],
+            ondelete="CASCADE",
+        ),
+        UniqueConstraint("org_id", "id"),
+        UniqueConstraint("org_id", "project_id", "id"),
+        UniqueConstraint("project_id", "name"),
+        _NO_RETURNING,
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    name: Mapped[str] = mapped_column(CITEXT)
+    color: Mapped[str] = mapped_column(String(7))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+
+class IssueLabel(Base):
+    """An issue/label attachment (M7). Mirrors migration 0008 (plan R3.3 row 16)."""
+
+    __tablename__ = "issue_labels"
+    __table_args__ = (
+        _fk(
+            "fk_issue_labels_org_id_issues",
+            ["org_id", "project_id", "issue_id"],
+            "issues",
+            ["org_id", "project_id", "id"],
+            ondelete="CASCADE",
+        ),
+        _fk(
+            "fk_issue_labels_org_id_labels",
+            ["org_id", "project_id", "label_id"],
+            "labels",
+            ["org_id", "project_id", "id"],
+            ondelete="CASCADE",
+        ),
+        PrimaryKeyConstraint("issue_id", "label_id", name="pk_issue_labels"),
+        Index("ix_issue_labels_project_id_label_id", "project_id", "label_id"),
+        _NO_RETURNING,
+    )
+
+    org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    issue_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    label_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )

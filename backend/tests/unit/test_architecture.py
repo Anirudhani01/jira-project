@@ -55,6 +55,9 @@ ALLOWED_TABLES = frozenset(
         "issues",
         "issue_activity",
         "idempotency_keys",
+        # M7
+        "labels",
+        "issue_labels",
     }
 )
 

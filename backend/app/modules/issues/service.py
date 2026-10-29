@@ -1,4 +1,4 @@
-"""Issue use cases (plan M6, R4, R7-M6).
+"""Issue use cases (plan M6/M7, R4, R7-M6, R7-M7).
 
 - Every operation runs in ONE transaction that re-checks the caller's project access
   (``project_transaction``); issues of projects the caller cannot view are 404, exactly
@@ -8,8 +8,18 @@
   consumes a number; the ``created`` activity row is written in the same transaction.
 - Update: requires the version the client last saw (``If-Match``); conditional update
   bumps ``version``; one activity row per changed field, same transaction.
-- M6 edits only summary, description, type and priority; sub-task issues need a parent
-  (M7) and are rejected for now.
+- Hierarchy (M7, plan R3.3 row 12): an epic has no parent; a standard issue's parent, if
+  any, is an epic; a sub-task requires a parent that is a standard issue. The three levels
+  make cycles structurally impossible (nothing can point to a sub-task as a parent), so no
+  separate cycle check is needed. Deleting a standard issue soft-deletes its sub-tasks with
+  it; deleting an epic detaches its children instead of deleting them.
+- Assignment (M7, plan R3.3 row 14): the assignee must be an active org owner/admin
+  (implicit project admin everywhere) or hold the project's admin/member role; removed
+  members are unassigned (M4/M6's ``unassign_member``).
+- Transitions (M7, plan R3.3 row 10, invariant 6): status changes only through a
+  permitted ``workflow_transitions`` row matching the issue's current status (or one with
+  no ``from_status_id``, meaning any status); gated the same way as other mutations
+  (``If-Match``/``version``).
 """
 
 import base64
@@ -21,10 +31,10 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy.exc import DBAPIError
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.authz.deps import OrgAccess, not_found, org_transaction
+from app.authz.deps import OrgAccess, forbidden, not_found, org_transaction
 from app.authz.issues import IssueRef
 from app.authz.permissions import Permission
 from app.authz.projects import ProjectAccess, project_transaction
@@ -33,17 +43,24 @@ from app.modules.audit import service as audit
 from app.modules.identity.deps import IdentityServices
 from app.modules.identity.directory import visible_users
 from app.modules.issues import repository
+from app.modules.issues.models import Issue, Label
 from app.modules.issues.repository import IssueFilter, NewIssue
 from app.modules.issues.schemas import (
     ActivityResponse,
+    ApplyTransitionRequest,
     CreateIssueRequest,
+    IssueRefShort,
     IssueResponse,
+    LabelRef,
+    LabelResponse,
     PriorityRef,
     StatusRef,
+    TransitionRef,
     TypeRef,
     UpdateIssueRequest,
     UserRef,
 )
+from app.modules.orgs import repository as orgs
 from app.modules.projects import repository as projects
 from app.modules.projects.models import Project
 from app.modules.projects.service import project_archived
@@ -80,8 +97,18 @@ def _reporter(users: dict[uuid.UUID, Any], user_id: uuid.UUID) -> UserRef:
     return UserRef(id=user_id, display_name=user.display_name if user else FORMER_MEMBER)
 
 
-def _response(row: Any, users: dict[uuid.UUID, Any]) -> IssueResponse:
+def _response(
+    row: Any,
+    users: dict[uuid.UUID, Any],
+    labels_by_issue: dict[uuid.UUID, list[Label]],
+    parents: dict[uuid.UUID, Any],
+) -> IssueResponse:
     issue = row.Issue
+    parent_ref = None
+    if issue.parent_id is not None and (parent := parents.get(issue.parent_id)) is not None:
+        parent_ref = IssueRefShort(
+            id=issue.parent_id, key=f"{parent.project_key}-{parent.seq}", summary=parent.summary
+        )
     return IssueResponse(
         id=issue.id,
         key=f"{row.project_key}-{issue.seq}",
@@ -95,6 +122,11 @@ def _response(row: Any, users: dict[uuid.UUID, Any]) -> IssueResponse:
         ),
         reporter=_reporter(users, issue.reporter_id),
         assignee=_user(users, issue.assignee_id),
+        parent=parent_ref,
+        labels=[
+            LabelRef(id=label.id, name=label.name, color=label.color)
+            for label in labels_by_issue.get(issue.id, [])
+        ],
         version=issue.version,
         created_at=issue.created_at,
         updated_at=issue.updated_at,
@@ -106,7 +138,10 @@ async def _responses(session: AsyncSession, rows: list[Any]) -> list[IssueRespon
         r.Issue.assignee_id for r in rows if r.Issue.assignee_id
     }
     users = await visible_users(session, sorted(ids))
-    return [_response(r, users) for r in rows]
+    labels_by_issue = await repository.list_issue_labels_bulk(session, [r.Issue.id for r in rows])
+    parent_ids = sorted({r.Issue.parent_id for r in rows if r.Issue.parent_id})
+    parents = await repository.find_issue_refs(session, parent_ids)
+    return [_response(r, users, labels_by_issue, parents) for r in rows]
 
 
 async def _issue_response(session: AsyncSession, issue_id: uuid.UUID) -> IssueResponse:
@@ -115,15 +150,11 @@ async def _issue_response(session: AsyncSession, issue_id: uuid.UUID) -> IssueRe
 
 
 # ---------------------------------------------------------------------- validation
-async def _type_ref(session: AsyncSession, type_id: uuid.UUID) -> dict[str, str]:
+async def _type_kind(session: AsyncSession, type_id: uuid.UUID) -> tuple[dict[str, str], str]:
     issue_type = await repository.find_type(session, type_id)
     if issue_type is None:
         raise invalid_field("type_id", "invalid_type", "Unknown issue type.")
-    if issue_type.kind == "subtask":  # needs a parent; hierarchy arrives in M7
-        raise invalid_field(
-            "type_id", "subtask_requires_parent", "Sub-tasks can only be created under a parent."
-        )
-    return {"id": str(issue_type.id), "name": issue_type.name}
+    return {"id": str(issue_type.id), "name": issue_type.name}, issue_type.kind
 
 
 async def _priority_ref(session: AsyncSession, priority_id: uuid.UUID) -> dict[str, str]:
@@ -136,6 +167,80 @@ async def _priority_ref(session: AsyncSession, priority_id: uuid.UUID) -> dict[s
 def _writable(project: Project) -> None:
     if project.archived_at is not None:
         raise project_archived()
+
+
+async def _validate_hierarchy(
+    session: AsyncSession,
+    project_id: uuid.UUID,
+    kind: str,
+    parent_id: uuid.UUID | None,
+    *,
+    self_id: uuid.UUID | None = None,
+) -> Issue | None:
+    """Enforces the epic -> standard -> sub-task levels (plan R3.3 row 12). Returns the
+    parent row, or ``None`` when the issue has no parent. ``self_id`` (update only) rejects
+    an issue naming itself as its own parent with a clean 422: left unchecked, the request
+    can otherwise reach the database's ``ck_issues_parent_not_self`` CHECK constraint as an
+    unhandled error instead (e.g. a standard issue PATCHed to ``subtask`` with its own id
+    as ``parent_id`` -- its own, still-``standard`` kind satisfies the subtask/parent-kind
+    check above before the self-reference is ever considered)."""
+    if kind == "epic":
+        if parent_id is not None:
+            raise invalid_field(
+                "parent_id", "epic_cannot_have_parent", "Epics cannot have a parent."
+            )
+        return None
+    if kind == "subtask" and parent_id is None:
+        raise invalid_field("parent_id", "subtask_requires_parent", "Sub-tasks must have a parent.")
+    if parent_id is None:
+        return None
+    if self_id is not None and parent_id == self_id:
+        raise invalid_field(
+            "parent_id", "parent_cannot_be_self", "An issue cannot be its own parent."
+        )
+    found = await repository.find_candidate_parent(session, project_id, parent_id)
+    if found is None:
+        raise invalid_field("parent_id", "invalid_parent", "Unknown issue.")
+    parent, parent_kind = found
+    required = "standard" if kind == "subtask" else "epic"
+    if parent_kind != required:
+        raise invalid_field(
+            "parent_id", "invalid_parent_kind", f"The parent must be a {required} issue."
+        )
+    return parent
+
+
+async def _validate_assignee(
+    session: AsyncSession, project: Project, assignee_id: uuid.UUID
+) -> None:
+    """The assignee must be an active org owner/admin (implicit project admin, §1.1) or
+    hold the project's admin/member role (plan R3.3 row 14)."""
+    membership = await orgs.get_member(session, assignee_id)
+    if (
+        membership is not None
+        and membership.removed_at is None
+        and membership.role
+        in (
+            "owner",
+            "admin",
+        )
+    ):
+        return
+    role = await projects.get_project_member(session, project.id, assignee_id)
+    if role in ("admin", "member"):
+        return
+    raise invalid_field(
+        "assignee_id", "invalid_assignee", "The assignee must be an active project member."
+    )
+
+
+async def _validate_labels(
+    session: AsyncSession, project_id: uuid.UUID, label_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, Label]:
+    all_labels = {label.id: label for label in await repository.list_labels(session, project_id)}
+    if any(label_id not in all_labels for label_id in label_ids):
+        raise invalid_field("label_ids", "invalid_label", "Unknown label.")
+    return all_labels
 
 
 # --------------------------------------------------------------------------- create
@@ -185,8 +290,15 @@ async def create_issue(
                             "This Idempotency-Key was already used for a different request.",
                         )
                     return Created(IssueResponse.model_validate(stored.response_body), True)
-            type_ref = await _type_ref(session, body.type_id)
+            type_ref, kind = await _type_kind(session, body.type_id)
             await _priority_ref(session, body.priority_id)
+            await _validate_hierarchy(session, project.id, kind, body.parent_id)
+            if body.assignee_id is not None:
+                if Permission.ISSUE_ASSIGN not in current.permissions:
+                    raise forbidden()
+                await _validate_assignee(session, project, body.assignee_id)
+            if body.label_ids:
+                await _validate_labels(session, project.id, body.label_ids)
             status_id = await repository.initial_status(session, project.workflow_id)
             issue_id = uuid.uuid4()
             seq = await repository.allocate_seq(session, project.id)
@@ -202,8 +314,14 @@ async def create_issue(
                     reporter_id=current.org.user_id,
                     summary=body.summary,
                     description=body.description,
+                    parent_id=body.parent_id,
+                    assignee_id=body.assignee_id,
                 ),
             )
+            if body.label_ids:
+                await repository.set_issue_labels(
+                    session, project.id, issue_id, add=set(body.label_ids), remove=set()
+                )
             await repository.add_activity(
                 session,
                 [{"issue_id": issue_id, "action": "created", "new_value": {"type": type_ref}}],
@@ -315,11 +433,63 @@ def _required(field: str, value: object) -> None:
         raise invalid_field(field, "validation_error", "This field cannot be empty.")
 
 
+def _issue_ref(project_key: str, issue: Any) -> dict[str, str]:
+    return {"id": str(issue.id), "key": f"{project_key}-{issue.seq}"}
+
+
+async def _hierarchy_changes(
+    session: AsyncSession, project: Project, issue: Any, body: UpdateIssueRequest
+) -> list[tuple[str, Any, str, Any, Any]]:
+    """``type_id``/``parent_id`` validated together: the resulting kind (new or current)
+    governs the resulting parent (new or current), per the hierarchy levels (plan R3.3
+    row 12). Assumes the caller already required a non-null ``type_id`` if present."""
+    fields = body.model_fields_set
+    type_changing = "type_id" in fields
+    parent_changing = "parent_id" in fields
+    new_type_id = body.type_id if type_changing else issue.type_id
+    new_parent_id = body.parent_id if parent_changing else issue.parent_id
+    type_changed = type_changing and new_type_id != issue.type_id
+    parent_changed = parent_changing and new_parent_id != issue.parent_id
+    if not (type_changed or parent_changed):
+        return []
+    if type_changed and await repository.find_children(session, project.id, issue.id):
+        raise invalid_field(
+            "type_id",
+            "issue_has_children",
+            "Remove or re-parent its children before changing the type.",
+        )
+    new_type, kind = await _type_kind(session, new_type_id)  # type: ignore[arg-type]
+    parent = await _validate_hierarchy(session, project.id, kind, new_parent_id, self_id=issue.id)
+    changes: list[tuple[str, Any, str, Any, Any]] = []
+    if type_changed:
+        old_type = await repository.find_type(session, issue.type_id)
+        old = {"id": str(issue.type_id), "name": old_type.name if old_type else None}
+        changes.append(("type_id", new_type_id, "type", old, new_type))
+    if parent_changed:
+        old_parent_ref = None
+        if issue.parent_id is not None:
+            found = await repository.find_issue_refs(session, [issue.parent_id])
+            if (old_parent := found.get(issue.parent_id)) is not None:
+                old_parent_ref = {
+                    "id": str(issue.parent_id),
+                    "key": f"{old_parent.project_key}-{old_parent.seq}",
+                }
+        new_parent_ref = _issue_ref(project.key, parent) if parent is not None else None
+        changes.append(("parent_id", new_parent_id, "parent", old_parent_ref, new_parent_ref))
+    return changes
+
+
 async def _changes(
-    session: AsyncSession, issue: Any, body: UpdateIssueRequest
+    session: AsyncSession,
+    project: Project,
+    permissions: frozenset[Permission],
+    issue: Any,
+    body: UpdateIssueRequest,
 ) -> list[tuple[str, Any, str, Any, Any]]:
     """(column, new value, activity field, old activity value, new activity value) for
-    each field that actually changes."""
+    each field that actually changes. ``type_id``/``parent_id`` are validated together:
+    the resulting kind (new or current) governs the resulting parent (new or current),
+    per the hierarchy levels (plan R3.3 row 12)."""
     fields = body.model_fields_set
     changes: list[tuple[str, Any, str, Any, Any]] = []
     if "summary" in fields:
@@ -332,13 +502,10 @@ async def _changes(
             changes.append(
                 ("description", description, "description", issue.description, description)
             )
-    if "type_id" in fields:
-        _required("type_id", body.type_id)
-        if body.type_id != issue.type_id:
-            new_type = await _type_ref(session, body.type_id)  # type: ignore[arg-type]
-            old_type = await repository.find_type(session, issue.type_id)
-            old = {"id": str(issue.type_id), "name": old_type.name if old_type else None}
-            changes.append(("type_id", body.type_id, "type", old, new_type))
+    if "type_id" in fields or "parent_id" in fields:
+        if "type_id" in fields:
+            _required("type_id", body.type_id)
+        changes += await _hierarchy_changes(session, project, issue, body)
     if "priority_id" in fields:
         _required("priority_id", body.priority_id)
         if body.priority_id != issue.priority_id:
@@ -349,7 +516,40 @@ async def _changes(
                 "name": old_priority.name if old_priority else None,
             }
             changes.append(("priority_id", body.priority_id, "priority", old, new_priority))
+    if "assignee_id" in fields and body.assignee_id != issue.assignee_id:
+        if Permission.ISSUE_ASSIGN not in permissions:
+            raise forbidden()
+        if body.assignee_id is not None:
+            await _validate_assignee(session, project, body.assignee_id)
+        old_assignee = {"id": str(issue.assignee_id)} if issue.assignee_id else None
+        new_assignee = {"id": str(body.assignee_id)} if body.assignee_id else None
+        changes.append(("assignee_id", body.assignee_id, "assignee", old_assignee, new_assignee))
     return changes
+
+
+async def _label_change(
+    session: AsyncSession, project: Project, issue: Any, body: UpdateIssueRequest
+) -> tuple[set[uuid.UUID], set[uuid.UUID], list[Any], list[Any]] | None:
+    """(labels to add, labels to remove, old refs, new refs), or ``None`` if the request
+    does not touch ``label_ids`` or asks for exactly the labels already attached."""
+    if "label_ids" not in body.model_fields_set:
+        return None
+    requested = set(body.label_ids or [])
+    all_labels = await _validate_labels(session, project.id, sorted(requested))
+    current = await repository.list_issue_labels(session, issue.id)
+    current_ids = {label.id for label in current}
+    if requested == current_ids:
+        return None
+    add, remove = requested - current_ids, current_ids - requested
+    old_refs = [
+        {"id": str(label.id), "name": label.name}
+        for label in sorted(current, key=lambda label: label.name)
+    ]
+    new_refs = [
+        {"id": str(label_id), "name": all_labels[label_id].name}
+        for label_id in sorted(requested, key=lambda label_id: all_labels[label_id].name)
+    ]
+    return add, remove, old_refs, new_refs
 
 
 async def update_issue(
@@ -358,39 +558,55 @@ async def update_issue(
     async with project_transaction(services, ref.project, Permission.ISSUE_EDIT) as (
         session,
         project,
-        _,
+        current,
     ):
         _writable(project)
         issue = await _load(session, project, ref)
         if issue.version != expected_version:
             raise version_conflict()
-        changes = await _changes(session, issue, body)
-        if changes:
+        changes = await _changes(session, project, current.permissions, issue, body)
+        labels = await _label_change(session, project, issue, body)
+        if changes or labels is not None:
             values = {column: new for column, new, _, _, _ in changes}
             if (
                 await repository.update_if_version(session, issue.id, issue.version, **values)
                 is None
             ):
                 raise version_conflict()
-            await repository.add_activity(
-                session,
-                [
+            if labels is not None:
+                add, remove, _, _ = labels
+                await repository.set_issue_labels(
+                    session, project.id, issue.id, add=add, remove=remove
+                )
+            entries = [
+                {
+                    "issue_id": issue.id,
+                    "action": "updated",
+                    "field": field,
+                    "old_value": old,
+                    "new_value": new_value,
+                }
+                for _, _, field, old, new_value in changes
+            ]
+            if labels is not None:
+                _, _, old_refs, new_refs = labels
+                entries.append(
                     {
                         "issue_id": issue.id,
                         "action": "updated",
-                        "field": field,
-                        "old_value": old,
-                        "new_value": new_value,
+                        "field": "labels",
+                        "old_value": old_refs,
+                        "new_value": new_refs,
                     }
-                    for _, _, field, old, new_value in changes
-                ],
-            )
+                )
+            await repository.add_activity(session, entries)
         return await _issue_response(session, issue.id)
 
 
 # --------------------------------------------------------------------------- delete
 async def delete_issue(services: IdentityServices, ref: IssueRef, client: ClientInfo) -> None:
-    """Soft delete (project admins; org owners/admins). Sub-task/epic cascades: M7."""
+    """Soft delete (project admins; org owners/admins). A standard issue's sub-tasks are
+    soft-deleted with it; an epic's children are detached instead (plan M7 AC)."""
     async with project_transaction(services, ref.project, Permission.ISSUE_DELETE) as (
         session,
         project,
@@ -398,9 +614,35 @@ async def delete_issue(services: IdentityServices, ref: IssueRef, client: Client
     ):
         _writable(project)
         issue = await _load(session, project, ref)
+        issue_type = await repository.find_type(session, issue.type_id)
         if not await repository.soft_delete(session, issue.id, issue.version):
             raise version_conflict()
-        await repository.add_activity(session, [{"issue_id": issue.id, "action": "deleted"}])
+        entries = [{"issue_id": issue.id, "action": "deleted"}]
+        self_ref = _issue_ref(project.key, issue)
+        if issue_type is not None and issue_type.kind == "standard":
+            cascaded = await repository.cascade_soft_delete_children(session, project.id, issue.id)
+            entries += [
+                {
+                    "issue_id": child_id,
+                    "action": "deleted",
+                    "field": "parent",
+                    "old_value": self_ref,
+                }
+                for child_id in cascaded
+            ]
+        elif issue_type is not None and issue_type.kind == "epic":
+            detached = await repository.detach_children(session, project.id, issue.id)
+            entries += [
+                {
+                    "issue_id": child_id,
+                    "action": "updated",
+                    "field": "parent",
+                    "old_value": self_ref,
+                    "new_value": None,
+                }
+                for child_id in detached
+            ]
+        await repository.add_activity(session, entries)
         await audit.record(
             session,
             "issue.deleted",
@@ -410,6 +652,109 @@ async def delete_issue(services: IdentityServices, ref: IssueRef, client: Client
             target_id=str(issue.id),
             metadata={"key": ref.key},
         )
+
+
+# ---------------------------------------------------------------------- hierarchy
+async def list_children(services: IdentityServices, ref: IssueRef) -> list[IssueResponse]:
+    async with project_transaction(services, ref.project, Permission.PROJECT_VIEW) as (
+        session,
+        project,
+        _,
+    ):
+        issue = await _load(session, project, ref)
+        children = await repository.find_children(session, project.id, issue.id)
+        rows = await repository.issue_views_by_ids(session, [c.id for c in children])
+        return await _responses(session, rows)
+
+
+# --------------------------------------------------------------------- transitions
+async def list_available_transitions(
+    services: IdentityServices, ref: IssueRef
+) -> list[TransitionRef]:
+    async with project_transaction(services, ref.project, Permission.PROJECT_VIEW) as (
+        session,
+        project,
+        _,
+    ):
+        issue = await _load(session, project, ref)
+        transitions = await repository.list_transitions(
+            session, project.workflow_id, issue.status_id
+        )
+        statuses = await repository.find_statuses(
+            session, [transition.to_status_id for transition in transitions]
+        )
+    return [
+        TransitionRef(
+            id=transition.id,
+            name=transition.name,
+            to_status=StatusRef(id=status.id, name=status.name, category=status.category),
+        )
+        for transition in transitions
+        if (status := statuses.get(transition.to_status_id)) is not None
+    ]
+
+
+def invalid_transition() -> AppError:
+    return AppError(422, "invalid_transition", "Unknown transition for this issue.")
+
+
+def transition_not_permitted() -> AppError:
+    return AppError(
+        422,
+        "transition_not_permitted",
+        "This transition is not available from the issue's current status.",
+    )
+
+
+async def apply_transition(
+    services: IdentityServices, ref: IssueRef, body: ApplyTransitionRequest, expected_version: int
+) -> IssueResponse:
+    async with project_transaction(services, ref.project, Permission.ISSUE_TRANSITION) as (
+        session,
+        project,
+        _,
+    ):
+        _writable(project)
+        issue = await _load(session, project, ref)
+        if issue.version != expected_version:
+            raise version_conflict()
+        transition = await repository.find_transition(
+            session, project.workflow_id, body.transition_id
+        )
+        if transition is None:
+            raise invalid_transition()
+        if transition.from_status_id is not None and transition.from_status_id != issue.status_id:
+            raise transition_not_permitted()
+        statuses = await repository.find_statuses(
+            session, [issue.status_id, transition.to_status_id]
+        )
+        old_status, new_status = statuses.get(issue.status_id), statuses[transition.to_status_id]
+        if (
+            await repository.set_status(
+                session,
+                issue.id,
+                issue.version,
+                transition.to_status_id,
+                mark_done=new_status.category == "done",
+            )
+            is None
+        ):
+            raise version_conflict()
+        await repository.add_activity(
+            session,
+            [
+                {
+                    "issue_id": issue.id,
+                    "action": "transitioned",
+                    "field": "status",
+                    "old_value": {"id": str(issue.status_id), "name": old_status.name}
+                    if old_status
+                    else None,
+                    "new_value": {"id": str(transition.to_status_id), "name": new_status.name},
+                }
+            ],
+        )
+        return await _issue_response(session, issue.id)
 
 
 # ------------------------------------------------------------------------- activity
@@ -453,3 +798,52 @@ def _decode_activity_cursor(cursor: str) -> int:
     if value < 0:
         raise invalid_cursor()
     return value
+
+
+# ----------------------------------------------------------------------------- labels
+async def list_labels(services: IdentityServices, access: ProjectAccess) -> list[Label]:
+    async with project_transaction(services, access, Permission.PROJECT_VIEW) as (
+        session,
+        project,
+        _,
+    ):
+        return await repository.list_labels(session, project.id)
+
+
+def label_name_taken() -> AppError:
+    return AppError(
+        409,
+        "label_name_taken",
+        "This label name is already used in the project.",
+        errors=[{"field": "body.name", "message": "is already used"}],
+    )
+
+
+async def create_label(
+    services: IdentityServices, access: ProjectAccess, *, name: str, color: str
+) -> LabelResponse:
+    label_id = uuid.uuid4()
+    try:
+        async with project_transaction(services, access, Permission.PROJECT_MANAGE) as (
+            session,
+            project,
+            _,
+        ):
+            await repository.create_label(session, label_id, project.id, name, color)
+    except IntegrityError as error:
+        if "uq_labels_project_id_name" in str(error.orig):
+            raise label_name_taken() from None
+        raise
+    return LabelResponse(id=label_id, name=name, color=color)
+
+
+async def delete_label(
+    services: IdentityServices, access: ProjectAccess, *, label_id: uuid.UUID
+) -> None:
+    async with project_transaction(services, access, Permission.PROJECT_MANAGE) as (
+        session,
+        project,
+        _,
+    ):
+        if not await repository.delete_label(session, project.id, label_id):
+            raise not_found()

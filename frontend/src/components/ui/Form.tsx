@@ -48,11 +48,19 @@ export function FormError({ children }: { children: ReactNode }) {
   );
 }
 
-export function SubmitButton({ pending, children }: { pending: boolean; children: ReactNode }) {
+export function SubmitButton({
+  pending,
+  disabled,
+  children,
+}: {
+  pending: boolean;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       aria-busy={pending}
       className="rounded bg-blue-700 px-4 py-2 font-medium text-white hover:bg-blue-800 disabled:opacity-60"
     >

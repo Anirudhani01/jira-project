@@ -13,6 +13,7 @@ from sqlalchemy import (
     ColumnElement,
     Table,
     and_,
+    delete,
     func,
     insert,
     literal_column,
@@ -24,7 +25,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.tenant import require_org_context
-from app.modules.issues.models import IdempotencyKey, Issue, IssueActivity
+from app.modules.issues.models import IdempotencyKey, Issue, IssueActivity, IssueLabel, Label
 from app.modules.orgs.models import IssueType, Priority
 from app.modules.projects.models import (
     Project,
@@ -32,6 +33,7 @@ from app.modules.projects.models import (
     ProjectMembership,
     Workflow,
     WorkflowStatus,
+    WorkflowTransition,
 )
 
 IDEMPOTENCY_TTL = "24 hours"
@@ -109,6 +111,8 @@ class NewIssue:
     reporter_id: uuid.UUID
     summary: str
     description: str | None
+    parent_id: uuid.UUID | None = None
+    assignee_id: uuid.UUID | None = None
 
 
 async def insert_issue(session: AsyncSession, new: NewIssue) -> None:
@@ -126,6 +130,8 @@ async def insert_issue(session: AsyncSession, new: NewIssue) -> None:
             reporter_id=new.reporter_id,
             summary=new.summary,
             description=new.description,
+            parent_id=new.parent_id,
+            assignee_id=new.assignee_id,
             rank=initial_rank(new.seq),
         )
     )
@@ -198,6 +204,183 @@ async def unassign_member(session: AsyncSession, user_id: uuid.UUID) -> list[uui
         .returning(Issue.id)
     )
     return list(rows.scalars())
+
+
+async def find_candidate_parent(
+    session: AsyncSession, project_id: uuid.UUID, parent_id: uuid.UUID
+) -> tuple[Issue, str] | None:
+    """A live issue of the same project, with its issue type's ``kind`` (hierarchy
+    validation, plan R3.3 row 12). ``None`` if unknown, deleted, or another project."""
+    context = require_org_context(session)
+    row = (
+        await session.execute(
+            select(Issue, IssueType.kind)
+            .join(IssueType, IssueType.id == Issue.type_id)
+            .where(
+                Issue.org_id == context.org_id,
+                Issue.project_id == project_id,
+                Issue.id == parent_id,
+                Issue.deleted_at.is_(None),
+            )
+        )
+    ).first()
+    return (row.Issue, row.kind) if row else None
+
+
+async def find_children(
+    session: AsyncSession, project_id: uuid.UUID, parent_id: uuid.UUID
+) -> list[Issue]:
+    context = require_org_context(session)
+    return list(
+        (
+            await session.execute(
+                select(Issue)
+                .where(
+                    Issue.org_id == context.org_id,
+                    Issue.project_id == project_id,
+                    Issue.parent_id == parent_id,
+                    Issue.deleted_at.is_(None),
+                )
+                .order_by(Issue.seq)
+            )
+        ).scalars()
+    )
+
+
+async def issue_views_by_ids(session: AsyncSession, ids: list[uuid.UUID]) -> list[Any]:
+    if not ids:
+        return []
+    context = require_org_context(session)
+    return list(
+        await session.execute(
+            _view_query()
+            .where(Issue.org_id == context.org_id, Issue.id.in_(ids))
+            .order_by(Issue.seq)
+        )
+    )
+
+
+async def cascade_soft_delete_children(
+    session: AsyncSession, project_id: uuid.UUID, parent_id: uuid.UUID
+) -> list[uuid.UUID]:
+    """A deleted standard issue's sub-tasks are soft-deleted with it (plan M7 AC)."""
+    context = require_org_context(session)
+    rows = await session.execute(
+        update(Issue)
+        .where(
+            Issue.org_id == context.org_id,
+            Issue.project_id == project_id,
+            Issue.parent_id == parent_id,
+            Issue.deleted_at.is_(None),
+        )
+        .values(deleted_at=func.now(), version=Issue.version + 1, updated_at=func.now())
+        .returning(Issue.id)
+    )
+    return list(rows.scalars())
+
+
+async def detach_children(
+    session: AsyncSession, project_id: uuid.UUID, parent_id: uuid.UUID
+) -> list[uuid.UUID]:
+    """A deleted epic's children are detached, not deleted (plan M7 AC)."""
+    context = require_org_context(session)
+    rows = await session.execute(
+        update(Issue)
+        .where(
+            Issue.org_id == context.org_id,
+            Issue.project_id == project_id,
+            Issue.parent_id == parent_id,
+            Issue.deleted_at.is_(None),
+        )
+        .values(parent_id=None, version=Issue.version + 1, updated_at=func.now())
+        .returning(Issue.id)
+    )
+    return list(rows.scalars())
+
+
+async def find_issue_refs(session: AsyncSession, ids: list[uuid.UUID]) -> dict[uuid.UUID, Any]:
+    """Short refs (key, summary) for parent display; parent is always the same project as
+    the child, so it is visible under RLS whenever the child is."""
+    if not ids:
+        return {}
+    context = require_org_context(session)
+    rows = (
+        await session.execute(
+            select(Issue.id, Issue.seq, Issue.summary, Project.key.label("project_key"))
+            .join(Project, Project.id == Issue.project_id)
+            .where(Issue.org_id == context.org_id, Issue.id.in_(ids))
+        )
+    ).all()
+    return {r.id: r for r in rows}
+
+
+# ------------------------------------------------------------------------- transitions
+async def list_transitions(
+    session: AsyncSession, workflow_id: uuid.UUID, status_id: uuid.UUID
+) -> list[WorkflowTransition]:
+    """Transitions permitted from ``status_id``: a specific ``from_status_id`` match, or a
+    ``NULL`` one (any status, plan §2.3)."""
+    require_org_context(session)
+    return list(
+        (
+            await session.execute(
+                select(WorkflowTransition)
+                .where(
+                    WorkflowTransition.workflow_id == workflow_id,
+                    or_(
+                        WorkflowTransition.from_status_id.is_(None),
+                        WorkflowTransition.from_status_id == status_id,
+                    ),
+                )
+                .order_by(WorkflowTransition.id)
+            )
+        ).scalars()
+    )
+
+
+async def find_transition(
+    session: AsyncSession, workflow_id: uuid.UUID, transition_id: uuid.UUID
+) -> WorkflowTransition | None:
+    require_org_context(session)
+    return (
+        await session.execute(
+            select(WorkflowTransition).where(
+                WorkflowTransition.workflow_id == workflow_id,
+                WorkflowTransition.id == transition_id,
+            )
+        )
+    ).scalar_one_or_none()
+
+
+async def find_statuses(
+    session: AsyncSession, ids: list[uuid.UUID]
+) -> dict[uuid.UUID, WorkflowStatus]:
+    if not ids:
+        return {}
+    require_org_context(session)
+    rows = (
+        await session.execute(select(WorkflowStatus).where(WorkflowStatus.id.in_(ids)))
+    ).scalars()
+    return {s.id: s for s in rows}
+
+
+async def set_status(
+    session: AsyncSession,
+    issue_id: uuid.UUID,
+    version: int,
+    status_id: uuid.UUID,
+    *,
+    mark_done: bool,
+) -> int | None:
+    """Applies a transition's target status; sets or clears ``done_at`` with it (plan M7:
+    ``done_at`` reflects the current status category, not accumulated history)."""
+    return await update_if_version(
+        session,
+        issue_id,
+        version,
+        status_id=status_id,
+        done_at=func.now() if mark_done else None,
+    )
 
 
 async def add_activity(session: AsyncSession, entries: list[dict[str, Any]]) -> None:
@@ -382,3 +565,100 @@ async def store_idempotent_response(
         )
         .values(response_status=status, response_body=body)
     )
+
+
+# ------------------------------------------------------------------------------ labels
+async def create_label(
+    session: AsyncSession, label_id: uuid.UUID, project_id: uuid.UUID, name: str, color: str
+) -> None:
+    context = require_org_context(session)
+    await session.execute(
+        insert(Label).values(
+            id=label_id, org_id=context.org_id, project_id=project_id, name=name, color=color
+        )
+    )
+
+
+async def list_labels(session: AsyncSession, project_id: uuid.UUID) -> list[Label]:
+    require_org_context(session)
+    return list(
+        (
+            await session.execute(
+                select(Label).where(Label.project_id == project_id).order_by(Label.name)
+            )
+        ).scalars()
+    )
+
+
+async def delete_label(session: AsyncSession, project_id: uuid.UUID, label_id: uuid.UUID) -> bool:
+    context = require_org_context(session)
+    result = await session.execute(
+        delete(Label).where(
+            Label.org_id == context.org_id, Label.project_id == project_id, Label.id == label_id
+        )
+    )
+    return bool(result.rowcount)  # type: ignore[attr-defined]
+
+
+async def list_issue_labels(session: AsyncSession, issue_id: uuid.UUID) -> list[Label]:
+    require_org_context(session)
+    return list(
+        (
+            await session.execute(
+                select(Label)
+                .join(IssueLabel, IssueLabel.label_id == Label.id)
+                .where(IssueLabel.issue_id == issue_id)
+                .order_by(Label.name)
+            )
+        ).scalars()
+    )
+
+
+async def list_issue_labels_bulk(
+    session: AsyncSession, issue_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, list[Label]]:
+    if not issue_ids:
+        return {}
+    require_org_context(session)
+    rows = (
+        await session.execute(
+            select(IssueLabel.issue_id, Label)
+            .join(Label, Label.id == IssueLabel.label_id)
+            .where(IssueLabel.issue_id.in_(issue_ids))
+            .order_by(Label.name)
+        )
+    ).all()
+    grouped: dict[uuid.UUID, list[Label]] = {}
+    for issue_id, label in rows:
+        grouped.setdefault(issue_id, []).append(label)
+    return grouped
+
+
+async def set_issue_labels(
+    session: AsyncSession,
+    project_id: uuid.UUID,
+    issue_id: uuid.UUID,
+    *,
+    add: set[uuid.UUID],
+    remove: set[uuid.UUID],
+) -> None:
+    context = require_org_context(session)
+    if remove:
+        await session.execute(
+            delete(IssueLabel).where(
+                IssueLabel.issue_id == issue_id, IssueLabel.label_id.in_(remove)
+            )
+        )
+    if add:
+        await session.execute(
+            insert(IssueLabel),
+            [
+                {
+                    "org_id": context.org_id,
+                    "project_id": project_id,
+                    "issue_id": issue_id,
+                    "label_id": label_id,
+                }
+                for label_id in add
+            ],
+        )

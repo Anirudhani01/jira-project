@@ -38,6 +38,8 @@ TENANT_TABLES = (
     "issues",
     "issue_activity",
     "idempotency_keys",
+    "labels",
+    "issue_labels",
 )
 
 

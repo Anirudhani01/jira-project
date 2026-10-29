@@ -4,8 +4,18 @@ import { useNavigate } from 'react-router';
 import { FormError, SubmitButton, TextField } from '../../components/ui/Form';
 import { ApiError } from '../../lib/api/errors';
 import { describeError } from '../../lib/forms';
+import { useProjectMembers } from '../projects/api';
 
-import { useCreateIssue, useIssueTypes, usePriorities } from './api';
+import { useCreateIssue, useIssue, useIssueTypes, useLabels, usePriorities } from './api';
+
+/** Resolves a typed-in parent key ("WEB-3") to its id, enabled only once something has
+ * been typed. Used by both the parent and (implicitly) the hierarchy-level check:
+ * the server still validates the kind, so this is a lookup, not a guarantee. */
+function useParentLookup(org: string, key: string) {
+  const trimmed = key.trim();
+  const result = useIssue(org, trimmed);
+  return trimmed ? result : undefined;
+}
 
 /** Modal create form. One Idempotency-Key per dialog: resubmitting after a lost response
  * replays the original issue instead of creating a second one. */
@@ -22,16 +32,25 @@ export function CreateIssueDialog({
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const types = useIssueTypes(org);
   const priorities = usePriorities(org);
+  const members = useProjectMembers(org, project);
+  const labels = useLabels(org, project);
   const create = useCreateIssue(org, project);
   const [summary, setSummary] = useState('');
   const [description, setDescription] = useState('');
   const [typeId, setTypeId] = useState('');
   const [priorityId, setPriorityId] = useState('');
-  // Sub-tasks need a parent (M7), so they are not offered here.
-  const creatable = (types.data ?? []).filter((t) => t.kind !== 'subtask');
-  const effectiveType = typeId || (creatable.find((t) => t.name === 'Task') ?? creatable[0])?.id;
+  const [assigneeId, setAssigneeId] = useState('');
+  const [parentKey, setParentKey] = useState('');
+  const [labelIds, setLabelIds] = useState<string[]>([]);
+
+  const effectiveType =
+    typeId || (types.data?.find((t) => t.name === 'Task') ?? types.data?.[0])?.id;
   const effectivePriority =
     priorityId || (priorities.data?.find((p) => p.name === 'Medium') ?? priorities.data?.[0])?.id;
+  const selectedType = types.data?.find((t) => t.id === effectiveType);
+  const needsParent = selectedType?.kind === 'subtask';
+  const parent = useParentLookup(org, parentKey);
+  const parentResolved = !parentKey.trim() || (parent && !parent.isPending && !parent.isError);
 
   const fieldError = (field: string) =>
     create.error instanceof ApiError
@@ -41,6 +60,8 @@ export function CreateIssueDialog({
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
     if (!effectiveType || !effectivePriority) return;
+    if (needsParent && !parentKey.trim()) return;
+    if (parentKey.trim() && !parent?.data) return;
     create.mutate(
       {
         idempotencyKey,
@@ -49,6 +70,9 @@ export function CreateIssueDialog({
           priority_id: effectivePriority,
           summary,
           ...(description ? { description } : {}),
+          ...(assigneeId ? { assignee_id: assigneeId } : {}),
+          ...(parent?.data ? { parent_id: parent.data.id } : {}),
+          ...(labelIds.length ? { label_ids: labelIds } : {}),
         },
       },
       { onSuccess: (issue) => void navigate(`/o/${org}/issues/${issue.key}`) },
@@ -80,7 +104,7 @@ export function CreateIssueDialog({
                 setTypeId(e.target.value);
               }}
             >
-              {creatable.map((t) => (
+              {(types.data ?? []).map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
@@ -125,8 +149,63 @@ export function CreateIssueDialog({
               ))}
             </select>
           </label>
+          <label className="block text-sm font-medium">
+            Assignee
+            <select
+              className="mt-1 block w-full rounded border border-slate-300 px-2 py-2"
+              value={assigneeId}
+              onChange={(e) => {
+                setAssigneeId(e.target.value);
+              }}
+            >
+              <option value="">Unassigned</option>
+              {(members.data ?? []).map((m) => (
+                <option key={m.user_id} value={m.user_id}>
+                  {m.display_name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <TextField
+            label={needsParent ? 'Parent (required for a sub-task)' : 'Parent (optional)'}
+            placeholder="e.g. WEB-3"
+            value={parentKey}
+            error={
+              parentKey.trim() && parent && !parent.isPending && parent.isError
+                ? 'No issue with that key.'
+                : fieldError('parent_id')
+            }
+            onChange={(e) => {
+              setParentKey(e.target.value);
+            }}
+          />
+          {(labels.data ?? []).length > 0 && (
+            <fieldset className="space-y-1">
+              <legend className="text-sm font-medium">Labels</legend>
+              {(labels.data ?? []).map((l) => (
+                <label key={l.id} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={labelIds.includes(l.id)}
+                    onChange={(e) => {
+                      setLabelIds((ids) =>
+                        e.target.checked ? [...ids, l.id] : ids.filter((id) => id !== l.id),
+                      );
+                    }}
+                  />
+                  <span
+                    className="inline-block h-3 w-3 rounded-full"
+                    style={{ backgroundColor: l.color }}
+                  />
+                  {l.name}
+                </label>
+              ))}
+            </fieldset>
+          )}
           <div className="flex gap-3">
-            <SubmitButton pending={create.isPending}>Create</SubmitButton>
+            <SubmitButton pending={create.isPending} disabled={!parentResolved}>
+              Create
+            </SubmitButton>
             <button type="button" className="underline" onClick={onClose}>
               Cancel
             </button>

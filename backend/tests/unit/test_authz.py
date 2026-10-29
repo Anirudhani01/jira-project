@@ -60,13 +60,17 @@ def test_slug_format(slug: str, ok: bool) -> None:
 
 
 def test_issue_permissions_follow_project_roles() -> None:
-    """M6: viewers only read; members create/edit; admins (and org owners/admins) also
-    delete. Org membership without a project role grants nothing."""
+    """M6/M7: viewers only read; members create/edit/assign/transition; admins (and org
+    owners/admins) also delete. Org membership without a project role grants nothing."""
     issue = {Permission.ISSUE_CREATE, Permission.ISSUE_EDIT, Permission.ISSUE_DELETE}
+    assign_transition = {Permission.ISSUE_ASSIGN, Permission.ISSUE_TRANSITION}
     assert project_permissions("member", "viewer") == {Permission.PROJECT_VIEW}
     member = project_permissions("member", "member")
     assert member & issue == {Permission.ISSUE_CREATE, Permission.ISSUE_EDIT}
+    assert assign_transition <= member
     assert issue <= project_permissions("member", "admin")
     assert issue <= project_permissions("owner", None)
     assert issue <= project_permissions("admin", None)
+    assert assign_transition <= project_permissions("member", "admin")
+    assert assign_transition <= project_permissions("owner", None)
     assert project_permissions("member", None) == frozenset()

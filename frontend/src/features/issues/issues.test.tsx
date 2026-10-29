@@ -34,6 +34,8 @@ const ISSUE = {
   priority: { id: MEDIUM.id, name: 'Medium', color: MEDIUM.color },
   reporter: { id: SIGNED_IN.user.id, display_name: 'Ann Example' },
   assignee: null,
+  parent: null,
+  labels: [],
   version: 3,
   created_at: '2026-10-28T00:00:00Z',
   updated_at: '2026-10-28T00:00:00Z',
@@ -43,6 +45,8 @@ const CONFIG = {
   'GET /orgs/acme/projects/WEB': () => json(PROJECT),
   'GET /orgs/acme/issue-types': () => json({ items: [TASK, SUBTASK] }),
   'GET /orgs/acme/priorities': () => json({ items: [HIGH, MEDIUM] }),
+  'GET /orgs/acme/projects/WEB/members': () => json({ items: [] }),
+  'GET /orgs/acme/projects/WEB/labels': () => json({ items: [] }),
 };
 
 afterEach(() => {
@@ -50,7 +54,7 @@ afterEach(() => {
 });
 
 describe('issue list', () => {
-  it('lists issues and creates one with an Idempotency-Key, never offering sub-tasks', async () => {
+  it('lists issues and creates one with an Idempotency-Key, offering sub-tasks', async () => {
     const calls = mockApi({
       ...CONFIG,
       'GET /orgs/acme/issues': () => json({ items: [ISSUE], next_cursor: null }),
@@ -65,7 +69,9 @@ describe('issue list', () => {
     await waitFor(() => {
       expect(within(dialog).getByRole('option', { name: 'Task' })).toBeInTheDocument();
     });
-    expect(within(dialog).queryByRole('option', { name: 'Sub-task' })).not.toBeInTheDocument();
+    // Sub-tasks are now offered (M7); creating one without a parent is still rejected
+    // server-side, so the dialog requires a parent key before it will submit one.
+    expect(within(dialog).getByRole('option', { name: 'Sub-task' })).toBeInTheDocument();
     await userEvent.type(within(dialog).getByLabelText('Summary'), 'New issue');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
     await waitFor(() => {
@@ -129,5 +135,101 @@ describe('issue detail', () => {
     mockApi({ ...CONFIG, 'GET /orgs/acme/issues/WEB-9': () => problem(404, 'not_found') });
     renderApp('/o/acme/issues/WEB-9');
     expect(await screen.findByRole('heading', { name: /not found/i })).toBeInTheDocument();
+  });
+});
+
+describe('issue detail: M7 (transitions, assignee, labels)', () => {
+  const ADMIN_PROJECT = {
+    ...PROJECT,
+    permissions: [
+      'issue.assign',
+      'issue.create',
+      'issue.delete',
+      'issue.edit',
+      'issue.transition',
+      'project.view',
+    ],
+  };
+  const DONE = { id: 's2', name: 'Done', category: 'done' };
+  const MEMBER = {
+    user_id: 'u-2',
+    display_name: 'Bea Example',
+    email: 'bea@example.com',
+    role: 'member',
+  };
+  const BUG = { id: 'l-1', name: 'bug', color: '#ff0000' };
+
+  it('lists and applies a status transition with If-Match', async () => {
+    const calls = mockApi({
+      ...CONFIG,
+      'GET /orgs/acme/projects/WEB': () => json(ADMIN_PROJECT),
+      'GET /orgs/acme/issues/WEB-1': () => json(ISSUE),
+      'GET /orgs/acme/issues/WEB-1/activity': () => json({ items: [], next_cursor: null }),
+      'GET /orgs/acme/issues/WEB-1/transitions': () =>
+        json({ items: [{ id: 't-done', name: 'Move to Done', to_status: DONE }] }),
+      'GET /orgs/acme/issues/WEB-1/children': () => json({ items: [] }),
+      'POST /orgs/acme/issues/WEB-1/transitions': () =>
+        json({ ...ISSUE, status: DONE, version: 4 }),
+    });
+    renderApp('/o/acme/issues/WEB-1');
+    await userEvent.selectOptions(await screen.findByLabelText('Status'), 'Done');
+    await userEvent.click(screen.getByRole('button', { name: 'Move' }));
+    await waitFor(() => {
+      expect(calls.some((c) => c.method === 'POST' && c.path.endsWith('/transitions'))).toBe(true);
+    });
+    const post = calls.find((c) => c.method === 'POST');
+    expect(post?.headers.get('If-Match')).toBe('"v3"');
+    expect(post?.body).toEqual({ transition_id: 't-done' });
+    await waitFor(() => {
+      expect(screen.getByText('Status').nextElementSibling).toHaveTextContent('Done');
+    });
+  });
+
+  it('edits the assignee via the combobox', async () => {
+    const calls = mockApi({
+      ...CONFIG,
+      'GET /orgs/acme/projects/WEB': () => json(ADMIN_PROJECT),
+      'GET /orgs/acme/projects/WEB/members': () => json({ items: [MEMBER] }),
+      'GET /orgs/acme/issues/WEB-1': () => json(ISSUE),
+      'GET /orgs/acme/issues/WEB-1/activity': () => json({ items: [], next_cursor: null }),
+      'GET /orgs/acme/issues/WEB-1/transitions': () => json({ items: [] }),
+      'GET /orgs/acme/issues/WEB-1/children': () => json({ items: [] }),
+      'PATCH /orgs/acme/issues/WEB-1': () =>
+        json({ ...ISSUE, assignee: { id: MEMBER.user_id, display_name: MEMBER.display_name } }),
+    });
+    renderApp('/o/acme/issues/WEB-1');
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit assignee' }));
+    await userEvent.selectOptions(screen.getByLabelText('Assignee'), MEMBER.user_id);
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(calls.some((c) => c.method === 'PATCH')).toBe(true);
+    });
+    const patch = calls.find((c) => c.method === 'PATCH');
+    expect(patch?.body).toEqual({ assignee_id: MEMBER.user_id });
+    expect(await screen.findByText('Bea Example')).toBeInTheDocument();
+  });
+
+  it('replaces the full label set from the picker', async () => {
+    const calls = mockApi({
+      ...CONFIG,
+      'GET /orgs/acme/projects/WEB': () => json(ADMIN_PROJECT),
+      'GET /orgs/acme/projects/WEB/labels': () => json({ items: [BUG] }),
+      'GET /orgs/acme/issues/WEB-1': () => json(ISSUE),
+      'GET /orgs/acme/issues/WEB-1/activity': () => json({ items: [], next_cursor: null }),
+      'GET /orgs/acme/issues/WEB-1/transitions': () => json({ items: [] }),
+      'GET /orgs/acme/issues/WEB-1/children': () => json({ items: [] }),
+      'PATCH /orgs/acme/issues/WEB-1': () => json({ ...ISSUE, labels: [BUG] }),
+    });
+    renderApp('/o/acme/issues/WEB-1');
+    expect(await screen.findByText('No labels.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Edit labels' }));
+    await userEvent.click(screen.getByLabelText('bug'));
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(calls.some((c) => c.method === 'PATCH')).toBe(true);
+    });
+    const patch = calls.find((c) => c.method === 'PATCH');
+    expect(patch?.body).toEqual({ label_ids: [BUG.id] });
+    expect(await screen.findByText('bug')).toBeInTheDocument();
   });
 });

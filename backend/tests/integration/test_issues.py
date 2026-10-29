@@ -203,21 +203,22 @@ async def test_failed_creates_do_not_consume_numbers(
     assert (await new_issue(ctx.http, ctx)).json()["key"] == "WEB-1"
 
 
-async def test_server_owned_and_m7_fields_are_rejected(ctx: Ctx) -> None:
+async def test_server_owned_fields_are_rejected(ctx: Ctx) -> None:
+    """Status is server-owned on create/update (set only through the transitions
+    endpoints, M7); assignee/parent are legitimate M7 fields, exercised separately."""
     for extra in (
         {"key": "WEB-99"},
         {"reporter_id": str(uuid.uuid4())},
         {"status_id": str(uuid.uuid4())},
         {"version": 7},
         {"org_id": str(uuid.uuid4())},
-        {"assignee_id": str(ctx.tenant.user_id)},
-        {"parent_key": "WEB-1"},
+        {"parent_key": "WEB-1"},  # unknown field; the real one is parent_id
         {"rank": "0"},
     ):
         response = await new_issue(ctx.http, ctx, ctx.body(**extra))
         assert response.status_code == 422, extra
     assert (await new_issue(ctx.http, ctx)).status_code == 201
-    for field in ("assignee_id", "parent_id", "status_id", "version", "reporter_id", "key"):
+    for field in ("status_id", "version", "reporter_id", "key"):
         response = await patch(ctx.http, ctx.slug, "WEB-1", {field: None}, '"v1"')
         assert response.status_code == 422, field
     row = await issue_row(ctx.tenant.org_id, 1)
