@@ -1,8 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
 import { FormError, SubmitButton, TextField } from '../../components/ui/Form';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { ErrorState, LoadingState } from '../../components/ui/States';
 import { ApiError } from '../../lib/api/errors';
 import type { SessionListItem } from '../../lib/api/types';
@@ -49,14 +53,23 @@ function ProfileForm({ displayName, email }: { displayName: string; email: strin
     }
   });
   return (
-    <section aria-labelledby="profile-title" className="space-y-4">
-      <h2 id="profile-title" className="text-lg font-semibold">
+    <Card className="space-y-4 p-6">
+      <h2 id="profile-title" className="text-lg font-semibold text-fg">
         Profile
       </h2>
-      <p className="text-sm text-slate-600">Signed in as {email}</p>
-      <form onSubmit={(e) => void onSubmit(e)} noValidate className="max-w-sm space-y-3">
+      <p className="text-sm text-fg-muted">Signed in as {email}</p>
+      <form
+        onSubmit={(e) => void onSubmit(e)}
+        noValidate
+        className="max-w-md space-y-3"
+        aria-labelledby="profile-title"
+      >
         <FormError>{nonFieldError(update.error)}</FormError>
-        {update.isSuccess ? <p role="status">Profile saved.</p> : null}
+        {update.isSuccess ? (
+          <p role="status" className="text-sm text-success">
+            Profile saved.
+          </p>
+        ) : null}
         <TextField
           label="Name"
           error={form.formState.errors.display_name?.message}
@@ -64,34 +77,46 @@ function ProfileForm({ displayName, email }: { displayName: string; email: strin
         />
         <SubmitButton pending={update.isPending}>Save</SubmitButton>
       </form>
-    </section>
+    </Card>
   );
 }
 
 function PasswordForm() {
   const change = useChangePassword();
+  const [fieldsKey, setFieldsKey] = useState(0);
   const form = useForm<z.infer<typeof passwordSchema>>({ resolver: zodResolver(passwordSchema) });
   const { errors } = form.formState;
   const onSubmit = form.handleSubmit(async ({ current_password, new_password }) => {
     try {
       await change.mutateAsync({ current_password, new_password });
       form.reset();
+      setFieldsKey((k) => k + 1);
     } catch (error) {
       applyServerErrors(error, ['current_password', 'new_password'], form.setError);
     }
   });
   return (
-    <section aria-labelledby="password-title" className="space-y-4">
-      <h2 id="password-title" className="text-lg font-semibold">
+    <Card className="space-y-4 p-6">
+      <h2 id="password-title" className="text-lg font-semibold text-fg">
         Change password
       </h2>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-fg-muted">
         Changing your password signs you out on all other devices.
       </p>
-      <form onSubmit={(e) => void onSubmit(e)} noValidate className="max-w-sm space-y-3">
+      <form
+        onSubmit={(e) => void onSubmit(e)}
+        noValidate
+        className="max-w-md space-y-3"
+        aria-labelledby="password-title"
+      >
         <FormError>{nonFieldError(change.error)}</FormError>
-        {change.isSuccess ? <p role="status">Password changed.</p> : null}
+        {change.isSuccess ? (
+          <p role="status" className="text-sm text-success">
+            Password changed.
+          </p>
+        ) : null}
         <TextField
+          key={`current-${fieldsKey}`}
           label="Current password"
           type="password"
           autoComplete="current-password"
@@ -99,13 +124,16 @@ function PasswordForm() {
           {...form.register('current_password')}
         />
         <TextField
+          key={`new-${fieldsKey}`}
           label="New password"
           type="password"
           autoComplete="new-password"
+          showStrength
           error={errors.new_password?.message}
           {...form.register('new_password')}
         />
         <TextField
+          key={`confirm-${fieldsKey}`}
           label="Confirm new password"
           type="password"
           autoComplete="new-password"
@@ -114,7 +142,7 @@ function PasswordForm() {
         />
         <SubmitButton pending={change.isPending}>Change password</SubmitButton>
       </form>
-    </section>
+    </Card>
   );
 }
 
@@ -123,27 +151,29 @@ function SessionRow({ item }: { item: SessionListItem }) {
   return (
     <li className="flex items-center justify-between gap-4 py-3">
       <div className="text-sm">
-        <p className="font-medium">
+        <p className="font-medium text-fg">
           {item.user_agent ?? 'Unknown device'}
-          {item.current ? <span className="ml-2 text-green-700">(this device)</span> : null}
+          {item.current ? <span className="ml-2 text-success">(this device)</span> : null}
         </p>
-        <p className="text-slate-600">
+        <p className="text-fg-muted">
           Last active {dateFormat.format(new Date(item.last_seen_at))}
           {item.ip ? ` · ${item.ip}` : ''}
         </p>
       </div>
       {item.current ? null : (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
+          className="text-danger hover:text-danger"
           onClick={() => {
             revoke.mutate(item.id);
           }}
           disabled={revoke.isPending}
-          className="text-sm text-red-700 underline disabled:opacity-60"
           aria-label={`Sign out session from ${item.user_agent ?? 'unknown device'}`}
         >
           Sign out
-        </button>
+        </Button>
       )}
     </li>
   );
@@ -158,28 +188,29 @@ function SessionsSection() {
   }
   const hasOthers = sessions.data.items.some((s) => !s.current);
   return (
-    <section aria-labelledby="sessions-title" className="space-y-3">
-      <h2 id="sessions-title" className="text-lg font-semibold">
+    <Card className="space-y-3 p-6">
+      <h2 id="sessions-title" className="text-lg font-semibold text-fg">
         Active sessions
       </h2>
-      <ul className="divide-y divide-slate-200">
+      <ul className="divide-y divide-line" aria-labelledby="sessions-title">
         {sessions.data.items.map((item) => (
           <SessionRow key={item.id} item={item} />
         ))}
       </ul>
       {hasOthers ? (
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           onClick={() => {
             revokeOthers.mutate();
           }}
           disabled={revokeOthers.isPending}
-          className="text-sm text-red-700 underline disabled:opacity-60"
         >
           Sign out all other sessions
-        </button>
+        </Button>
       ) : null}
-    </section>
+    </Card>
   );
 }
 
@@ -188,10 +219,10 @@ export function AccountPage() {
   if (!session.data) return null; // RequireAuth renders loading/redirect states
   const { user } = session.data;
   return (
-    <div className="space-y-10">
-      <h1 className="text-2xl font-semibold">Account</h1>
+    <div className="mx-auto max-w-2xl space-y-6">
+      <PageHeader title="Account" description="Profile, password, and signed-in devices" />
       {user.email_verified ? null : (
-        <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+        <p className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-fg">
           Your email address is not verified yet. Open the verification link we emailed you. To get
           a new link, sign up again with the same email address.
         </p>

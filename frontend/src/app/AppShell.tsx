@@ -4,10 +4,13 @@ import { Breadcrumbs } from './shell/Breadcrumbs';
 import { MobileProjectDrawer, ProjectSidebar } from './shell/ProjectSidebar';
 import { ShellProvider } from './shell/ShellContext';
 import { TopBar } from './shell/TopBar';
+import { useAuthRoute } from '../features/auth/useAuthRoute';
+
 import { useShowProjectSidebar } from './shell/useProjectContext';
 
 function AppShellBody() {
   const inProject = useShowProjectSidebar();
+  const authRoute = useAuthRoute();
 
   return (
     <div className="flex min-h-screen flex-col bg-bg text-fg">
@@ -24,7 +27,13 @@ function AppShellBody() {
           {inProject ? <Breadcrumbs /> : null}
           <main
             id="main"
-            className={inProject ? 'flex-1 px-4 py-6' : 'mx-auto w-full max-w-6xl flex-1 px-4 py-8'}
+            className={
+              inProject
+                ? 'flex-1 px-4 py-6'
+                : authRoute
+                  ? 'flex-1 px-4 py-6 lg:px-6'
+                  : 'mx-auto w-full max-w-6xl flex-1 px-4 py-8'
+            }
           >
             <Outlet />
           </main>

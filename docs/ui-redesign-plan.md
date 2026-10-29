@@ -217,8 +217,8 @@ screenshots; `make lint test` stays green.
 | PR | UI status | Backend | Notes |
 |---|---|---|---|
 | 1 Foundations | **Done (#31)** — tokens (violet), fonts, Radix primitives, toasts, theme provider, `/__design` (dev), axe E2E light+dark | **OK — none needed** | Dark mode is opt-in until PR 12; product pages still use legacy light markup until later PRs. |
-| 2 App shell | **Done (local)** — top bar, sidebar, breadcrumbs, drawer; legacy org `<select>` removed | **OK — none** | Screenshots: add to `docs/ui-redesign/after/` before merge. |
-| 3 Auth + org home + account | **Pending** — split auth layout, project cards, skeletons | **OK — none** | Open-issue count on cards only if cheap from existing APIs. |
+| 2 App shell | **Done (#33)** — top bar, sidebar, breadcrumbs, drawer; legacy org `<select>` removed | **OK — none** | Screenshots: add to `docs/ui-redesign/after/` before merge. |
+| 3 Auth + org home + account | **Done (local)** — `AuthLayout`, project cards + templates, `Field`/`PasswordField`, account cards, skeleton/error states on touched routes | **OK — none** | Open-issue count omitted (`ProjectSummary` has no counts). Screenshots before merge. |
 | 4 Board | **Pending** — rich cards, filters, sprint header, dnd polish | **OK — none** | Quick filters client-side on loaded cards (≤500). |
 | 5 Issue detail | **Pending** — modal + page, inline edit, activity tabs | **Needed (PR 5)** — additive `done`/`total` on `GET …/issues/{key}/children` | Rest uses existing issue/comment/transition APIs + `If-Match`. |
 | 6 Create issue + comboboxes | **Pending** — modal, cmdk comboboxes, idempotency | **OK — none** | Members, labels, issues search already exist. |

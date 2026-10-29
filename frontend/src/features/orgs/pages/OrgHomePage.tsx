@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { Link, useParams } from 'react-router';
 
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { Button } from '../../../components/ui/Button';
 import { ErrorState, LoadingState } from '../../../components/ui/States';
 import { ApiError } from '../../../lib/api/errors';
 import { NotFoundPage } from '../../../app/pages/NotFoundPage';
@@ -21,37 +23,37 @@ export function OrgHomePage() {
   if (org.isError) return <ErrorState error={org.error} onRetry={() => void org.refetch()} />;
 
   const canManage = org.data.permissions.includes('org.manage');
+  const canCreate = org.data.permissions.includes('project.create');
+
   return (
-    <section aria-labelledby="org-title" className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 id="org-title" className="text-2xl font-semibold">
-          {org.data.name}
-        </h1>
-        <div className="flex gap-4">
-          <Link to={`/o/${org.data.slug}/settings/members`} className="text-blue-700 underline">
-            Members
-          </Link>
-          {org.data.permissions.includes('org.audit.view') ? (
-            <Link to={`/o/${org.data.slug}/settings/audit`} className="text-blue-700 underline">
-              Audit log
-            </Link>
-          ) : null}
-          {canManage ? (
-            <Link to={`/o/${org.data.slug}/settings`} className="text-blue-700 underline">
-              Settings
-            </Link>
-          ) : null}
-        </div>
-      </div>
-      <section aria-labelledby="projects-title" className="space-y-2">
-        <h2 id="projects-title" className="text-lg font-semibold">
+    <div className="space-y-8">
+      <PageHeader
+        title={org.data.name}
+        description="Projects in this organization"
+        actions={
+          <>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to={`/o/${org.data.slug}/settings/members`}>Members</Link>
+            </Button>
+            {org.data.permissions.includes('org.audit.view') ? (
+              <Button variant="ghost" size="sm" asChild>
+                <Link to={`/o/${org.data.slug}/settings/audit`}>Audit log</Link>
+              </Button>
+            ) : null}
+            {canManage ? (
+              <Button variant="secondary" size="sm" asChild>
+                <Link to={`/o/${org.data.slug}/settings`}>Settings</Link>
+              </Button>
+            ) : null}
+          </>
+        }
+      />
+      <section aria-labelledby="projects-title" className="space-y-4">
+        <h2 id="projects-title" className="text-lg font-semibold text-fg">
           Projects
         </h2>
-        <ProjectList
-          org={org.data.slug}
-          canCreate={org.data.permissions.includes('project.create')}
-        />
+        <ProjectList org={org.data.slug} canCreate={canCreate} />
       </section>
-    </section>
+    </div>
   );
 }
