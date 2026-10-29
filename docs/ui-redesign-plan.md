@@ -216,8 +216,207 @@ screenshots; `make lint test` stays green.
 
 | PR | Status |
 |---|---|
-| 1 Foundations | **done** — tokens (violet), Inter/JetBrains Mono, Radix primitives, toasts, theme provider, `/__design` gallery (dev only), axe light+dark in E2E. Dark mode is opt-in until PR 12 (legacy pages still use fixed light colours). |
-| 2-18 | not started |
+| 1 Foundations | **done, merged (#31)** — tokens (violet), Inter/JetBrains Mono, Radix primitives, toasts, theme provider, `/__design` gallery (dev only), axe light+dark in E2E. Dark mode is opt-in until PR 12 (legacy pages still use fixed light colours). |
+| 2-18 | fully specified in section 8d; not started |
+
+## 8d. PR-by-PR specification (PRs 2-18)
+
+Every PR obeys the contract in section 0 (existing routes/API contracts kept, lint + typecheck +
+unit + `make e2e` green, axe serious/critical = 0 in light **and** dark, before/after
+screenshots in `docs/ui-redesign/after/`, plan progress table updated). "Backend" lists the only
+server changes a PR may make; everything else is frontend. Each PR ends with the legacy markup
+it replaced deleted, so no page keeps two styles.
+
+### PR 2 — App shell
+- **Goal:** one consistent frame for every signed-in page.
+- **Build:** top bar (wordmark, project switcher popover, **Create** button, search trigger,
+  notifications popover slot, theme toggle, profile menu with Account / Sign out); project
+  sidebar (project avatar+key, **Board / Backlog / Issues / Settings**, collapsible, state
+  remembered in localStorage); breadcrumbs from the route; mobile (< 1024 px) sidebar becomes a
+  drawer; skip-link and landmark roles kept. Replaces `AppShell.tsx` and the org switcher
+  `<select>`.
+- **Behaviour:** sidebar shows only for `/o/:org/p/:key/*`; Backlog link only for scrum
+  projects; current page marked `aria-current="page"`; project switcher lists projects the user
+  can view (existing `GET /orgs/{org}/projects`).
+- **Tests:** component tests for sidebar visibility/active state/collapse persistence/drawer;
+  E2E: navigate Board → Backlog → Issues via the sidebar with the keyboard only; axe on shell.
+- **Backend:** none. **Depends on:** 1.
+
+### PR 3 — Auth, org home, project list, account
+- **Build:** auth pages in a split layout (form + short product panel), password show/hide and
+  strength hint (client-side length/charset only; the server remains the authority); org home as
+  project cards (avatar, key, name, board type, open-issue count if cheap, last activity) with an
+  empty state and **Create project** card; create-org/create-project/accept-invite/account/
+  sessions pages restyled with the new `Field`/`Button`; all `LoadingState`/`ErrorState` become
+  skeletons and the shared error panel with retry and request id.
+- **Tests:** existing auth/org/project/account tests updated (labels unchanged); axe on each
+  route; E2E signup→verify→login unchanged.
+- **Backend:** none (open-issue count only if already derivable from existing list calls;
+  otherwise omitted). **Depends on:** 2.
+
+### PR 4 — Board
+- **Build:** rich `IssueCard` (type icon, key in mono, summary clamp 2 lines, priority icon,
+  labels as chips, assignee avatar, parent/epic chip, comment count if available), column
+  header (name, count, WIP `n / limit` bar turning warning/danger), `+ Create` at column foot,
+  quick-filter toolbar (search box, assignee avatar stack toggles, **Only my issues**, type and
+  label filters, **Clear**; filters in the URL and applied client-side to the ≤500 loaded
+  cards), dnd-kit drag overlay + drop highlighting + invalid-column dimming (existing logic),
+  drag handle as a real button (keeps the axe fix), "Move to…" in a card overflow menu,
+  sprint header for scrum (name, dates, goal, days left, **Complete sprint** dialog reusing the
+  backlog mutation), empty-column and no-active-sprint empty states, skeleton while loading.
+- **Tests:** card/column/filter component tests; optimistic rollback test kept; E2E: filter by
+  assignee, move via menu, keyboard drag (focus handle, Space, arrows, Space) asserting the new
+  column; axe on board.
+- **Backend:** none. **Depends on:** 2.
+
+### PR 5 — Issue detail (modal route + page)
+- **Build:** route-driven **modal over board/backlog/list** (background-location pattern) and the
+  same component as a full page at `/o/:org/issues/:key`. Two columns: left — inline-editable
+  title, Markdown description (click to edit, preview toggle, Save/Cancel, `Esc` cancels),
+  child-issues table with progress bar, **Activity** tabs (All / Comments / History) with
+  relative times and a comment composer (Markdown toolbar: bold, italic, code, list, link;
+  preview); right — **status button** (menu of allowed transitions only), assignee, reporter,
+  labels, parent/epic, sprint, priority, type, created/updated. Every field saves on blur/select
+  with `If-Match`; **412** shows a toast "Updated by someone else" plus **Reload** that refetches
+  and keeps the user's draft; delete lives in the overflow menu with a confirm dialog.
+- **Tests:** component tests per field (edit, cancel, save, 412 conflict, validation error);
+  E2E: open from board in a modal, edit summary + priority, comment, close with `Esc`, deep
+  link loads the page form; axe on modal and page.
+- **Backend:** child-issue counts — add `done`/`total` to `GET /issues/{key}/children`
+  response (additive). **Depends on:** 2, 4.
+
+### PR 6 — Create issue and comboboxes
+- **Build:** shared **Combobox** (cmdk-based: type to filter, avatars/icons, keyboard, clear)
+  used for assignee (project members), labels (multi, create-on-type for admins), parent/epic
+  (search epics/stories), sprint; **Create issue** modal: project, type chooser (icons), summary,
+  description, assignee, labels, parent, sprint, "Create another", Idempotency-Key per submit;
+  opened by the top-bar **Create** button, column `+ Create`, backlog inline create and the
+  `C` shortcut (PR 9 wires the shortcut). Sub-task requires a parent (existing rule) with a
+  clear inline message.
+- **Tests:** combobox unit tests (filter, keyboard, multi, clear, a11y name); create flow incl.
+  idempotent retry and sub-task parent rule; E2E create from the top bar.
+- **Backend:** none (uses members/labels/issues endpoints). **Depends on:** 2, 5.
+
+### PR 7 — Backlog
+- **Build:** collapsible sprint panels (name, dates, goal, issue count, status-category count
+  lozenges, **Start / Complete / Edit / Delete** in a menu), row grid (drag handle, type, key,
+  summary, epic chip, labels, assignee avatar, priority, status lozenge), **inline create** at the
+  foot of each panel, multi-select (checkbox column, shift-range) with a floating bar **Move to
+  sprint / Backlog**, drag between panels with drop highlighting (existing mutation), start-sprint
+  dialog (dates default to today + 2 weeks) and complete-sprint dialog (target selector, open
+  issue count), create-sprint button, empty states per panel.
+- **Tests:** panel/row/selection component tests; E2E: create sprint, add two issues by drag
+  and by menu, start, complete to backlog; axe.
+- **Backend:** none. **Depends on:** 4, 6.
+
+### PR 8 — Issue list and search
+- **Build:** sortable table (key, type, summary, status, priority, assignee, labels, updated)
+  with sticky header, column picker (persisted), filter bar of chips (status category, type,
+  priority, assignee, label, sprint, text; chips removable; **Clear all**), result count,
+  infinite scroll/"Load more", row actions menu, empty state with suggestion to clear filters;
+  `q` search box with `/` focus (shortcut in PR 9).
+- **Tests:** table sort/filter/column-picker component tests; E2E: filter + search + open issue.
+- **Backend:** `sort` already supported for `updated_at`/`created_at`; add `key`, `priority`,
+  `status` sort and a `label` filter param to `GET /issues` (additive, tested, openapi
+  regenerated). **Depends on:** 5.
+
+### PR 9 — Command palette and shortcuts
+- **Build:** `⌘K / Ctrl+K` palette (cmdk): jump to projects, open issue by key, text search
+  results, actions (Create issue, Go to board/backlog/issues, Toggle theme, Sign out);
+  global shortcuts `C`, `/`, `?`, `G B`, `G L`, `G I`, `J/K` in lists, `E` edit, `M` comment;
+  **Shortcut help** dialog; shortcuts disabled while typing in inputs and when a modal is open;
+  every shortcut also reachable by menu (no keyboard-only features).
+- **Tests:** hook tests for the key map and the "ignore while typing" guard; E2E: open palette,
+  go to an issue, `C` opens create.
+- **Backend:** none. **Depends on:** 2, 6, 8.
+
+### PR 10 — Notifications, settings, members, audit
+- **Build:** notifications popover (grouped Today/Earlier, per-type icons, unread dot, **Mark
+  all read**, deep link to the issue and comment, empty state, polling kept); project settings
+  as tabs (Details, Members, Board columns, Workflow read-only, Danger zone) with a **board
+  column editor** (drag-reorder, rename, WIP input, status chips mapped to columns, validation
+  "every status in exactly one column"); org settings and members (invite dialog, role menu,
+  remove with confirm); audit log with filter chips, metadata expansion row, load more.
+- **Tests:** component tests for editor validation and notification grouping; E2E: edit a
+  column name/WIP and see it on the board; axe on every touched route.
+- **Backend:** notification payload gains `comment_id` for deep links (additive field on
+  `issue_commented`). **Depends on:** 2, 5.
+
+### PR 11 — Story points
+- **Build:** estimate field on create/detail/backlog rows/board cards; sprint panel and
+  board header show committed and completed points; quick-edit in the backlog row.
+- **Backend:** migration — nullable `issues.story_points smallint` (CHECK 0..100); added to
+  create/update/response schemas, activity (`story_points` field change), `version` bump like
+  other fields; sprint response gains `points_total` and `points_done`; backlog/board responses
+  carry it via `IssueResponse`. Tests: validation bounds, activity, RLS unchanged, sprint
+  totals, migration round trip, openapi drift. **Depends on:** 7.
+
+### PR 12 — Responsive, theme default, visual QA
+- **Build:** every route usable at 360 / 768 / 1280 px (board scrolls horizontally with
+  sticky headers, tables become cards on small screens, modals full-screen on mobile); flip the
+  theme default from light to **system** (all legacy colour classes are gone by now — add a
+  lint rule/test that forbids `slate-`/`blue-` palette classes and raw hex in `src/`); Playwright
+  **screenshot baseline** (light + dark × key routes) stored under `e2e/__screenshots__`,
+  compared in `make e2e`; performance budget (initial JS ≤ 250 kB gzip via route-level
+  `lazy()`), reduced-motion check.
+- **Tests:** the new lint/guard test, screenshot specs, axe sweep over every route.
+- **Backend:** none. **Depends on:** 3-11.
+
+### PR 13 — Swimlanes
+- **Build:** board **Group by** menu: None / Assignee / Epic; collapsible lanes with counts;
+  unassigned/no-epic lane last; works with filters and drag (moving between lanes does not
+  change assignee/epic — lanes are a view only, stated in the UI).
+- **Tests:** grouping function unit tests; E2E: group by assignee, collapse a lane.
+- **Backend:** none. **Depends on:** 4, 12.
+
+### PR 14 — Saved filters
+- **Build:** "Save filter" on list/board toolbar (name, personal), saved filters listed in the
+  sidebar under **Filters**, rename/delete, applying one sets the URL params.
+- **Backend:** migration `saved_filters(id, org_id, project_id, owner_id, name, params jsonb,
+  created_at)` with RLS (owner-only), composite FKs, unique `(owner_id, project_id, name)`;
+  endpoints `GET/POST /projects/{key}/filters`, `PATCH/DELETE /filters/{id}`; `params` validated
+  against an allow-list of keys/values (no free-form SQL/JSON). Tests: own-only RLS, validation,
+  limits (50 per user per project), openapi. **Depends on:** 8, 12.
+
+### PR 15 — Bulk actions
+- **Build:** multi-select on list and backlog with a bar: **Assign, Move to sprint, Change
+  priority, Delete**; confirmation with item count; per-item result summary ("18 updated, 2
+  failed — see why").
+- **Backend:** `POST /orgs/{org}/issues/bulk` `{keys[≤100], action, value}` runs each item in
+  its own transaction with the normal permission/version/archived checks and returns per-item
+  results (never all-or-nothing); one audit event per call (`issue.bulk` with counts). Tests:
+  mixed success/failure, permission per item, limit, idempotent replay via `Idempotency-Key`.
+  **Depends on:** 7, 8.
+
+### PR 16 — Sprint reports
+- **Build:** **Reports** sidebar item: Sprint report (committed vs completed, added after start,
+  removed, carried over), **Burndown** (issues and points, ideal line, scope-change markers),
+  **Velocity** (last 6 closed sprints, committed vs completed); charts as accessible SVG with a
+  data table alternative; follows the dataviz guidance (colour-blind safe, tooltips, legend).
+- **Backend:** `GET /sprints/{id}/report`, `GET /sprints/{id}/burndown`, `GET
+  /projects/{key}/velocity?sprints=6`, all derived from `issue_activity` (status transitions,
+  `sprint_changed`, `story_points`) and sprint dates — no new tables. Tests: golden datasets
+  for add/remove/complete mid-sprint, empty sprint, points vs count. **Depends on:** 11.
+
+### PR 17 — Roadmap / timeline
+- **Build:** **Roadmap** sidebar item: epics as bars across a sprint/month timeline (start =
+  first child's sprint start, end = last sprint end), progress fill (done/total), expand to
+  children, zoom (sprints / months), today marker, keyboard navigable rows.
+- **Backend:** `GET /projects/{key}/roadmap` (epics with child counts, done counts, sprint
+  span); no new tables. Tests: span/aggregation cases, access control. **Depends on:** 11, 16.
+
+### PR 18 — Final QA and release
+- **Build:** screenshot baseline in CI (GitHub Actions job running the stack + `make e2e`,
+  allowed to be required once green for a week), full axe sweep, performance and bundle
+  budget check, cross-browser smoke (Chromium + Firefox + WebKit) on the E2E journey, docs
+  (`README` screenshots, `docs/ui-guide.md` with component rules), delete `/__design` from
+  production routes (already dev-only), final decision-record entry.
+- **Backend:** none. **Depends on:** 13-17.
+
+### Order and parallelism
+Strict order 2 → 3; then 4 and 5 can proceed in parallel after 2; 6 after 5; 7 after 4+6;
+8 after 5; 9 after 6+8; 10 after 5; 11 after 7; 12 after 3-11; 13-17 after 12 (13/14/15 are
+independent; 16 → 17); 18 last.
 
 ## 9. Decisions (resolved — see section 0)
 
