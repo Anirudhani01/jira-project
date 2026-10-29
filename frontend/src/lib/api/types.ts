@@ -42,5 +42,7 @@ export type Backlog = Schemas['BacklogResponse'];
 export type CompleteSprintResult = Schemas['CompleteSprintResponse'];
 export type Notification = Schemas['NotificationResponse'];
 export type NotificationList = Schemas['NotificationListResponse'];
+export type AuditEvent = Schemas['AuditEventResponse'];
+export type AuditEventList = Schemas['AuditEventListResponse'];
 export type Comment = Schemas['CommentResponse'];
 export type CommentList = Schemas['CommentListResponse'];

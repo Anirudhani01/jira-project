@@ -19,6 +19,7 @@ services:
       APP_OWNER_PASSWORD: ${APP_OWNER_PASSWORD:?set APP_OWNER_PASSWORD in .env}
       APP_RW_PASSWORD: ${APP_RW_PASSWORD:?set APP_RW_PASSWORD in .env}
       APP_WORKER_PASSWORD: ${APP_WORKER_PASSWORD:?set APP_WORKER_PASSWORD in .env}
+      APP_RETENTION_PASSWORD: ${APP_RETENTION_PASSWORD:?set APP_RETENTION_PASSWORD in .env}
     ports:
       - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
@@ -116,6 +117,7 @@ services:
       COOKIE_SECURE: "false"
       DATABASE_URL: postgresql+asyncpg://app_rw:${APP_RW_PASSWORD}@postgres:5432/jira
       WORKER_DATABASE_URL: postgresql+asyncpg://app_worker:${APP_WORKER_PASSWORD}@postgres:5432/jira
+      RETENTION_DATABASE_URL: postgresql+asyncpg://app_retention:${APP_RETENTION_PASSWORD}@postgres:5432/jira
       REDIS_URL: redis://redis:6379/0
       APP_SECRET_KEY: ${APP_SECRET_KEY:?set APP_SECRET_KEY in .env}
       <<: *dev-email

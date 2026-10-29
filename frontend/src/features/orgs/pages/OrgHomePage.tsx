@@ -31,6 +31,11 @@ export function OrgHomePage() {
           <Link to={`/o/${org.data.slug}/settings/members`} className="text-blue-700 underline">
             Members
           </Link>
+          {org.data.permissions.includes('org.audit.view') ? (
+            <Link to={`/o/${org.data.slug}/settings/audit`} className="text-blue-700 underline">
+              Audit log
+            </Link>
+          ) : null}
           {canManage ? (
             <Link to={`/o/${org.data.slug}/settings`} className="text-blue-700 underline">
               Settings

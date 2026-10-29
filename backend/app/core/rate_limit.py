@@ -45,6 +45,10 @@ ORG_CREATE_PER_USER: Final = RateLimit("org-create-user", 10, 3600)
 # M4: invitations per organization (plan §4.5).
 INVITATIONS_PER_ORG: Final = RateLimit("invitations-org", 100, 86_400)
 
+# M12 (plan §4.5): one global budget per signed-in user across the whole API. The limit
+# itself is configurable (``API_RATE_LIMIT_PER_MINUTE``, 0 = off), so it is built at runtime.
+API_PER_USER_NAME: Final = "api-user"
+
 # Atomic check-and-reserve: concurrent requests cannot all pass the check before any
 # of them is counted (the original check-then-hit design allowed parallel bursts).
 _ACQUIRE_SCRIPT = """

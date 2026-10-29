@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
 from app.core.errors import AppError
-from app.core.rate_limit import RateLimiter
+from app.core.rate_limit import API_PER_USER_NAME, RateLimit, RateLimiter
 from app.core.security import SecretKeys, hash_token
 from app.db.tenant import TenantContext, bind_tenant
 from app.modules.identity import repository
@@ -113,10 +113,22 @@ async def optional_session(request: Request, services: Services) -> AuthContext 
 
 
 async def require_session(
-    auth: Annotated[AuthContext | None, Depends(optional_session)],
+    auth: Annotated[AuthContext | None, Depends(optional_session)], services: Services
 ) -> AuthContext:
     if auth is None:
         raise unauthenticated()
+    limit = services.settings.api_rate_limit_per_minute
+    if limit > 0:  # one global budget per signed-in user (plan §4.5); 0 disables it
+        acquired = await services.limiter.acquire(
+            RateLimit(API_PER_USER_NAME, limit, 60), str(auth.user_id)
+        )
+        if acquired.blocked:
+            raise AppError(
+                429,
+                "rate_limited",
+                "Too many requests. Slow down and try again shortly.",
+                headers={"Retry-After": str(int(acquired.retry_after or 1) + 1)},
+            )
     return auth
 
 

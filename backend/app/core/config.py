@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     migration_database_url: SecretStr | None = None
     # Worker process connection (app_worker role). Required only by `python -m app.worker`.
     worker_database_url: SecretStr | None = None
+    # Retention purge connection (app_retention role). Optional: without it the worker does
+    # not purge (plan V2.7).
+    retention_database_url: SecretStr | None = None
+    retention_interval_seconds: int = Field(default=3600, ge=60, le=86400)
+    # Global per-user API limit (requests per minute, M12). 0 disables it (rollback switch).
+    api_rate_limit_per_minute: int = Field(default=600, ge=0, le=100_000)
     redis_url: SecretStr
 
     db_pool_size: int = Field(default=10, ge=1, le=100)
@@ -201,6 +207,10 @@ class Settings(BaseSettings):
             worker_user = _db_username(self.worker_database_url.get_secret_value())
             if worker_user is None or worker_user in FORBIDDEN_RUNTIME_DB_USERS:
                 problems.append("WORKER_DATABASE_URL must use the least-privileged worker role")
+        if self.retention_database_url is not None:
+            retention_user = _db_username(self.retention_database_url.get_secret_value())
+            if retention_user is None or retention_user in FORBIDDEN_RUNTIME_DB_USERS:
+                problems.append("RETENTION_DATABASE_URL must use the retention role")
         return problems
 
     def _production_problems(self) -> list[str]:
@@ -232,6 +242,8 @@ class Settings(BaseSettings):
             secrets["MIGRATION_DATABASE_URL"] = self.migration_database_url
         if self.worker_database_url is not None:
             secrets["WORKER_DATABASE_URL"] = self.worker_database_url
+        if self.retention_database_url is not None:
+            secrets["RETENTION_DATABASE_URL"] = self.retention_database_url
         if self.smtp_password is not None:
             secrets["SMTP_PASSWORD"] = self.smtp_password
         for name, secret in secrets.items():

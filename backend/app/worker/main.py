@@ -13,7 +13,7 @@ import uuid
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
@@ -26,6 +26,7 @@ from app.modules.orgs.emails import handle_invitation_job
 from app.modules.orgs.members import TOPIC_ORG_INVITATION
 from app.modules.outbox import repository as outbox
 from app.modules.outbox.repository import ClaimedJob
+from app.worker.retention import run_purge
 
 logger = logging.getLogger("app.worker")
 
@@ -176,6 +177,21 @@ class Worker:
         logger.info("worker stopped", extra={"event": "worker.stopped"})
 
 
+async def retention_loop(settings: Settings, engine: AsyncEngine, stopping: asyncio.Event) -> None:
+    """Periodic purge; a failure is logged and retried at the next interval."""
+    while not stopping.is_set():
+        try:
+            if await run_purge(engine) is None:
+                logger.info("retention purge skipped", extra={"event": "retention.locked"})
+        except Exception as exc:
+            logger.error(
+                "retention purge failed",
+                extra={"event": "retention.failed", "error_type": type(exc).__name__},
+            )
+        with suppress(TimeoutError):
+            await asyncio.wait_for(stopping.wait(), timeout=settings.retention_interval_seconds)
+
+
 async def run_worker(settings: Settings) -> None:
     if settings.worker_database_url is None:
         raise SystemExit("WORKER_DATABASE_URL is required to run the worker")
@@ -188,7 +204,20 @@ async def run_worker(settings: Settings) -> None:
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGTERM, signal.SIGINT):
             loop.add_signal_handler(sig, worker.stopping.set)
+        retention_engine = None
+        retention_task = None
+        if settings.retention_database_url is not None:
+            retention_engine = create_db_engine(
+                settings, application_name="jira-retention", url=settings.retention_database_url
+            )
+            retention_task = asyncio.create_task(
+                retention_loop(settings, retention_engine, worker.stopping)
+            )
         await worker.run()
+        if retention_task is not None:
+            await retention_task
+        if retention_engine is not None:
+            await retention_engine.dispose()
     finally:
         await engine.dispose()
 
