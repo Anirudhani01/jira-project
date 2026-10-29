@@ -9,11 +9,10 @@ from starlette.requests import Request
 
 from app.core.logging import redact
 from app.core.rate_limit import LOGIN_PER_IP_EMAIL, SIGNUP_PER_IP, RateLimiter
-from app.modules.identity.service import reserve_rate_limit
-from app.modules.security_events.service import ClientInfo
 from app.core.security import KeyPurpose, SecretKeys, hash_token, new_session_token
 from app.main import create_redis
 from app.modules.identity.deps import client_info
+from app.modules.identity.service import reserve_rate_limit
 from app.modules.security_events.service import ClientInfo, _values
 from tests.conftest import make_settings
 
