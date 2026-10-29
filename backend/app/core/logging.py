@@ -26,6 +26,8 @@ ALLOWED_EXTRA_FIELDS: Final = frozenset(
         "error_type",
         "driver_error_type",
         "error_message",
+        "timeout_scope",
+        "timeout_seconds",
         "component",
         "check",
         "outcome",
@@ -69,17 +71,52 @@ def exception_type_name(exc: BaseException) -> str:
     return f"{cls.__module__}.{cls.__qualname__}"
 
 
+def _exception_chain(exc: BaseException) -> tuple[BaseException, ...]:
+    """Exceptions reachable via ``orig``, ``__cause__``, and ``__context__``."""
+    chain: list[BaseException] = []
+    seen: set[int] = set()
+
+    def visit(node: BaseException | None) -> None:
+        if node is None or id(node) in seen:
+            return
+        seen.add(id(node))
+        chain.append(node)
+        orig = getattr(node, "orig", None)
+        if isinstance(orig, BaseException):
+            visit(orig)
+        visit(node.__cause__)
+        if not node.__suppress_context__:
+            visit(node.__context__)
+
+    visit(exc)
+    return tuple(chain)
+
+
 def sanitized_error_extra(exc: BaseException) -> dict[str, str]:
     """Structured ``extra=`` fields for an exception without leaking secrets."""
-    driver: BaseException = exc
+    chain = _exception_chain(exc)
+    message = redact(str(exc))
+    if not message.strip():
+        if isinstance(exc, TimeoutError):
+            message = (
+                "deadline exceeded (asyncio TimeoutError); a slower database error "
+                "may have been cancelled without a message"
+            )
+        else:
+            message = redact(repr(exc))
+    extra: dict[str, str] = {
+        "error_type": exception_type_name(exc),
+        "error_message": message,
+    }
+    driver: BaseException | None = None
     orig = getattr(exc, "orig", None)
     if isinstance(orig, BaseException):
         driver = orig
-    extra: dict[str, str] = {
-        "error_type": exception_type_name(exc),
-        "error_message": redact(str(exc)),
-    }
-    if driver is not exc:
+    else:
+        for candidate in chain[1:]:
+            driver = candidate
+            break
+    if driver is not None and driver is not exc:
         extra["driver_error_type"] = exception_type_name(driver)
     return extra
 

@@ -22,6 +22,15 @@ from app.db.role_check import UnsafeDatabaseRoleError, verify_runtime_role
 
 logger = logging.getLogger("app.health")
 
+
+def _database_failure_log_extra(exc: Exception, *, timeout_seconds: float) -> dict[str, str]:
+    extra = sanitized_error_extra(exc)
+    if isinstance(exc, TimeoutError):
+        extra["timeout_scope"] = "readiness_deadline"
+        extra["timeout_seconds"] = str(timeout_seconds)
+    return extra
+
+
 DatabaseState = Literal["ok", "unavailable", "misconfigured"]
 RedisState = Literal["ok", "degraded"]
 OverallState = Literal["ready", "degraded", "unavailable"]
@@ -80,7 +89,7 @@ class DependencyReadinessProbe:
                 extra={
                     "event": "db.role_check",
                     "outcome": "deferred",
-                    **sanitized_error_extra(exc),
+                    **_database_failure_log_extra(exc, timeout_seconds=self._timeout),
                 },
             )
 
@@ -105,7 +114,7 @@ class DependencyReadinessProbe:
                 extra={
                     "event": "readiness",
                     "check": "database",
-                    **sanitized_error_extra(exc),
+                    **_database_failure_log_extra(exc, timeout_seconds=self._timeout),
                 },
             )
             return "unavailable"

@@ -77,9 +77,16 @@ def test_sanitized_error_extra_redacts_secrets_and_includes_driver_type() -> Non
     record = _record("db down", **extra)
     payload = json.loads(JsonFormatter().format(record))
     assert payload["error_type"] == "builtins.RuntimeError"
-    assert "driver_error_type" not in payload
+    assert payload["driver_error_type"] == "builtins.TimeoutError"
     assert fake_db_password not in payload["error_message"]
     assert fake_db_password not in json.dumps(payload)
+
+
+def test_sanitized_error_extra_describes_bare_asyncio_timeout() -> None:
+    extra = sanitized_error_extra(TimeoutError())
+    assert extra["error_type"] == "builtins.TimeoutError"
+    assert extra["error_message"]
+    assert "deadline exceeded" in extra["error_message"]
 
 
 def test_non_primitive_extra_values_are_stringified_and_redacted() -> None:
