@@ -74,3 +74,26 @@ def test_issue_permissions_follow_project_roles() -> None:
     assert assign_transition <= project_permissions("member", "admin")
     assert assign_transition <= project_permissions("owner", None)
     assert project_permissions("member", None) == frozenset()
+
+
+def test_comment_permissions_follow_the_same_buckets_as_issue_create_edit_delete() -> None:
+    """M8: ``comment.create``/``comment.edit_own`` sit in the same role bucket as
+    ``issue.create``/``issue.edit`` (viewer: neither; member/admin: both). There is no
+    ``comment.edit_any``: only ``comment.delete_any`` sits in the admin-only bucket with
+    ``issue.delete`` -- a project member can create/edit their own comments but can never
+    delete someone else's."""
+    create_edit = {Permission.COMMENT_CREATE, Permission.COMMENT_EDIT_OWN}
+    delete_any = Permission.COMMENT_DELETE_ANY
+    viewer = project_permissions("member", "viewer")
+    assert not (create_edit & viewer)
+    assert delete_any not in viewer
+    member = project_permissions("member", "member")
+    assert create_edit <= member
+    assert delete_any not in member
+    assert create_edit <= project_permissions("member", "admin")
+    assert delete_any in project_permissions("member", "admin")
+    assert create_edit <= project_permissions("owner", None)
+    assert delete_any in project_permissions("owner", None)
+    assert create_edit <= project_permissions("admin", None)
+    assert delete_any in project_permissions("admin", None)
+    assert project_permissions("member", None) & (create_edit | {delete_any}) == frozenset()

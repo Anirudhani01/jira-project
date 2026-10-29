@@ -7,6 +7,8 @@ import { ErrorState, LoadingState } from '../../components/ui/States';
 import { ApiError } from '../../lib/api/errors';
 import type { Issue } from '../../lib/api/types';
 import { describeError } from '../../lib/forms';
+import { useSession } from '../auth/api';
+import { CommentsSection } from '../comments/CommentsSection';
 import { useProject, useProjectMembers } from '../projects/api';
 
 import {
@@ -46,6 +48,8 @@ export function IssueDetailPage() {
       canDelete={writable && permissions.includes('issue.delete')}
       canAssign={writable && permissions.includes('issue.assign')}
       canTransition={writable && permissions.includes('issue.transition')}
+      canComment={writable && permissions.includes('comment.create')}
+      canDeleteAnyComment={writable && permissions.includes('comment.delete_any')}
       onReload={() => void issue.refetch()}
     />
   );
@@ -58,6 +62,8 @@ function IssueView({
   canDelete,
   canAssign,
   canTransition,
+  canComment,
+  canDeleteAnyComment,
   onReload,
 }: {
   org: string;
@@ -66,9 +72,12 @@ function IssueView({
   canDelete: boolean;
   canAssign: boolean;
   canTransition: boolean;
+  canComment: boolean;
+  canDeleteAnyComment: boolean;
   onReload: () => void;
 }) {
   const navigate = useNavigate();
+  const session = useSession();
   const types = useIssueTypes(org);
   const priorities = usePriorities(org);
   const members = useProjectMembers(org, issue.project_key);
@@ -462,24 +471,14 @@ function IssueView({
           Delete issue
         </button>
       ) : null}
-      <section aria-labelledby="activity-title" className="space-y-2">
-        <h2 id="activity-title" className="text-lg font-semibold">
-          Activity
-        </h2>
-        <ol className="space-y-1 text-sm">
-          {(activity.data ?? []).map((a) => (
-            <li key={a.id}>
-              {a.actor?.display_name ?? 'System'}{' '}
-              {a.action === 'updated'
-                ? `changed ${a.field ?? ''}`
-                : a.action === 'transitioned'
-                  ? 'changed status'
-                  : a.action}{' '}
-              · <time dateTime={a.created_at}>{new Date(a.created_at).toLocaleString()}</time>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <CommentsSection
+        org={org}
+        issueKey={issue.key}
+        activity={activity.data ?? []}
+        currentUserId={session.data?.user.id ?? ''}
+        canComment={canComment}
+        canDeleteAny={canDeleteAnyComment}
+      />
     </article>
   );
 }

@@ -241,6 +241,9 @@ async def test_project_visibility_and_role_restrictions(tenant: Tenant) -> None:
         ] == []
         # Org admins are implicit project admins.
         assert (await admin.get(base)).json()["permissions"] == [
+            "comment.create",
+            "comment.delete_any",
+            "comment.edit_own",
             "issue.assign",
             "issue.create",
             "issue.delete",

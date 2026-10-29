@@ -24,6 +24,7 @@ from app.db.engine import create_db_engine
 from app.db.session import create_sessionmaker
 from app.health import DependencyReadinessProbe, ReadinessProbe
 from app.health import router as health_router
+from app.modules.comments.router import router as comments_router
 from app.modules.identity.deps import IdentityServices
 from app.modules.identity.passwords import BreachChecker, PasswordHashing
 from app.modules.identity.router import router as identity_router
@@ -109,6 +110,7 @@ def create_app(
     app.include_router(orgs_router)
     app.include_router(projects_router)
     app.include_router(issues_router)
+    app.include_router(comments_router)
 
     # add_middleware wraps: the last added is outermost.
     app.add_middleware(ErrorBoundaryMiddleware)

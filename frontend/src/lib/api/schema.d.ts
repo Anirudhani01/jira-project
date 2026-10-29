@@ -310,6 +310,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orgs/{org_slug}/comments/{comment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Comment */
+        delete: operations["delete_comment_api_v1_orgs__org_slug__comments__comment_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Comment */
+        patch: operations["update_comment_api_v1_orgs__org_slug__comments__comment_id__patch"];
+        trace?: never;
+    };
     "/api/v1/orgs/{org_slug}/invitations": {
         parameters: {
             query?: never;
@@ -439,6 +457,28 @@ export interface paths {
         get: operations["list_children_api_v1_orgs__org_slug__issues__issue_key__children_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/issues/{issue_key}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Comments */
+        get: operations["list_comments_api_v1_orgs__org_slug__issues__issue_key__comments_get"];
+        put?: never;
+        /**
+         * Create Comment
+         * @description ``Idempotency-Key`` (optional): a retry with the same key and body replays the
+         *     original response, exactly like issue creation.
+         */
+        post: operations["create_comment_api_v1_orgs__org_slug__issues__issue_key__comments_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -869,6 +909,45 @@ export interface components {
             position: number;
             /** Status Ids */
             status_ids: string[];
+        };
+        /** CommentListResponse */
+        CommentListResponse: {
+            /** Items */
+            items: components["schemas"]["CommentResponse"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** CommentResponse */
+        CommentResponse: {
+            author: components["schemas"]["UserRef"];
+            /** Body */
+            body: string;
+            /** Body Html */
+            body_html: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Edited At */
+            edited_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issue Key */
+            issue_key: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** CreateCommentRequest */
+        CreateCommentRequest: {
+            /** Body */
+            body: string;
         };
         /** CreateInvitationRequest */
         CreateInvitationRequest: {
@@ -1427,6 +1506,11 @@ export interface components {
             kind: string;
             /** Name */
             name: string;
+        };
+        /** UpdateCommentRequest */
+        UpdateCommentRequest: {
+            /** Body */
+            body: string;
         };
         /**
          * UpdateIssueRequest
@@ -2074,6 +2158,72 @@ export interface operations {
             };
         };
     };
+    delete_comment_api_v1_orgs__org_slug__comments__comment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_comment_api_v1_orgs__org_slug__comments__comment_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCommentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_invitations_api_v1_orgs__org_slug__invitations_get: {
         parameters: {
             query?: never;
@@ -2397,6 +2547,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChildrenResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_comments_api_v1_orgs__org_slug__issues__issue_key__comments_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                issue_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_comment_api_v1_orgs__org_slug__issues__issue_key__comments_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "idempotency-key"?: string | null;
+            };
+            path: {
+                issue_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCommentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentResponse"];
                 };
             };
             /** @description Validation Error */

@@ -64,9 +64,15 @@ M7_PATHS = {
     "/api/v1/orgs/{org_slug}/projects/{project_key}/labels",
     "/api/v1/orgs/{org_slug}/projects/{project_key}/labels/{label_id}",
 }
+M8_PATHS = {
+    "/api/v1/orgs/{org_slug}/issues/{issue_key}/comments",
+    "/api/v1/orgs/{org_slug}/comments/{comment_id}",
+}
 
 
 def test_openapi_has_only_authorized_routes() -> None:
-    """Scope guard: routes beyond M7 must not appear before their milestone."""
+    """Scope guard: routes beyond M8 must not appear before their milestone."""
     paths = set(json.loads(build_schema())["paths"])
-    assert paths == (M1_PATHS | M2_PATHS | M3_PATHS | M4_PATHS | M5_PATHS | M6_PATHS | M7_PATHS)
+    assert paths == (
+        M1_PATHS | M2_PATHS | M3_PATHS | M4_PATHS | M5_PATHS | M6_PATHS | M7_PATHS | M8_PATHS
+    )

@@ -22,6 +22,10 @@ class Permission(StrEnum):
     ISSUE_DELETE = "issue.delete"
     ISSUE_ASSIGN = "issue.assign"
     ISSUE_TRANSITION = "issue.transition"
+    # Comment-scoped (M8)
+    COMMENT_CREATE = "comment.create"
+    COMMENT_EDIT_OWN = "comment.edit_own"
+    COMMENT_DELETE_ANY = "comment.delete_any"
 
 
 _ADMIN: Final = frozenset(
@@ -69,6 +73,9 @@ _PROJECT_ALL: Final = frozenset(
         Permission.ISSUE_DELETE,
         Permission.ISSUE_ASSIGN,
         Permission.ISSUE_TRANSITION,
+        Permission.COMMENT_CREATE,
+        Permission.COMMENT_EDIT_OWN,
+        Permission.COMMENT_DELETE_ANY,
     }
 )
 PROJECT_ROLE_PERMISSIONS: Final[dict[str, frozenset[Permission]]] = {
@@ -80,6 +87,8 @@ PROJECT_ROLE_PERMISSIONS: Final[dict[str, frozenset[Permission]]] = {
             Permission.ISSUE_EDIT,
             Permission.ISSUE_ASSIGN,
             Permission.ISSUE_TRANSITION,
+            Permission.COMMENT_CREATE,
+            Permission.COMMENT_EDIT_OWN,
         }
     ),
     "viewer": frozenset({Permission.PROJECT_VIEW}),
