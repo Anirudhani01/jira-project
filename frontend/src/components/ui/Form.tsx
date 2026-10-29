@@ -2,8 +2,6 @@ import { Eye, EyeOff } from 'lucide-react';
 import {
   forwardRef,
   useId,
-  useLayoutEffect,
-  useRef,
   useState,
   type InputHTMLAttributes,
   type ReactNode,
@@ -83,21 +81,9 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(fu
 ) {
   const generated = useId();
   const inputId = id ?? generated;
-  const inputRef = useRef<HTMLInputElement>(null);
   const [visible, setVisible] = useState(false);
   const [draft, setDraft] = useState('');
-
-  useLayoutEffect(() => {
-    if (typeof value === 'string') {
-      setDraft(value);
-      return;
-    }
-    const el = inputRef.current;
-    if (el && el.value === '' && draft !== '') setDraft('');
-  });
-
-  const current =
-    typeof value === 'string' ? value : (inputRef.current?.value ?? draft);
+  const current = typeof value === 'string' ? value : draft;
   const strength = showStrength ? passwordStrength(current) : 'empty';
   const strengthNote =
     showStrength && strength !== 'empty' ? PASSWORD_STRENGTH_LABEL[strength] : null;
@@ -111,11 +97,7 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(fu
       </label>
       <div className="relative">
         <Input
-          ref={(node) => {
-            inputRef.current = node;
-            if (typeof ref === 'function') ref(node);
-            else if (ref) ref.current = node;
-          }}
+          ref={ref}
           id={inputId}
           type={visible ? 'text' : 'password'}
           aria-invalid={error ? true : undefined}

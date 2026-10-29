@@ -4,12 +4,13 @@ import { Card } from '../../components/ui/Card';
 
 import { PROJECT_TEMPLATES, type ProjectTemplateId } from './projectTemplates';
 
-export function ProjectTemplatePicker({ org }: { org: string }) {
-  const templates = Object.values(PROJECT_TEMPLATES) as (typeof PROJECT_TEMPLATES)[ProjectTemplateId][];
+const TEMPLATE_IDS: ProjectTemplateId[] = ['kanban', 'scrum'];
 
+export function ProjectTemplatePicker({ org }: { org: string }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {templates.map((template) => {
+      {TEMPLATE_IDS.map((id) => {
+        const template = PROJECT_TEMPLATES[id];
         const Icon = template.icon;
         return (
           <Link

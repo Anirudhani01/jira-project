@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -82,12 +83,14 @@ function ProfileForm({ displayName, email }: { displayName: string; email: strin
 
 function PasswordForm() {
   const change = useChangePassword();
+  const [fieldsKey, setFieldsKey] = useState(0);
   const form = useForm<z.infer<typeof passwordSchema>>({ resolver: zodResolver(passwordSchema) });
   const { errors } = form.formState;
   const onSubmit = form.handleSubmit(async ({ current_password, new_password }) => {
     try {
       await change.mutateAsync({ current_password, new_password });
       form.reset();
+      setFieldsKey((k) => k + 1);
     } catch (error) {
       applyServerErrors(error, ['current_password', 'new_password'], form.setError);
     }
@@ -113,6 +116,7 @@ function PasswordForm() {
           </p>
         ) : null}
         <TextField
+          key={`current-${fieldsKey}`}
           label="Current password"
           type="password"
           autoComplete="current-password"
@@ -120,6 +124,7 @@ function PasswordForm() {
           {...form.register('current_password')}
         />
         <TextField
+          key={`new-${fieldsKey}`}
           label="New password"
           type="password"
           autoComplete="new-password"
@@ -128,6 +133,7 @@ function PasswordForm() {
           {...form.register('new_password')}
         />
         <TextField
+          key={`confirm-${fieldsKey}`}
           label="Confirm new password"
           type="password"
           autoComplete="new-password"
