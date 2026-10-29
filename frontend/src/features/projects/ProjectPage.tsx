@@ -52,9 +52,14 @@ export function ProjectPage() {
           </button>
         ) : null}
       </div>
-      <Link className="text-blue-700 underline" to={`/o/${org}/p/${p.key}/issues`}>
-        View issues
-      </Link>
+      <div className="flex gap-4">
+        <Link className="text-blue-700 underline" to={`/o/${org}/p/${p.key}/board`}>
+          Board
+        </Link>
+        <Link className="text-blue-700 underline" to={`/o/${org}/p/${p.key}/issues`}>
+          View issues
+        </Link>
+      </div>
       <FormError>{failure ? describeError(failure) : null}</FormError>
       <section aria-labelledby="workflow-title" className="space-y-2">
         <h2 id="workflow-title" className="text-lg font-semibold">

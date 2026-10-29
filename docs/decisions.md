@@ -176,6 +176,27 @@ Issues core (plan M6, R3.3 rows 9-15, R4, R7-M6), migration 0007. Decisions appl
 - Org-member removal unassigns the member's live issues (version bump + activity) in the
   same transaction. `sprint_id` has no foreign key until M10; the `search` column is M12.
 
+## M9 implementation record (pending review)
+Kanban board (plan M9), migration 0010. Decisions applied:
+- Migration 0010 is not "revert only" as planned: `PUT .../board/columns` needs `UPDATE (name,
+  position, wip_limit)` and `DELETE` on `board_columns` and `DELETE` on
+  `board_column_statuses`. New RLS policies reuse `app_can_edit_board` (project admin).
+- New permission `board.manage` (project admin; org owner/admin implicitly). Audit event
+  `board.columns.updated` records the project key and the column count only.
+- `POST /issues/{key}/move` takes `to_status_id`, `after_key` (card above) and `before_key`
+  (card below). A status change needs `If-Match` (428/412) and a workflow transition
+  (422 `transition_not_permitted`); a pure reorder needs neither and never bumps `version`.
+  Invalid or inverted neighbours answer 422 `invalid_position` and write nothing. With no
+  neighbours the card goes to the end of its target status.
+- Ranks are project-wide base-62 fractions (`issues/rank.py`); a rank longer than 64
+  characters triggers a project-wide rebalance in the same transaction. Sprint-aware moves
+  and the scrum board's active sprint are M10.
+- Board read: not-done cards plus those done in the last 14 days, capped at 500
+  (`truncated`), in (rank, id) order, with the workflow transitions for drop targets.
+- Frontend: dnd-kit pointer and keyboard sensors with live announcements, plus a "Move to"
+  menu per card; the plan is computed before the optimistic update (the mutation runs after
+  `onMutate`), and failures restore the snapshot. Playwright E2E is not in the repository yet.
+
 ## Open questions
 - Retention of platform security events (proposed 1 y), application logs (30 d), traces (14 d).
 - Org audit events after org deletion (needed before org deletion is built).

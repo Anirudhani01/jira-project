@@ -485,6 +485,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orgs/{org_slug}/issues/{issue_key}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move Issue
+         * @description Board move: status change (needs ``If-Match``) and/or reorder (does not).
+         */
+        post: operations["move_issue_api_v1_orgs__org_slug__issues__issue_key__move_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orgs/{org_slug}/issues/{issue_key}/transitions": {
         parameters: {
             query?: never;
@@ -618,6 +638,40 @@ export interface paths {
         put?: never;
         /** Archive Project */
         post: operations["archive_project_api_v1_orgs__org_slug__projects__project_key__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Board */
+        get: operations["get_board_api_v1_orgs__org_slug__projects__project_key__board_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/board/columns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace Columns */
+        put: operations["replace_columns_api_v1_orgs__org_slug__projects__project_key__board_columns_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -889,6 +943,51 @@ export interface components {
             /** User Agent */
             user_agent: string | null;
         };
+        /** BoardColumn */
+        BoardColumn: {
+            /** Count */
+            count: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issues */
+            issues: components["schemas"]["IssueResponse"][];
+            /** Name */
+            name: string;
+            /** Over Wip Limit */
+            over_wip_limit: boolean;
+            /** Position */
+            position: number;
+            /** Status Ids */
+            status_ids: string[];
+            /** Wip Limit */
+            wip_limit: number | null;
+        };
+        /** BoardResponse */
+        BoardResponse: {
+            /** Board Type */
+            board_type: string;
+            /** Columns */
+            columns: components["schemas"]["BoardColumn"][];
+            /** Project Key */
+            project_key: string;
+            /** Transitions */
+            transitions: components["schemas"]["BoardTransition"][];
+            /** Truncated */
+            truncated: boolean;
+        };
+        /** BoardTransition */
+        BoardTransition: {
+            /** From Status Id */
+            from_status_id: string | null;
+            /**
+             * To Status Id
+             * Format: uuid
+             */
+            to_status_id: string;
+        };
         /** ChangePasswordRequest */
         ChangePasswordRequest: {
             /** Current Password */
@@ -900,6 +999,17 @@ export interface components {
         ChildrenResponse: {
             /** Items */
             items: components["schemas"]["IssueResponse"][];
+        };
+        /** ColumnInput */
+        ColumnInput: {
+            /** Id */
+            id?: string | null;
+            /** Name */
+            name: string;
+            /** Status Ids */
+            status_ids: string[];
+            /** Wip Limit */
+            wip_limit?: number | null;
         };
         /** ColumnResponse */
         ColumnResponse: {
@@ -1198,6 +1308,19 @@ export interface components {
              */
             user_id: string;
         };
+        /**
+         * MoveIssueRequest
+         * @description Board move (M9): optional status change plus position. ``after_key`` is the card
+         *     that will sit directly above the moved one, ``before_key`` the one directly below.
+         */
+        MoveIssueRequest: {
+            /** After Key */
+            after_key?: string | null;
+            /** Before Key */
+            before_key?: string | null;
+            /** To Status Id */
+            to_status_id?: string | null;
+        };
         /** OrgListResponse */
         OrgListResponse: {
             /** Items */
@@ -1361,6 +1484,11 @@ export interface components {
              * @enum {string}
              */
             status: "ready" | "degraded" | "unavailable";
+        };
+        /** ReplaceColumnsRequest */
+        ReplaceColumnsRequest: {
+            /** Columns */
+            columns: components["schemas"]["ColumnInput"][];
         };
         /** SessionInfo */
         SessionInfo: {
@@ -2633,6 +2761,44 @@ export interface operations {
             };
         };
     };
+    move_issue_api_v1_orgs__org_slug__issues__issue_key__move_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
+            path: {
+                issue_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveIssueRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_transitions_api_v1_orgs__org_slug__issues__issue_key__transitions_get: {
         parameters: {
             query?: never;
@@ -2983,6 +3149,74 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_board_api_v1_orgs__org_slug__projects__project_key__board_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BoardResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replace_columns_api_v1_orgs__org_slug__projects__project_key__board_columns_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceColumnsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BoardResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

@@ -16,6 +16,7 @@ class Permission(StrEnum):
     PROJECT_VIEW = "project.view"
     PROJECT_MANAGE = "project.manage"
     PROJECT_MEMBERS_MANAGE = "project.members.manage"
+    BOARD_MANAGE = "board.manage"  # M9
     # Issue-scoped (M6, M7)
     ISSUE_CREATE = "issue.create"
     ISSUE_EDIT = "issue.edit"
@@ -68,6 +69,7 @@ _PROJECT_ALL: Final = frozenset(
         Permission.PROJECT_VIEW,
         Permission.PROJECT_MANAGE,
         Permission.PROJECT_MEMBERS_MANAGE,
+        Permission.BOARD_MANAGE,
         Permission.ISSUE_CREATE,
         Permission.ISSUE_EDIT,
         Permission.ISSUE_DELETE,

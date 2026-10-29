@@ -132,6 +132,18 @@ class ApplyTransitionRequest(_Request):
     transition_id: uuid.UUID
 
 
+IssueKey = Annotated[str, StringConstraints(pattern=r"^[A-Z][A-Z0-9]{1,9}-[1-9][0-9]{0,8}$")]
+
+
+class MoveIssueRequest(_Request):
+    """Board move (M9): optional status change plus position. ``after_key`` is the card
+    that will sit directly above the moved one, ``before_key`` the one directly below."""
+
+    to_status_id: uuid.UUID | None = None
+    after_key: IssueKey | None = None
+    before_key: IssueKey | None = None
+
+
 class CreateLabelRequest(_Request):
     name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
     color: Annotated[str, StringConstraints(pattern=r"^#[0-9A-Fa-f]{6}$")]

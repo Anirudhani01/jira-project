@@ -39,6 +39,7 @@ ACTION_METADATA_ALLOWLIST: Final[dict[str, frozenset[str]]] = {
     "project.member.added": frozenset({"project", "role"}),
     "project.member.role_changed": frozenset({"project", "old_role", "new_role"}),
     "project.member.removed": frozenset({"project", "role"}),
+    "board.columns.updated": frozenset({"project", "columns"}),
     "issue.deleted": frozenset({"key"}),
 }
 

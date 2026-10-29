@@ -26,6 +26,7 @@ from app.modules.issues.schemas import (
     IssueResponse,
     LabelListResponse,
     LabelResponse,
+    MoveIssueRequest,
     SortOrder,
     StatusCategory,
     TransitionListResponse,
@@ -204,6 +205,30 @@ async def apply_transition(
     if match is None:
         raise service.version_conflict()
     issue = await service.apply_transition(services, ref, body, int(match.group(1)))
+    response.headers["ETag"] = _etag(issue)
+    return issue
+
+
+@router.post(
+    "/issues/{issue_key}/move",
+    response_model=IssueResponse,
+    dependencies=[CsrfProtected],
+)
+async def move_issue(
+    body: MoveIssueRequest,
+    ref: TransitionIssue,
+    response: Response,
+    services: Services,
+    if_match: Annotated[str | None, Header()] = None,
+) -> IssueResponse:
+    """Board move: status change (needs ``If-Match``) and/or reorder (does not)."""
+    expected: int | None = None
+    if if_match is not None:
+        match = ETAG.fullmatch(if_match.strip())
+        if match is None:
+            raise service.version_conflict()
+        expected = int(match.group(1))
+    issue = await service.move_issue(services, ref, body, expected)
     response.headers["ETag"] = _etag(issue)
     return issue
 

@@ -31,6 +31,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy import func
 from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,6 +43,7 @@ from app.core.errors import AppError
 from app.modules.audit import service as audit
 from app.modules.identity.deps import IdentityServices
 from app.modules.identity.directory import visible_users
+from app.modules.issues import rank as ranking
 from app.modules.issues import repository
 from app.modules.issues.models import Issue, Label
 from app.modules.issues.repository import IssueFilter, NewIssue
@@ -53,6 +55,7 @@ from app.modules.issues.schemas import (
     IssueResponse,
     LabelRef,
     LabelResponse,
+    MoveIssueRequest,
     PriorityRef,
     StatusRef,
     TransitionRef,
@@ -133,7 +136,7 @@ def _response(
     )
 
 
-async def _responses(session: AsyncSession, rows: list[Any]) -> list[IssueResponse]:
+async def issue_responses(session: AsyncSession, rows: list[Any]) -> list[IssueResponse]:
     ids = {r.Issue.reporter_id for r in rows} | {
         r.Issue.assignee_id for r in rows if r.Issue.assignee_id
     }
@@ -145,7 +148,7 @@ async def _responses(session: AsyncSession, rows: list[Any]) -> list[IssueRespon
 
 
 async def _issue_response(session: AsyncSession, issue_id: uuid.UUID) -> IssueResponse:
-    [response] = await _responses(session, [await repository.issue_view(session, issue_id)])
+    [response] = await issue_responses(session, [await repository.issue_view(session, issue_id)])
     return response
 
 
@@ -418,7 +421,7 @@ async def list_issues(
             after=after,
             limit=query.limit + 1,
         )
-        items = await _responses(session, rows[: query.limit])
+        items = await issue_responses(session, rows[: query.limit])
     next_cursor = None
     if len(rows) > query.limit:
         last = rows[query.limit - 1].Issue
@@ -664,7 +667,7 @@ async def list_children(services: IdentityServices, ref: IssueRef) -> list[Issue
         issue = await _load(session, project, ref)
         children = await repository.find_children(session, project.id, issue.id)
         rows = await repository.issue_views_by_ids(session, [c.id for c in children])
-        return await _responses(session, rows)
+        return await issue_responses(session, rows)
 
 
 # --------------------------------------------------------------------- transitions
@@ -754,6 +757,113 @@ async def apply_transition(
                 }
             ],
         )
+        return await _issue_response(session, issue.id)
+
+
+def invalid_position() -> AppError:
+    return AppError(
+        422,
+        "invalid_position",
+        "The neighbouring issues no longer match the board; refresh and try again.",
+    )
+
+
+async def _neighbour(
+    session: AsyncSession, project: Project, issue: Any, key: str | None
+) -> Any | None:
+    if key is None:
+        return None
+    prefix, _, number = key.rpartition("-")
+    found = (
+        await repository.find_issues_by_seq(session, project.id, [int(number)])
+        if prefix == project.key
+        else {}
+    )
+    neighbour = found.get(int(number)) if found else None
+    if neighbour is None or neighbour.id == issue.id:
+        raise invalid_position()
+    return neighbour
+
+
+async def move_issue(
+    services: IdentityServices,
+    ref: IssueRef,
+    body: MoveIssueRequest,
+    expected_version: int | None,
+) -> IssueResponse:
+    """Atomic board move (plan §3): status change (workflow-checked, versioned) and rank in
+    one transaction. A pure reorder needs no ``If-Match`` and never bumps ``version``."""
+    async with project_transaction(services, ref.project, Permission.ISSUE_TRANSITION) as (
+        session,
+        project,
+        _,
+    ):
+        _writable(project)
+        issue = await _load(session, project, ref)
+        target_id = body.to_status_id or issue.status_id
+        changes_status = target_id != issue.status_id
+        if expected_version is not None and issue.version != expected_version:
+            raise version_conflict()
+        if changes_status:
+            if expected_version is None:
+                raise AppError(
+                    428,
+                    "precondition_required",
+                    'Send If-Match with the issue\'s ETag ("v<version>") to change status.',
+                )
+            statuses = await repository.find_statuses(session, [issue.status_id, target_id])
+            if target_id not in statuses:
+                raise invalid_transition()
+            allowed = await repository.list_transitions(
+                session, project.workflow_id, issue.status_id
+            )
+            if all(transition.to_status_id != target_id for transition in allowed):
+                raise transition_not_permitted()
+        above = await _neighbour(session, project, issue, body.after_key)
+        below = await _neighbour(session, project, issue, body.before_key)
+        if above is not None and below is not None and above.rank >= below.rank:
+            raise invalid_position()
+        if above is None and below is None:
+            last = await repository.last_rank_in_status(session, project.id, target_id, issue.id)
+            new_rank = ranking.between(last, None)
+        else:
+            new_rank = ranking.between(
+                above.rank if above is not None else None,
+                below.rank if below is not None else None,
+            )
+        if changes_status:
+            new_status = statuses[target_id]
+            old_status = statuses.get(issue.status_id)
+            if (
+                await repository.update_if_version(
+                    session,
+                    issue.id,
+                    issue.version,
+                    status_id=target_id,
+                    rank=new_rank,
+                    done_at=func.now() if new_status.category == "done" else None,
+                )
+                is None
+            ):
+                raise version_conflict()
+            await repository.add_activity(
+                session,
+                [
+                    {
+                        "issue_id": issue.id,
+                        "action": "transitioned",
+                        "field": "status",
+                        "old_value": {"id": str(issue.status_id), "name": old_status.name}
+                        if old_status
+                        else None,
+                        "new_value": {"id": str(target_id), "name": new_status.name},
+                    }
+                ],
+            )
+        elif not await repository.set_rank(session, issue.id, new_rank):
+            raise not_found()
+        if ranking.needs_rebalance(new_rank):
+            await repository.rebalance_project_ranks(session, project.id)
         return await _issue_response(session, issue.id)
 
 

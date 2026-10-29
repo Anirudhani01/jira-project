@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.tenant import require_org_context
 from app.modules.issues.models import IdempotencyKey, Issue, IssueActivity, IssueLabel, Label
+from app.modules.issues.rank import spread
 from app.modules.orgs.models import IssueType, Priority
 from app.modules.projects.models import (
     Project,
@@ -187,6 +188,83 @@ async def set_rank(session: AsyncSession, issue_id: uuid.UUID, rank: str) -> boo
         .values(rank=rank)
     )
     return bool(result.rowcount)  # type: ignore[attr-defined]
+
+
+async def list_board_views(
+    session: AsyncSession, project_id: uuid.UUID, *, done_within_days: int, limit: int
+) -> list[Any]:
+    """Board cards in (rank, id) order: every not-done issue plus those finished within
+    ``done_within_days`` (plan §3). Callers pass ``cap + 1`` to detect truncation."""
+    context = require_org_context(session)
+    recent = Issue.done_at >= func.now() - func.make_interval(0, 0, 0, done_within_days)
+    return list(
+        await session.execute(
+            _view_query()
+            .where(
+                Issue.org_id == context.org_id,
+                Issue.project_id == project_id,
+                Issue.deleted_at.is_(None),
+                or_(WorkflowStatus.category != "done", recent),
+            )
+            .order_by(Issue.rank, Issue.id)
+            .limit(limit)
+        )
+    )
+
+
+async def find_issues_by_seq(
+    session: AsyncSession, project_id: uuid.UUID, seqs: list[int]
+) -> dict[int, Issue]:
+    """Live issues of one project keyed by sequence number (move neighbours)."""
+    context = require_org_context(session)
+    rows = (
+        await session.execute(
+            select(Issue).where(
+                Issue.org_id == context.org_id,
+                Issue.project_id == project_id,
+                Issue.seq.in_(seqs),
+                Issue.deleted_at.is_(None),
+            )
+        )
+    ).scalars()
+    return {issue.seq: issue for issue in rows}
+
+
+async def last_rank_in_status(
+    session: AsyncSession, project_id: uuid.UUID, status_id: uuid.UUID, exclude_id: uuid.UUID
+) -> str | None:
+    context = require_org_context(session)
+    return (
+        await session.execute(
+            select(func.max(Issue.rank)).where(
+                Issue.org_id == context.org_id,
+                Issue.project_id == project_id,
+                Issue.status_id == status_id,
+                Issue.id != exclude_id,
+                Issue.deleted_at.is_(None),
+            )
+        )
+    ).scalar_one()
+
+
+async def rebalance_project_ranks(session: AsyncSession, project_id: uuid.UUID) -> None:
+    """Respread every live issue's rank of a project in its current (rank, id) order."""
+    context = require_org_context(session)
+    ids = list(
+        (
+            await session.execute(
+                select(Issue.id)
+                .where(
+                    Issue.org_id == context.org_id,
+                    Issue.project_id == project_id,
+                    Issue.deleted_at.is_(None),
+                )
+                .order_by(Issue.rank, Issue.id)
+            )
+        ).scalars()
+    )
+    for issue_id, new_rank in zip(ids, spread(len(ids)), strict=True):
+        await set_rank(session, issue_id, new_rank)
 
 
 async def unassign_member(session: AsyncSession, user_id: uuid.UUID) -> list[uuid.UUID]:

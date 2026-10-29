@@ -289,6 +289,135 @@
         "title": "AuditEventResponse",
         "type": "object"
       },
+      "BoardColumn": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/IssueResponse"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "over_wip_limit": {
+            "title": "Over Wip Limit",
+            "type": "boolean"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "status_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Status Ids",
+            "type": "array"
+          },
+          "wip_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wip Limit"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "position",
+          "wip_limit",
+          "status_ids",
+          "count",
+          "over_wip_limit",
+          "issues"
+        ],
+        "title": "BoardColumn",
+        "type": "object"
+      },
+      "BoardResponse": {
+        "properties": {
+          "board_type": {
+            "title": "Board Type",
+            "type": "string"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/BoardColumn"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "project_key": {
+            "title": "Project Key",
+            "type": "string"
+          },
+          "transitions": {
+            "items": {
+              "$ref": "#/components/schemas/BoardTransition"
+            },
+            "title": "Transitions",
+            "type": "array"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "project_key",
+          "board_type",
+          "columns",
+          "transitions",
+          "truncated"
+        ],
+        "title": "BoardResponse",
+        "type": "object"
+      },
+      "BoardTransition": {
+        "properties": {
+          "from_status_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Status Id"
+          },
+          "to_status_id": {
+            "format": "uuid",
+            "title": "To Status Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_status_id",
+          "to_status_id"
+        ],
+        "title": "BoardTransition",
+        "type": "object"
+      },
       "ChangePasswordRequest": {
         "additionalProperties": false,
         "properties": {
@@ -326,6 +455,57 @@
           "items"
         ],
         "title": "ChildrenResponse",
+        "type": "object"
+      },
+      "ColumnInput": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "status_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Status Ids",
+            "type": "array"
+          },
+          "wip_limit": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wip Limit"
+          }
+        },
+        "required": [
+          "name",
+          "status_ids"
+        ],
+        "title": "ColumnInput",
         "type": "object"
       },
       "ColumnResponse": {
@@ -1098,6 +1278,50 @@
         "title": "MemberResponse",
         "type": "object"
       },
+      "MoveIssueRequest": {
+        "additionalProperties": false,
+        "description": "Board move (M9): optional status change plus position. ``after_key`` is the card\nthat will sit directly above the moved one, ``before_key`` the one directly below.",
+        "properties": {
+          "after_key": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z][A-Z0-9]{1,9}-[1-9][0-9]{0,8}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Key"
+          },
+          "before_key": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z][A-Z0-9]{1,9}-[1-9][0-9]{0,8}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before Key"
+          },
+          "to_status_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Status Id"
+          }
+        },
+        "title": "MoveIssueRequest",
+        "type": "object"
+      },
       "OrgListResponse": {
         "properties": {
           "items": {
@@ -1508,6 +1732,25 @@
           "checks"
         ],
         "title": "ReadinessResponse",
+        "type": "object"
+      },
+      "ReplaceColumnsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnInput"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Columns",
+            "type": "array"
+          }
+        },
+        "required": [
+          "columns"
+        ],
+        "title": "ReplaceColumnsRequest",
         "type": "object"
       },
       "SessionInfo": {
@@ -3897,6 +4140,84 @@
         ]
       }
     },
+    "/api/v1/orgs/{org_slug}/issues/{issue_key}/move": {
+      "post": {
+        "description": "Board move: status change (needs ``If-Match``) and/or reorder (does not).",
+        "operationId": "move_issue_api_v1_orgs__org_slug__issues__issue_key__move_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issue_key",
+            "required": true,
+            "schema": {
+              "title": "Issue Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "org_slug",
+            "required": true,
+            "schema": {
+              "title": "Org Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveIssueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssueResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Move Issue",
+        "tags": [
+          "issues"
+        ]
+      }
+    },
     "/api/v1/orgs/{org_slug}/issues/{issue_key}/transitions": {
       "get": {
         "description": "Transitions permitted from the issue's current status.",
@@ -4463,6 +4784,118 @@
         "summary": "Archive Project",
         "tags": [
           "projects"
+        ]
+      }
+    },
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/board": {
+      "get": {
+        "operationId": "get_board_api_v1_orgs__org_slug__projects__project_key__board_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_key",
+            "required": true,
+            "schema": {
+              "title": "Project Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "org_slug",
+            "required": true,
+            "schema": {
+              "title": "Org Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Board",
+        "tags": [
+          "boards"
+        ]
+      }
+    },
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/board/columns": {
+      "put": {
+        "operationId": "replace_columns_api_v1_orgs__org_slug__projects__project_key__board_columns_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_key",
+            "required": true,
+            "schema": {
+              "title": "Project Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "org_slug",
+            "required": true,
+            "schema": {
+              "title": "Org Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceColumnsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Replace Columns",
+        "tags": [
+          "boards"
         ]
       }
     },
