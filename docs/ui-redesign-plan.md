@@ -1,7 +1,20 @@
 # UI redesign plan
 
-Status: **proposal — pick an option (section 7) before any code is written.**
+Status: **APPROVED — Option C (full parity), violet accent, dark mode in scope.** Section 0 is the contract; the rest is the reasoning behind it.
 Date: 2026-10-30. Screenshots of today's UI are in `docs/ui-redesign/before/`.
+
+## 0. Final decisions (the contract)
+
+| # | Decision |
+|---|---|
+| 1 | **Scope: Option C, full parity** — all rows of section 8 (PRs 1-12) plus the Option-C additions in section 8b (PRs 13-18). |
+| 2 | **Accent colour: violet.** Light `#6a45d6`, dark `#b69cff` (both meet 4.5:1 text contrast on their surfaces); hover/soft variants derived from them. The epic issue type moves to magenta `#b4308a` so epics stay distinguishable from the accent. Everything else neutral. |
+| 3 | **Dark mode: yes**, light / dark / system, shipped in PR 1. |
+| 4 | **Primitives: Radix UI + our own wrapper components**, `lucide-react` icons, Inter + JetBrains Mono (self-hosted), Radix Toast (not sonner: sonner injects a `<style>` tag, which the production CSP `style-src 'self'` blocks). |
+| 5 | **Product name/logo:** keep "Jira Project" as a placeholder wordmark; never use Atlassian marks, icons, fonts or copy. |
+| 6 | **Compatibility rule:** existing routes and API contracts do not change (except the additive endpoints listed in section 6); the existing E2E journey and unit tests are updated, never deleted. |
+| 7 | **Quality gate on every PR:** lint, typecheck, unit tests, `make e2e`, axe (serious/critical = 0) on every touched route, before/after screenshots, light and dark. |
+| 8 | **Delivery:** one PR per row below, merged in order; each PR is shippable on its own. |
 
 ## 1. Why: what is wrong today
 
@@ -61,7 +74,7 @@ visual identity (section 3).
 
 ## 3. Visual identity and design system (ours)
 
-- **Look**: calm, dense, "work tool" — neutral surfaces, one confident accent colour, semantic
+- **Look**: calm, dense, "work tool" — neutral surfaces, one confident **violet** accent, semantic
   colours for status/priority, 8 px grid, 6–8 px radii, soft elevation only on overlays.
 - **Tokens** (CSS variables in `src/index.css`, mapped into Tailwind v4 `@theme`):
   colour roles (surface, surface-raised, border, text, text-muted, accent, danger, warning,
@@ -188,12 +201,24 @@ Rules for every PR: keep existing routes and API contracts; no regression in axe
 critical) or keyboard access; update unit tests and the E2E journey; attach before/after
 screenshots; `make lint test` stays green.
 
-## 9. Decisions needed from you
+## 8b. Option-C additions (after PR 12)
 
-1. **Option** A, B or C (section 7).
-2. **Visual direction**: (a) neutral + blue accent (closest to the familiar tracker feel), or
-   (b) neutral + a different accent (e.g. violet/teal) to look distinct. Product name/logo: keep
-   "Jira Project" as a placeholder or choose a name (we must not use Atlassian's marks).
+| # | PR | Contents | Backend |
+|---|---|---|---|
+| 13 | Swimlanes | board grouped by assignee or epic, collapsible lanes | none |
+| 14 | Saved filters | filter chips persisted per user, shown in the sidebar | `saved_filters` table + 4 endpoints |
+| 15 | Bulk actions | multi-select in list/backlog: assign, move to sprint, delete | `POST /issues/bulk` |
+| 16 | Sprint reports | burndown, velocity, sprint report page | report endpoints over activity data |
+| 17 | Roadmap/timeline | epic timeline by sprint/date | none (uses sprint dates, epics) |
+| 18 | Final QA | full screenshot baseline in CI, a11y and performance budget sweep, docs | none |
+
+## 9. Decisions (resolved — see section 0)
+
+These were the open questions; the answers are recorded in section 0:
+
+1. **Option**: **C** (section 7).
+2. **Visual direction**: **violet accent** on neutral surfaces. Product name/logo: placeholder
+   "Jira Project" (we must not use Atlassian's marks).
 3. **Dark mode** in scope now (recommended) or later.
 4. **Primitives**: Radix + our own wrappers (recommended) or a ready kit (e.g. shadcn/ui on
    Radix, same dependency, faster start, more files to own).
