@@ -13,7 +13,8 @@ export
 COMPOSE := docker compose -f infra/docker-compose.yml --env-file $(ENV_FILE)
 GITLEAKS_IMAGE := zricethezav/gitleaks:v8.28.0
 TMP_DIR := $(CURDIR)/.tmp
-UV := cd backend && uv
+# Ignore a stale VIRTUAL_ENV from another repo; uv still targets backend/.venv via pyproject.toml.
+UV := cd backend && env -u VIRTUAL_ENV uv
 PNPM := cd frontend && pnpm
 NODE_PIN := $(strip $(file < .nvmrc))
 

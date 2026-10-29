@@ -17,6 +17,7 @@ from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from app.core.logging import sanitized_error_extra
 from app.db.role_check import UnsafeDatabaseRoleError, verify_runtime_role
 
 logger = logging.getLogger("app.health")
@@ -79,7 +80,7 @@ class DependencyReadinessProbe:
                 extra={
                     "event": "db.role_check",
                     "outcome": "deferred",
-                    "error_type": type(exc).__name__,
+                    **sanitized_error_extra(exc),
                 },
             )
 
@@ -101,7 +102,11 @@ class DependencyReadinessProbe:
         except Exception as exc:
             logger.warning(
                 "readiness: database unavailable",
-                extra={"event": "readiness", "check": "database", "error_type": type(exc).__name__},
+                extra={
+                    "event": "readiness",
+                    "check": "database",
+                    **sanitized_error_extra(exc),
+                },
             )
             return "unavailable"
         return "misconfigured" if self._role_unsafe else "ok"
