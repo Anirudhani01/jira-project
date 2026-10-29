@@ -1,0 +1,103 @@
+# Render Blueprint for a zero-cost initial deployment.
+# See DEPLOYMENT.md for the manual Supabase/Render dashboard steps this depends on
+# (DB roles, Redis URL, secrets). This file only prepares configuration — nothing here
+# deploys or creates resources until you push it and connect it in the Render dashboard.
+#
+# Architecture: the frontend (Render Static Site, free) is the browser-facing origin.
+# It rewrite-proxies /api/* to the backend service, so the SPA and API stay same-origin
+# from the browser's point of view -- the app has no CORS middleware by design (it
+# relies on nginx doing the same thing locally; see frontend/nginx/default.conf) and
+# uses a `__Host-` prefixed session cookie, which requires that same-origin shape.
+#
+# Postgres is NOT defined here: Supabase hosts it (see DEPLOYMENT.md). Redis is NOT
+# defined here either: Render's own Redis/Key Value offering has no lasting free tier;
+# use a free external provider (e.g. Upstash) and paste its URL as a secret below.
+
+services:
+  - type: web
+    name: jira-backend
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # Render injects $PORT; the committed Dockerfile hardcodes 8000 for the local
+    # compose stack, so override the start command here instead of editing the image.
+    # UVICORN_FORWARDED_ALLOW_IPS=* trusts X-Forwarded-* from Render's own edge proxy
+    # (the container itself is not reachable from the public internet directly), the
+    # same trust relationship the local nginx->backend hop has via FORWARDED_ALLOW_IPS.
+    dockerCommand: >-
+      uvicorn app.main:create_app --factory --host 0.0.0.0 --port $PORT
+      --no-access-log --proxy-headers
+    healthCheckPath: /readyz
+    envVars:
+      - key: ENVIRONMENT
+        value: prod
+      - key: LOG_LEVEL
+        value: INFO
+      - key: UVICORN_FORWARDED_ALLOW_IPS
+        value: "*"
+      - key: COOKIE_SECURE
+        value: "true"
+      # Set after the frontend's Render URL (or custom domain) is known.
+      - key: APP_BASE_URL
+        sync: false
+      # postgresql+asyncpg://app_rw:<password>@<supabase-host>:5432/postgres?ssl=require
+      # Use Supabase's DIRECT connection host (port 5432), not the pgbouncer pooler
+      # (6543): this app sets session-level server_settings (statement_timeout etc.)
+      # per connection, which requires session pooling, not transaction pooling.
+      - key: DATABASE_URL
+        sync: false
+      - key: WORKER_DATABASE_URL
+        sync: false
+      - key: MIGRATION_DATABASE_URL
+        sync: false
+      # From a free external provider (e.g. Upstash); must be rediss:// (TLS) for a
+      # public endpoint. See DEPLOYMENT.md.
+      - key: REDIS_URL
+        sync: false
+      - key: APP_SECRET_KEY
+        generateValue: true
+      - key: BREACH_CHECK_MODE
+        value: hibp
+      # Signup stays disabled (default) until an email provider is configured; see
+      # DEPLOYMENT.md "Email / outbox worker" for the zero-cost options and limitation.
+      - key: SIGNUP_ENABLED
+        value: "false"
+      - key: EMAIL_DELIVERY_ENABLED
+        value: "false"
+
+  - type: web
+    name: jira-frontend
+    runtime: static
+    plan: free
+    rootDir: frontend
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    staticPublishPath: dist
+    routes:
+      # Proxied through the same origin the browser sees, so the session cookie
+      # (SameSite=Lax, __Host- prefixed) and the absence of CORS both keep working
+      # exactly as in local/dev. Replace the destination with jira-backend's actual
+      # Render URL (or a custom domain) before deploying.
+      - type: rewrite
+        source: /api/*
+        destination: https://jira-backend.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+# --- Not defined above: a background worker for the outbox email job (app.worker). ---
+# Render's Background Worker service type has no free tier (Starter plan, currently
+# the lowest paid tier, is required). Documented as a known limitation in DEPLOYMENT.md
+# rather than worked around. If/when you accept that cost, add:
+#
+# - type: worker
+#   name: jira-worker
+#   runtime: docker
+#   plan: starter
+#   rootDir: backend
+#   dockerfilePath: ./Dockerfile
+#   dockerContext: .
+#   dockerCommand: python -m app.worker
+#   envVars: [... same DATABASE_URL/WORKER_DATABASE_URL/REDIS_URL/APP_SECRET_KEY,
+#             plus EMAIL_DELIVERY_ENABLED=true and SMTP_* once a provider is chosen ...]
