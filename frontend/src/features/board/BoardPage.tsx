@@ -207,6 +207,7 @@ export function BoardPage() {
       <div className="flex items-center justify-between">
         <h1 id="board-title" className="text-2xl font-semibold">
           {data.project_key} board
+          {data.sprint ? ` — ${data.sprint.name}` : ''}
         </h1>
         <Link className="text-blue-700 underline" to={`/o/${org}/p/${data.project_key}/issues`}>
           List view
@@ -215,6 +216,15 @@ export function BoardPage() {
       {move.isError ? (
         <p role="alert" className="rounded bg-red-50 p-2 text-sm text-red-800">
           Could not move the card: {move.error.message} The board was restored.
+        </p>
+      ) : null}
+      {data.board_type === 'scrum' && !data.sprint ? (
+        <p className="text-sm text-slate-600">
+          No active sprint. Start one from the{' '}
+          <Link className="text-blue-700 underline" to={`/o/${org}/p/${data.project_key}/backlog`}>
+            backlog
+          </Link>
+          .
         </p>
       ) : null}
       {data.truncated ? (

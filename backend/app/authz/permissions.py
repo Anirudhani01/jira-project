@@ -17,6 +17,7 @@ class Permission(StrEnum):
     PROJECT_MANAGE = "project.manage"
     PROJECT_MEMBERS_MANAGE = "project.members.manage"
     BOARD_MANAGE = "board.manage"  # M9
+    SPRINT_MANAGE = "sprint.manage"  # M10
     # Issue-scoped (M6, M7)
     ISSUE_CREATE = "issue.create"
     ISSUE_EDIT = "issue.edit"
@@ -70,6 +71,7 @@ _PROJECT_ALL: Final = frozenset(
         Permission.PROJECT_MANAGE,
         Permission.PROJECT_MEMBERS_MANAGE,
         Permission.BOARD_MANAGE,
+        Permission.SPRINT_MANAGE,
         Permission.ISSUE_CREATE,
         Permission.ISSUE_EDIT,
         Permission.ISSUE_DELETE,
@@ -89,6 +91,7 @@ PROJECT_ROLE_PERMISSIONS: Final[dict[str, frozenset[Permission]]] = {
             Permission.ISSUE_EDIT,
             Permission.ISSUE_ASSIGN,
             Permission.ISSUE_TRANSITION,
+            Permission.SPRINT_MANAGE,
             Permission.COMMENT_CREATE,
             Permission.COMMENT_EDIT_OWN,
         }

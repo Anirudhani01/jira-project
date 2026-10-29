@@ -10,6 +10,7 @@ import { RequireAuth } from '../features/auth/RequireAuth';
 import { CreateOrgPage } from '../features/orgs/pages/CreateOrgPage';
 import { CreateProjectPage } from '../features/projects/CreateProjectPage';
 import { IssueDetailPage } from '../features/issues/IssueDetailPage';
+import { BacklogPage } from '../features/backlog/BacklogPage';
 import { BoardPage } from '../features/board/BoardPage';
 import { IssueListPage } from '../features/issues/IssueListPage';
 import { ProjectPage } from '../features/projects/ProjectPage';
@@ -48,6 +49,7 @@ export const routes: RouteObject[] = [
           { path: 'o/:org/p/:key', element: <ProjectPage /> },
           { path: 'o/:org/p/:key/issues', element: <IssueListPage /> },
           { path: 'o/:org/p/:key/board', element: <BoardPage /> },
+          { path: 'o/:org/p/:key/backlog', element: <BacklogPage /> },
           { path: 'o/:org/issues/:issueKey', element: <IssueDetailPage /> },
         ],
       },

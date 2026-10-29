@@ -5,7 +5,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
-from app.modules.issues.schemas import IssueResponse
+from app.modules.issues.schemas import IssueResponse, SprintRef
 
 ColumnName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 
@@ -47,3 +47,4 @@ class BoardResponse(BaseModel):
     columns: list[BoardColumn]
     transitions: list[BoardTransition]
     truncated: bool
+    sprint: SprintRef | None

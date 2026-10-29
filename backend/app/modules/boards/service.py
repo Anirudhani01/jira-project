@@ -18,10 +18,12 @@ from app.modules.boards.schemas import (
 )
 from app.modules.identity.deps import IdentityServices
 from app.modules.issues import repository as issues
+from app.modules.issues.schemas import SprintRef
 from app.modules.issues.service import issue_responses
 from app.modules.projects.models import Project
 from app.modules.projects.service import project_archived
 from app.modules.security_events.service import ClientInfo
+from app.modules.sprints import repository as sprints
 
 CARD_CAP = 500
 DONE_WITHIN_DAYS = 14
@@ -32,8 +34,19 @@ async def _board(session: AsyncSession, project: Project) -> BoardResponse:
     columns = await repository.list_columns(session, board.id)
     mapping = await repository.column_statuses(session, board.id)
     transitions = await repository.list_transitions(session, project.workflow_id)
-    rows = await issues.list_board_views(
-        session, project.id, done_within_days=DONE_WITHIN_DAYS, limit=CARD_CAP + 1
+    sprint = None
+    if project.board_type == "scrum":  # a scrum board shows the active sprint only
+        sprint = await sprints.find_active(session, project.id)
+    rows = (
+        []
+        if project.board_type == "scrum" and sprint is None
+        else await issues.list_board_views(
+            session,
+            project.id,
+            done_within_days=DONE_WITHIN_DAYS,
+            limit=CARD_CAP + 1,
+            sprint_id=sprint.id if sprint else None,
+        )
     )
     truncated = len(rows) > CARD_CAP
     cards = await issue_responses(session, rows[:CARD_CAP])
@@ -65,6 +78,7 @@ async def _board(session: AsyncSession, project: Project) -> BoardResponse:
             for t in transitions
         ],
         truncated=truncated,
+        sprint=SprintRef(id=sprint.id, name=sprint.name, state=sprint.state) if sprint else None,
     )
 
 

@@ -62,6 +62,13 @@ class Issue(Base):
         CheckConstraint("parent_id <> id", name="parent_not_self"),
         CheckConstraint("version > 0", name="version_positive"),
         _fk(
+            "fk_issues_org_id_sprints",
+            ["org_id", "project_id", "sprint_id"],
+            "sprints",
+            ["org_id", "project_id", "id"],
+            ondelete="SET NULL (sprint_id)",
+        ),
+        _fk(
             "fk_issues_org_id_projects",
             ["org_id", "project_id", "workflow_id"],
             "projects",
@@ -131,7 +138,7 @@ class Issue(Base):
     parent_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     assignee_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     reporter_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
-    sprint_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))  # FK in M10
+    sprint_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     summary: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(Text)
     rank: Mapped[str] = mapped_column(Text(collation="C"))

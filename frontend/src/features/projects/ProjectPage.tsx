@@ -56,6 +56,11 @@ export function ProjectPage() {
         <Link className="text-blue-700 underline" to={`/o/${org}/p/${p.key}/board`}>
           Board
         </Link>
+        {p.board_type === 'scrum' ? (
+          <Link className="text-blue-700 underline" to={`/o/${org}/p/${p.key}/backlog`}>
+            Backlog
+          </Link>
+        ) : null}
         <Link className="text-blue-700 underline" to={`/o/${org}/p/${p.key}/issues`}>
           View issues
         </Link>

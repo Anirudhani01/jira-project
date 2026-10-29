@@ -60,6 +60,8 @@ ALLOWED_TABLES = frozenset(
         "issue_labels",
         # M8
         "comments",
+        # M10
+        "sprints",
     }
 )
 

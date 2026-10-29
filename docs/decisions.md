@@ -197,6 +197,27 @@ Kanban board (plan M9), migration 0010. Decisions applied:
   menu per card; the plan is computed before the optimistic update (the mutation runs after
   `onMutate`), and failures restore the snapshot. Playwright E2E is not in the repository yet.
 
+## M10 implementation record (pending review)
+Sprints and backlog (plan M10, R3.3 rows 15/21, R4), migration 0011. Decisions applied:
+- `sprints` (future -> active -> closed) with a partial unique index (one active sprint per
+  project), date/state CHECKs and RLS reusing `app_can_write_issues` (project admin/member
+  plus org owner/admin = `sprint.manage`); only `future` sprints are deletable, and the
+  `issues` FK is `ON DELETE SET NULL (sprint_id)`, added `NOT VALID` then validated.
+- Only scrum projects have sprints (422 `sprints_require_scrum_project` otherwise).
+- Assigning an issue to a sprint is `POST /issues/{key}/move` with `sprint_id` (null =
+  backlog). It needs `If-Match` (428/412), `issue.edit`, locks the sprint `FOR SHARE` and
+  refuses a closed one (409 `sprint_closed`). Completion locks the sprint (and the carry-over
+  target) `FOR UPDATE`, so a concurrent add is either carried over or rejected, never
+  stranded (tested).
+- Completion moves unfinished issues to the backlog or a chosen future sprint, bumping each
+  `version` and writing `sprint_changed` activity; done issues stay in the closed sprint.
+- Deleting a future sprint returns its issues to the backlog through the FK; those issues'
+  versions are not bumped and no activity is written (a database cascade cannot do either).
+- The scrum board shows the active sprint's issues only, and an empty board when none is
+  active. The backlog page lists active and future sprints plus unfinished unplanned issues
+  (cap 500); closed sprints' issues are history.
+- Audit: `sprint.started` and `sprint.completed` (project, sprint name, moved count).
+
 ## Open questions
 - Retention of platform security events (proposed 1 y), application logs (30 d), traces (14 d).
 - Org audit events after org deletion (needed before org deletion is built).

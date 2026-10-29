@@ -57,6 +57,7 @@ from app.modules.issues.schemas import (
     LabelResponse,
     MoveIssueRequest,
     PriorityRef,
+    SprintRef,
     StatusRef,
     TransitionRef,
     TypeRef,
@@ -68,6 +69,7 @@ from app.modules.projects import repository as projects
 from app.modules.projects.models import Project
 from app.modules.projects.service import project_archived
 from app.modules.security_events.service import ClientInfo
+from app.modules.sprints import repository as sprints
 
 FORMER_MEMBER = "Former member"
 LOCK_NOT_AVAILABLE = "55P03"
@@ -126,6 +128,9 @@ def _response(
         reporter=_reporter(users, issue.reporter_id),
         assignee=_user(users, issue.assignee_id),
         parent=parent_ref,
+        sprint=SprintRef(id=issue.sprint_id, name=row.sprint_name, state=row.sprint_state)
+        if issue.sprint_id is not None and row.sprint_name is not None
+        else None,
         labels=[
             LabelRef(id=label.id, name=label.name, color=label.color)
             for label in labels_by_issue.get(issue.id, [])
@@ -785,81 +790,138 @@ async def _neighbour(
     return neighbour
 
 
+async def _check_status_move(
+    session: AsyncSession, project: Project, issue: Any, target_id: uuid.UUID
+) -> dict[uuid.UUID, Any]:
+    statuses = await repository.find_statuses(session, [issue.status_id, target_id])
+    if target_id not in statuses:
+        raise invalid_transition()
+    allowed = await repository.list_transitions(session, project.workflow_id, issue.status_id)
+    if all(transition.to_status_id != target_id for transition in allowed):
+        raise transition_not_permitted()
+    return statuses
+
+
+async def _lock_target_sprint(
+    session: AsyncSession, project: Project, sprint_id: uuid.UUID | None
+) -> Any | None:
+    if sprint_id is None:
+        return None
+    sprint = await sprints.find_sprint(session, project.id, sprint_id, lock="share")
+    if sprint is None:
+        raise AppError(422, "invalid_sprint", "Unknown sprint for this project.")
+    if sprint.state == "closed":
+        raise AppError(409, "sprint_closed", "This sprint is closed.")
+    return sprint
+
+
+async def _move_rank(
+    session: AsyncSession,
+    project: Project,
+    issue: Any,
+    body: MoveIssueRequest,
+    *,
+    target_id: uuid.UUID,
+    changes_sprint: bool,
+) -> str:
+    above = await _neighbour(session, project, issue, body.after_key)
+    below = await _neighbour(session, project, issue, body.before_key)
+    if above is not None and below is not None and above.rank >= below.rank:
+        raise invalid_position()
+    if above is None and below is None:
+        if changes_sprint:
+            last = await repository.last_rank_in_sprint(
+                session, project.id, body.sprint_id, issue.id
+            )
+        else:
+            last = await repository.last_rank_in_status(session, project.id, target_id, issue.id)
+        return ranking.between(last, None)
+    return ranking.between(
+        above.rank if above is not None else None, below.rank if below is not None else None
+    )
+
+
+def _status_activity(issue: Any, new_status: Any, old_status: Any | None) -> dict[str, Any]:
+    return {
+        "issue_id": issue.id,
+        "action": "transitioned",
+        "field": "status",
+        "old_value": {"id": str(issue.status_id), "name": old_status.name} if old_status else None,
+        "new_value": {"id": str(new_status.id), "name": new_status.name},
+    }
+
+
+def _sprint_activity(issue: Any, old_sprint: Any | None, new_sprint: Any | None) -> dict[str, Any]:
+    return {
+        "issue_id": issue.id,
+        "action": "sprint_changed",
+        "field": "sprint",
+        "old_value": {"id": str(old_sprint.id), "name": old_sprint.name} if old_sprint else None,
+        "new_value": {"id": str(new_sprint.id), "name": new_sprint.name} if new_sprint else None,
+    }
+
+
 async def move_issue(
     services: IdentityServices,
     ref: IssueRef,
     body: MoveIssueRequest,
     expected_version: int | None,
 ) -> IssueResponse:
-    """Atomic board move (plan §3): status change (workflow-checked, versioned) and rank in
-    one transaction. A pure reorder needs no ``If-Match`` and never bumps ``version``."""
+    """Atomic board/backlog move (plan §3): status change (workflow-checked), sprint change
+    (sprint locked ``FOR SHARE``, never ``closed``) and rank in one transaction. A pure
+    reorder needs no ``If-Match`` and never bumps ``version``; a status or sprint change
+    does both."""
     async with project_transaction(services, ref.project, Permission.ISSUE_TRANSITION) as (
         session,
         project,
-        _,
+        current,
     ):
         _writable(project)
         issue = await _load(session, project, ref)
         target_id = body.to_status_id or issue.status_id
         changes_status = target_id != issue.status_id
+        changes_sprint = "sprint_id" in body.model_fields_set and body.sprint_id != issue.sprint_id
         if expected_version is not None and issue.version != expected_version:
             raise version_conflict()
-        if changes_status:
-            if expected_version is None:
-                raise AppError(
-                    428,
-                    "precondition_required",
-                    'Send If-Match with the issue\'s ETag ("v<version>") to change status.',
+        if (changes_status or changes_sprint) and expected_version is None:
+            raise AppError(
+                428,
+                "precondition_required",
+                'Send If-Match with the issue\'s ETag ("v<version>") to change status or sprint.',
+            )
+        if changes_sprint and Permission.ISSUE_EDIT not in current.permissions:
+            raise forbidden()
+        statuses = (
+            await _check_status_move(session, project, issue, target_id) if changes_status else {}
+        )
+        new_sprint = (
+            await _lock_target_sprint(session, project, body.sprint_id) if changes_sprint else None
+        )
+        new_rank = await _move_rank(
+            session, project, issue, body, target_id=target_id, changes_sprint=changes_sprint
+        )
+        if changes_status or changes_sprint:
+            values: dict[str, Any] = {"rank": new_rank}
+            activity: list[dict[str, Any]] = []
+            if changes_status:
+                new_status = statuses[target_id]
+                values["status_id"] = target_id
+                values["done_at"] = func.now() if new_status.category == "done" else None
+                activity.append(_status_activity(issue, new_status, statuses.get(issue.status_id)))
+            if changes_sprint:
+                old_sprint = (
+                    await sprints.find_sprint(session, project.id, issue.sprint_id)
+                    if issue.sprint_id
+                    else None
                 )
-            statuses = await repository.find_statuses(session, [issue.status_id, target_id])
-            if target_id not in statuses:
-                raise invalid_transition()
-            allowed = await repository.list_transitions(
-                session, project.workflow_id, issue.status_id
-            )
-            if all(transition.to_status_id != target_id for transition in allowed):
-                raise transition_not_permitted()
-        above = await _neighbour(session, project, issue, body.after_key)
-        below = await _neighbour(session, project, issue, body.before_key)
-        if above is not None and below is not None and above.rank >= below.rank:
-            raise invalid_position()
-        if above is None and below is None:
-            last = await repository.last_rank_in_status(session, project.id, target_id, issue.id)
-            new_rank = ranking.between(last, None)
-        else:
-            new_rank = ranking.between(
-                above.rank if above is not None else None,
-                below.rank if below is not None else None,
-            )
-        if changes_status:
-            new_status = statuses[target_id]
-            old_status = statuses.get(issue.status_id)
+                values["sprint_id"] = body.sprint_id
+                activity.append(_sprint_activity(issue, old_sprint, new_sprint))
             if (
-                await repository.update_if_version(
-                    session,
-                    issue.id,
-                    issue.version,
-                    status_id=target_id,
-                    rank=new_rank,
-                    done_at=func.now() if new_status.category == "done" else None,
-                )
+                await repository.update_if_version(session, issue.id, issue.version, **values)
                 is None
             ):
                 raise version_conflict()
-            await repository.add_activity(
-                session,
-                [
-                    {
-                        "issue_id": issue.id,
-                        "action": "transitioned",
-                        "field": "status",
-                        "old_value": {"id": str(issue.status_id), "name": old_status.name}
-                        if old_status
-                        else None,
-                        "new_value": {"id": str(target_id), "name": new_status.name},
-                    }
-                ],
-            )
+            await repository.add_activity(session, activity)
         elif not await repository.set_rank(session, issue.id, new_rank):
             raise not_found()
         if ranking.needs_rebalance(new_rank):

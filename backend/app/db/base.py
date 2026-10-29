@@ -26,3 +26,4 @@ def import_all_models() -> None:
     from app.modules.outbox import models as outbox_models  # noqa: F401, PLC0415
     from app.modules.projects import models as project_models  # noqa: F401, PLC0415
     from app.modules.security_events import models as event_models  # noqa: F401, PLC0415
+    from app.modules.sprints import models as sprint_models  # noqa: F401, PLC0415

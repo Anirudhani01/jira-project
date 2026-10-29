@@ -24,6 +24,7 @@ function card(key: string, statusId: string, version = 1): Issue {
     assignee: null,
     parent: null,
     labels: [],
+    sprint: null,
     version,
     created_at: '2026-10-28T00:00:00Z',
     updated_at: '2026-10-28T00:00:00Z',
@@ -51,6 +52,7 @@ function board(): Board {
     project_key: 'WEB',
     board_type: 'kanban',
     truncated: false,
+    sprint: null,
     columns: [
       column('c1', 'To Do', TODO, [card('WEB-1', TODO), card('WEB-2', TODO)], 1),
       column('c2', 'Doing', DOING, [card('WEB-3', DOING)], null),

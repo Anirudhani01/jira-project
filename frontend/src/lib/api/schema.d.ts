@@ -644,6 +644,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/backlog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Backlog */
+        get: operations["get_backlog_api_v1_orgs__org_slug__projects__project_key__backlog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orgs/{org_slug}/projects/{project_key}/board": {
         parameters: {
             query?: never;
@@ -770,6 +787,24 @@ export interface paths {
         patch: operations["update_member_api_v1_orgs__org_slug__projects__project_key__members__user_id__patch"];
         trace?: never;
     };
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/sprints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Sprints */
+        get: operations["list_sprints_api_v1_orgs__org_slug__projects__project_key__sprints_get"];
+        put?: never;
+        /** Create Sprint */
+        post: operations["create_sprint_api_v1_orgs__org_slug__projects__project_key__sprints_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orgs/{org_slug}/projects/{project_key}/unarchive": {
         parameters: {
             query?: never;
@@ -801,6 +836,58 @@ export interface paths {
         get: operations["get_workflow_api_v1_orgs__org_slug__projects__project_key__workflow_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/sprints/{sprint_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Sprint */
+        delete: operations["delete_sprint_api_v1_orgs__org_slug__sprints__sprint_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Sprint */
+        patch: operations["update_sprint_api_v1_orgs__org_slug__sprints__sprint_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/sprints/{sprint_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete Sprint */
+        post: operations["complete_sprint_api_v1_orgs__org_slug__sprints__sprint_id__complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/sprints/{sprint_id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Sprint */
+        post: operations["start_sprint_api_v1_orgs__org_slug__sprints__sprint_id__start_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -943,6 +1030,23 @@ export interface components {
             /** User Agent */
             user_agent: string | null;
         };
+        /** BacklogResponse */
+        BacklogResponse: {
+            /** Backlog */
+            backlog: components["schemas"]["IssueResponse"][];
+            /** Project Key */
+            project_key: string;
+            /** Sprints */
+            sprints: components["schemas"]["BacklogSprint"][];
+            /** Truncated */
+            truncated: boolean;
+        };
+        /** BacklogSprint */
+        BacklogSprint: {
+            /** Issues */
+            issues: components["schemas"]["IssueResponse"][];
+            sprint: components["schemas"]["SprintResponse"];
+        };
         /** BoardColumn */
         BoardColumn: {
             /** Count */
@@ -973,6 +1077,7 @@ export interface components {
             columns: components["schemas"]["BoardColumn"][];
             /** Project Key */
             project_key: string;
+            sprint: components["schemas"]["SprintRef"] | null;
             /** Transitions */
             transitions: components["schemas"]["BoardTransition"][];
             /** Truncated */
@@ -1054,6 +1159,20 @@ export interface components {
              */
             updated_at: string;
         };
+        /** CompleteSprintRequest */
+        CompleteSprintRequest: {
+            /**
+             * Move Open Issues To
+             * @default backlog
+             */
+            move_open_issues_to: "backlog" | string;
+        };
+        /** CompleteSprintResponse */
+        CompleteSprintResponse: {
+            /** Moved Issues */
+            moved_issues: number;
+            sprint: components["schemas"]["SprintResponse"];
+        };
         /** CreateCommentRequest */
         CreateCommentRequest: {
             /** Body */
@@ -1118,6 +1237,13 @@ export interface components {
             description?: string | null;
             /** Key */
             key: string;
+            /** Name */
+            name: string;
+        };
+        /** CreateSprintRequest */
+        CreateSprintRequest: {
+            /** Goal */
+            goal?: string | null;
             /** Name */
             name: string;
         };
@@ -1198,6 +1324,7 @@ export interface components {
             /** Project Key */
             project_key: string;
             reporter: components["schemas"]["UserRef"];
+            sprint: components["schemas"]["SprintRef"] | null;
             status: components["schemas"]["StatusRef"];
             /** Summary */
             summary: string;
@@ -1318,6 +1445,8 @@ export interface components {
             after_key?: string | null;
             /** Before Key */
             before_key?: string | null;
+            /** Sprint Id */
+            sprint_id?: string | null;
             /** To Status Id */
             to_status_id?: string | null;
         };
@@ -1564,6 +1693,60 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** SprintListResponse */
+        SprintListResponse: {
+            /** Items */
+            items: components["schemas"]["SprintResponse"][];
+        };
+        /** SprintRef */
+        SprintRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** State */
+            state: string;
+        };
+        /** SprintResponse */
+        SprintResponse: {
+            /** Completed At */
+            completed_at: string | null;
+            /** End At */
+            end_at: string | null;
+            /** Goal */
+            goal: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issue Count */
+            issue_count: number;
+            /** Name */
+            name: string;
+            /** Project Key */
+            project_key: string;
+            /** Start At */
+            start_at: string | null;
+            /** State */
+            state: string;
+        };
+        /** StartSprintRequest */
+        StartSprintRequest: {
+            /**
+             * End At
+             * Format: date-time
+             */
+            end_at: string;
+            /**
+             * Start At
+             * Format: date-time
+             */
+            start_at: string;
+        };
         /** StatusRef */
         StatusRef: {
             /** Category */
@@ -1693,6 +1876,13 @@ export interface components {
             description?: string | null;
             /** Key */
             readonly key?: unknown;
+            /** Name */
+            name?: string | null;
+        };
+        /** UpdateSprintRequest */
+        UpdateSprintRequest: {
+            /** Goal */
+            goal?: string | null;
             /** Name */
             name?: string | null;
         };
@@ -3161,6 +3351,38 @@ export interface operations {
             };
         };
     };
+    get_backlog_api_v1_orgs__org_slug__projects__project_key__backlog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BacklogResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_board_api_v1_orgs__org_slug__projects__project_key__board_get: {
         parameters: {
             query?: never;
@@ -3498,6 +3720,74 @@ export interface operations {
             };
         };
     };
+    list_sprints_api_v1_orgs__org_slug__projects__project_key__sprints_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SprintListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_sprint_api_v1_orgs__org_slug__projects__project_key__sprints_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSprintRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SprintResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     unarchive_project_api_v1_orgs__org_slug__projects__project_key__unarchive_post: {
         parameters: {
             query?: never;
@@ -3547,6 +3837,144 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkflowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_sprint_api_v1_orgs__org_slug__sprints__sprint_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sprint_id: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_sprint_api_v1_orgs__org_slug__sprints__sprint_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sprint_id: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSprintRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SprintResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_sprint_api_v1_orgs__org_slug__sprints__sprint_id__complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sprint_id: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteSprintRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompleteSprintResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_sprint_api_v1_orgs__org_slug__sprints__sprint_id__start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sprint_id: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartSprintRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SprintResponse"];
                 };
             };
             /** @description Validation Error */

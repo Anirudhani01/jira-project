@@ -53,6 +53,12 @@ class StatusRef(BaseModel):
     category: str
 
 
+class SprintRef(BaseModel):
+    id: uuid.UUID
+    name: str
+    state: str
+
+
 class PriorityRef(BaseModel):
     id: uuid.UUID
     name: str
@@ -88,6 +94,7 @@ class IssueResponse(BaseModel):
     reporter: UserRef
     assignee: UserRef | None
     parent: IssueRefShort | None
+    sprint: SprintRef | None
     labels: list[LabelRef]
     version: int
     created_at: datetime
@@ -140,6 +147,7 @@ class MoveIssueRequest(_Request):
     that will sit directly above the moved one, ``before_key`` the one directly below."""
 
     to_status_id: uuid.UUID | None = None
+    sprint_id: uuid.UUID | None = None  # send null to return the issue to the backlog
     after_key: IssueKey | None = None
     before_key: IssueKey | None = None
 
