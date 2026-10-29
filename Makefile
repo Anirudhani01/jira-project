@@ -105,15 +105,26 @@ fmt: node-version-check ## Auto-format backend and frontend
 	$(UV) run ruff check --fix .
 	$(PNPM) format
 
-.PHONY: test backend-test backend-test-unit frontend-test
+.PHONY: test test-parallel backend-test backend-test-parallel backend-test-unit backend-test-integration frontend-test
 test: ## All tests (backend integration tests require infra-up)
 	$(MAKE) -j2 backend-test frontend-test
+
+# Unit tests use fake DB/Redis URLs; integration needs infra-up + TEST_* (see tests/integration/conftest.py).
+# Safe in parallel: separate pytest processes; only integration uses Postgres/Redis/Mailpit.
+test-parallel: ## Backend unit + integration + frontend concurrently (used by make ci)
+	$(MAKE) -j3 backend-test-unit backend-test-integration frontend-test
 
 backend-test:
 	$(UV) run env REQUIRE_INTEGRATION=1 pytest
 
+backend-test-parallel:
+	$(MAKE) -j2 backend-test-unit backend-test-integration
+
 backend-test-unit:
 	$(UV) run pytest tests/unit
+
+backend-test-integration:
+	$(UV) run env REQUIRE_INTEGRATION=1 pytest tests/integration
 
 frontend-test: node-version-check
 	$(PNPM) test
@@ -177,6 +188,13 @@ ci-secrets-scan: ## Full history on main; worktree-only on PRs (CI_GITLEAKS_FULL
 	fi
 
 # ------------------------------------------------------------------------------- CI
-.PHONY: ci
-ci: install infra-up lint typecheck test ci-migrate-roundtrip openapi-check build audit ci-secrets-scan ## Everything CI runs
+.PHONY: test-ci-path-classify ci ci-docs
+test-ci-path-classify: ## Unit tests for PR path classification (.github/scripts)
+	python3 .github/scripts/classify_pr_paths.py
+
+ci: install infra-up lint typecheck test-parallel ci-migrate-roundtrip openapi-check build audit ci-secrets-scan ## Everything CI runs
 	@echo "make ci: all checks passed"
+
+ci-docs: ## Docs-only PRs: gitleaks (respects CI_GITLEAKS_FULL_HISTORY); no app tests or Docker
+	$(MAKE) ci-secrets-scan
+	@echo "make ci-docs: docs-only checks passed"

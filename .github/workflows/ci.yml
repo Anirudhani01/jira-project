@@ -21,6 +21,7 @@ jobs:
       migrations: ${{ steps.filter.outputs.migrations }}
       docker: ${{ steps.filter.outputs.docker }}
       code: ${{ steps.filter.outputs.code }}
+      documentation: ${{ steps.filter.outputs.documentation }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,6 +32,11 @@ jobs:
         id: filter
         with:
           filters: |
+            documentation:
+              - 'docs/**'
+              - 'README.md'
+              - 'DEPLOYMENT.md'
+              - 'PLAN.md'
             migrations:
               - 'backend/migrations/**'
             docker:
@@ -48,14 +54,32 @@ jobs:
               - '.env.example'
               - '.gitleaks.toml'
               - '.gitignore'
+              - 'backend/uv.lock'
+              - 'frontend/pnpm-lock.yaml'
+              - '.nvmrc'
+              - '.editorconfig'
+              - 'render.yaml'
 
   docs-only:
-    name: Docs-only (CI skipped)
+    name: Docs only (secrets scan)
     needs: changes
-    if: github.event_name == 'pull_request' && needs.changes.outputs.code != 'true'
+    if: |
+      github.event_name == 'pull_request' &&
+      needs.changes.outputs.documentation == 'true' &&
+      needs.changes.outputs.code != 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - run: echo "Docs/markdown-only change; full CI skipped."
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: make ci-docs
+        env:
+          CI_GITLEAKS_FULL_HISTORY: "0"
+        run: make ci-docs
 
   ci:
     name: make ci
@@ -63,7 +87,8 @@ jobs:
     if: |
       github.event_name == 'workflow_dispatch' ||
       github.ref == 'refs/heads/main' ||
-      (github.event_name == 'pull_request' && needs.changes.outputs.code == 'true')
+      (github.event_name == 'pull_request' && needs.changes.outputs.code == 'true') ||
+      (github.event_name == 'pull_request' && needs.changes.outputs.documentation != 'true')
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -116,3 +141,32 @@ jobs:
       - name: Stop services
         if: always()
         run: make down
+
+  # Single PR conclusion job so branch protection can require "CI" without treating
+  # skipped full-ci as a pending check when the docs-only path ran instead.
+  ci-required:
+    name: CI
+    needs: [changes, docs-only, ci]
+    if: always() && !cancelled() && github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Path classification self-test
+        run: python3 .github/scripts/classify_pr_paths.py
+
+      - name: Require full CI or docs-only success
+        env:
+          CI_RESULT: ${{ needs.ci.result }}
+          DOCS_RESULT: ${{ needs.docs-only.result }}
+        run: |
+          set -euo pipefail
+          if [ "$CI_RESULT" = "success" ]; then
+            echo "Full CI passed."
+            exit 0
+          fi
+          if [ "$DOCS_RESULT" = "success" ]; then
+            echo "Documentation-only CI passed."
+            exit 0
+          fi
+          echo "CI did not pass (make ci=$CI_RESULT, docs-only=$DOCS_RESULT)." >&2
+          exit 1
