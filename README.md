@@ -78,7 +78,7 @@ make reset-db  # DESTRUCTIVE: also deletes the local database volume
 | `make ci` | Install, infra, lint, typecheck, tests, migration round trip, OpenAPI drift, build, audit, secret scan |
 | `make images` | Build backend and frontend container images locally (never pushed) |
 
-CI (`.github/workflows/ci.yml`) runs exactly `make ci` followed by `make images`.
+CI (`.github/workflows/ci.yml`) runs `make ci` then `make images` when applicable. **`main`** always gets the full gate (migration round-trip, full gitleaks history, image builds). **Pull requests** skip heavy steps unless the relevant paths change; docs-only PRs skip full CI. See [`docs/ci.md`](docs/ci.md).
 
 ## Identity (M1, M2) at a glance
 
