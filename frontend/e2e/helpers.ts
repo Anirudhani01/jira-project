@@ -62,7 +62,11 @@ export async function setTheme(page: Page, theme: 'light' | 'dark') {
   }, theme);
 }
 
-export async function captureAfterScreenshot(page: Page, basename: string, theme: 'light' | 'dark') {
+export async function captureAfterScreenshot(
+  page: Page,
+  basename: string,
+  theme: 'light' | 'dark',
+) {
   const dir = process.env.E2E_SCREENSHOTS ?? UI_REDESIGN_AFTER_DIR;
   fs.mkdirSync(dir, { recursive: true });
   await page.screenshot({

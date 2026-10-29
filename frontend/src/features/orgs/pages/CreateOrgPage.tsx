@@ -38,7 +38,10 @@ export function CreateOrgPage() {
   if (session.data && !session.data.user.email_verified) {
     return (
       <SimpleFormPage title="Create an organization" titleId="new-org-title">
-        <p role="status" className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">
+        <p
+          role="status"
+          className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm"
+        >
           {VERIFY_FIRST_MESSAGE}
         </p>
       </SimpleFormPage>

@@ -54,7 +54,10 @@ export function ProjectTemplateView({
                     key={item}
                     className="flex gap-3 rounded-md border border-line bg-surface-2/80 px-3 py-2 text-sm text-fg"
                   >
-                    <span className="mt-0.5 size-1.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
+                    <span
+                      className="mt-0.5 size-1.5 shrink-0 rounded-full bg-accent"
+                      aria-hidden="true"
+                    />
                     {item}
                   </li>
                 ))}

@@ -1,16 +1,7 @@
 import { Eye, EyeOff } from 'lucide-react';
-import {
-  forwardRef,
-  useId,
-  useState,
-  type InputHTMLAttributes,
-  type ReactNode,
-} from 'react';
+import { forwardRef, useId, useState, type InputHTMLAttributes, type ReactNode } from 'react';
 
-import {
-  PASSWORD_STRENGTH_LABEL,
-  passwordStrength,
-} from '../../features/auth/passwordStrength';
+import { PASSWORD_STRENGTH_LABEL, passwordStrength } from '../../features/auth/passwordStrength';
 import { cn } from '../../lib/cn';
 
 import { Button } from './Button';
@@ -65,105 +56,93 @@ interface PasswordFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>,
   showStrength?: boolean;
 }
 
-export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(function PasswordField(
-  {
-  label,
-  error,
-  hint,
-  id,
-  showStrength = false,
-  value,
-  onChange,
-  className,
-  ...props
-},
-  ref,
-) {
-  const generated = useId();
-  const inputId = id ?? generated;
-  const [visible, setVisible] = useState(false);
-  const [draft, setDraft] = useState('');
-  const current = typeof value === 'string' ? value : draft;
-  const strength = showStrength ? passwordStrength(current) : 'empty';
-  const strengthNote =
-    showStrength && strength !== 'empty' ? PASSWORD_STRENGTH_LABEL[strength] : null;
-  const combinedHint = [hint, strengthNote].filter(Boolean).join(' ') || undefined;
-  const note = error ?? combinedHint;
+export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
+  function PasswordField(
+    { label, error, hint, id, showStrength = false, value, onChange, className, ...props },
+    ref,
+  ) {
+    const generated = useId();
+    const inputId = id ?? generated;
+    const [visible, setVisible] = useState(false);
+    const [draft, setDraft] = useState('');
+    const current = typeof value === 'string' ? value : draft;
+    const strength = showStrength ? passwordStrength(current) : 'empty';
+    const strengthNote =
+      showStrength && strength !== 'empty' ? PASSWORD_STRENGTH_LABEL[strength] : null;
+    const combinedHint = [hint, strengthNote].filter(Boolean).join(' ') || undefined;
+    const note = error ?? combinedHint;
 
-  return (
-    <div className="space-y-1">
-      <label htmlFor={inputId} className="block text-[13px] font-medium text-fg">
-        {label}
-      </label>
-      <div className="relative">
-        <Input
-          ref={ref}
-          id={inputId}
-          type={visible ? 'text' : 'password'}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={note ? `${inputId}-note` : undefined}
-          value={value}
-          onChange={(event) => {
-            setDraft(event.target.value);
-            onChange?.(event);
-          }}
-          className={cn('pr-9', className)}
-          {...props}
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="absolute right-0 top-0 h-8 w-9 px-0"
-          aria-label={visible ? `Hide password for ${label}` : `Show password for ${label}`}
-          aria-pressed={visible}
-          onClick={() => {
-            setVisible((v) => !v);
-          }}
-        >
-          {visible ? (
-            <EyeOff className="size-4" aria-hidden="true" />
-          ) : (
-            <Eye className="size-4" aria-hidden="true" />
-          )}
-        </Button>
-      </div>
-      {showStrength && strength !== 'empty' ? (
-        <div
-          className="flex gap-1 pt-0.5"
-          aria-hidden="true"
-          role="presentation"
-        >
-          {[1, 2, 3].map((segment) => (
-            <div
-              key={segment}
-              className={cn(
-                'h-1 flex-1 rounded-full bg-line',
-                (strength === 'weak' && segment === 1) ||
-                  (strength === 'fair' && segment <= 2) ||
-                  (strength === 'strong' && segment <= 3)
-                  ? strength === 'weak'
-                    ? 'bg-warning'
-                    : strength === 'fair'
-                      ? 'bg-accent'
-                      : 'bg-success'
-                  : '',
-              )}
-            />
-          ))}
+    return (
+      <div className="space-y-1">
+        <label htmlFor={inputId} className="block text-[13px] font-medium text-fg">
+          {label}
+        </label>
+        <div className="relative">
+          <Input
+            ref={ref}
+            id={inputId}
+            type={visible ? 'text' : 'password'}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={note ? `${inputId}-note` : undefined}
+            value={value}
+            onChange={(event) => {
+              setDraft(event.target.value);
+              onChange?.(event);
+            }}
+            className={cn('pr-9', className)}
+            {...props}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="absolute right-0 top-0 h-8 w-9 px-0"
+            aria-label={visible ? `Hide password for ${label}` : `Show password for ${label}`}
+            aria-pressed={visible}
+            onClick={() => {
+              setVisible((v) => !v);
+            }}
+          >
+            {visible ? (
+              <EyeOff className="size-4" aria-hidden="true" />
+            ) : (
+              <Eye className="size-4" aria-hidden="true" />
+            )}
+          </Button>
         </div>
-      ) : null}
-      {note ? (
-        <p
-          id={`${inputId}-note`}
-          className={cn('text-xs', error ? 'text-danger' : 'text-fg-muted')}
-        >
-          {error ?? combinedHint}
-        </p>
-      ) : null}
-    </div>
-  );
-});
+        {showStrength && strength !== 'empty' ? (
+          <div className="flex gap-1 pt-0.5" aria-hidden="true" role="presentation">
+            {[1, 2, 3].map((segment) => (
+              <div
+                key={segment}
+                className={cn(
+                  'h-1 flex-1 rounded-full bg-line',
+                  (strength === 'weak' && segment === 1) ||
+                    (strength === 'fair' && segment <= 2) ||
+                    (strength === 'strong' && segment <= 3)
+                    ? strength === 'weak'
+                      ? 'bg-warning'
+                      : strength === 'fair'
+                        ? 'bg-accent'
+                        : 'bg-success'
+                    : '',
+                )}
+              />
+            ))}
+          </div>
+        ) : null}
+        {note ? (
+          <p
+            id={`${inputId}-note`}
+            className={cn('text-xs', error ? 'text-danger' : 'text-fg-muted')}
+          >
+            {error ?? combinedHint}
+          </p>
+        ) : null}
+      </div>
+    );
+  },
+);
 
 export function FormError({ children }: { children: ReactNode }) {
   if (!children) return null;

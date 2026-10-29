@@ -59,7 +59,10 @@ function ScrumPreview() {
         </div>
         <div className="mt-2 flex gap-1.5">
           {['To do', 'Doing', 'Done'].map((col) => (
-            <div key={col} className="flex-1 space-y-1 rounded border border-line/80 bg-surface p-1">
+            <div
+              key={col}
+              className="flex-1 space-y-1 rounded border border-line/80 bg-surface p-1"
+            >
               <div className="text-[9px] text-fg-muted">{col}</div>
               {col === 'To do' ? <MiniCard className="scale-90" /> : null}
             </div>

@@ -1,11 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import {
-  axeAndScreenshot,
-  expectThemed,
-  setTheme,
-  signUpAndSignIn,
-} from './helpers';
+import { axeAndScreenshot, expectThemed, setTheme, signUpAndSignIn } from './helpers';
 
 for (const theme of ['light', 'dark'] as const) {
   test(`account page — axe and screenshot (${theme})`, async ({ page, request }) => {

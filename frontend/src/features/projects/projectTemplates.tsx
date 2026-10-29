@@ -20,7 +20,11 @@ export const PROJECT_TEMPLATES: Record<ProjectTemplateId, ProjectTemplate> = {
     description: 'Continuous flow on a board with columns.',
     summary: 'Track work as cards moving through columns — ideal for support queues and ops teams.',
     icon: Kanban,
-    includes: ['Board with customizable columns', 'Workflow and statuses you control', 'Issue list and detail views'],
+    includes: [
+      'Board with customizable columns',
+      'Workflow and statuses you control',
+      'Issue list and detail views',
+    ],
   },
   scrum: {
     id: 'scrum',
@@ -29,7 +33,11 @@ export const PROJECT_TEMPLATES: Record<ProjectTemplateId, ProjectTemplate> = {
     description: 'Sprints, backlog, and board together.',
     summary: 'Plan in sprints, groom a backlog, and run a board for the active sprint.',
     icon: LayoutGrid,
-    includes: ['Backlog and sprint planning', 'Board for the active sprint', 'Start and complete sprint flows'],
+    includes: [
+      'Backlog and sprint planning',
+      'Board for the active sprint',
+      'Start and complete sprint flows',
+    ],
   },
 };
 

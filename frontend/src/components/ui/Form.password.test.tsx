@@ -37,8 +37,12 @@ describe('PasswordField', () => {
         <PasswordField label="New password" />
       </>,
     );
-    expect(screen.getByRole('button', { name: 'Show password for Current password' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Show password for New password' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Show password for Current password' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Show password for New password' }),
+    ).toBeInTheDocument();
   });
 
   it('clears strength UI after react-hook-form reset', async () => {
