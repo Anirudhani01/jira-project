@@ -34,6 +34,7 @@ Create Date: 2026-10-29
 """
 
 from collections.abc import Sequence
+from typing import Any
 
 import sqlalchemy as sa
 from alembic import op
@@ -55,7 +56,7 @@ def _fk(
     return sa.ForeignKeyConstraint(cols, [f"{table}.{c}" for c in refcols], name=name, **kw)  # type: ignore[arg-type]
 
 
-def _ts(name: str, nullable: bool = False) -> sa.Column[object]:
+def _ts(name: str, nullable: bool = False) -> sa.Column[Any]:
     default = None if nullable else sa.text("now()")
     return sa.Column(name, sa.DateTime(timezone=True), server_default=default, nullable=nullable)
 
