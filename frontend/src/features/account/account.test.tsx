@@ -38,8 +38,9 @@ describe('AccountPage', () => {
       'DELETE /me/sessions/s2': () => new Response(null, { status: 204 }),
     });
     renderApp('/account');
-    const list = await screen.findByRole('list');
-    expect(within(list).getByText('(this device)')).toBeInTheDocument();
+    // The toast region is also a list, so pick the one holding the sessions.
+    const current = await screen.findByText('(this device)');
+    expect(within(current.closest('ul') as HTMLElement).getAllByRole('listitem')).toHaveLength(2);
     expect(screen.getByText(/not verified yet/)).toBeInTheDocument();
 
     const user = userEvent.setup();

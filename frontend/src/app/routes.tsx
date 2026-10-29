@@ -10,6 +10,7 @@ import { RequireAuth } from '../features/auth/RequireAuth';
 import { CreateOrgPage } from '../features/orgs/pages/CreateOrgPage';
 import { CreateProjectPage } from '../features/projects/CreateProjectPage';
 import { IssueDetailPage } from '../features/issues/IssueDetailPage';
+import { DesignPage } from './DesignPage';
 import { AuditPage } from '../features/audit/AuditPage';
 import { BacklogPage } from '../features/backlog/BacklogPage';
 import { BoardPage } from '../features/board/BoardPage';
@@ -32,6 +33,8 @@ export const routes: RouteObject[] = [
     errorElement: <RouteErrorBoundary />,
     children: [
       { index: true, element: <HomePage /> },
+      // Component gallery for visual QA; never part of a production build.
+      ...(import.meta.env.DEV ? [{ path: '__design', element: <DesignPage /> }] : []),
       { path: 'login', element: <LoginPage /> },
       { path: 'signup', element: <SignupPage /> },
       { path: 'verify-email', element: <VerifyEmailPage /> },
