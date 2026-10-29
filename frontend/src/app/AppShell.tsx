@@ -1,79 +1,44 @@
-import { Link, Outlet, useNavigate } from 'react-router';
+import { Outlet } from 'react-router';
 
-import { useLogout, useSession } from '../features/auth/api';
-import { OrgNotificationBell } from '../features/notifications/NotificationBell';
-import { OrgSwitcher } from '../features/orgs/OrgSwitcher';
+import { Breadcrumbs } from './shell/Breadcrumbs';
+import { MobileProjectDrawer, ProjectSidebar } from './shell/ProjectSidebar';
+import { ShellProvider } from './shell/ShellContext';
+import { TopBar } from './shell/TopBar';
+import { useShowProjectSidebar } from './shell/useProjectContext';
 
-function UserNav() {
-  const session = useSession();
-  const logout = useLogout();
-  const navigate = useNavigate();
+function AppShellBody() {
+  const inProject = useShowProjectSidebar();
 
-  if (session.isPending) return null;
-  if (!session.data) {
-    return (
-      <div className="flex items-center gap-4 text-sm">
-        <Link to="/login" className="hover:underline">
-          Sign in
-        </Link>
-        <Link
-          to="/signup"
-          className="rounded-md bg-accent px-3 py-1.5 text-accent-fg no-underline hover:bg-accent-hover"
-        >
-          Sign up
-        </Link>
-      </div>
-    );
-  }
   return (
-    <div className="flex items-center gap-4 text-sm">
-      <OrgSwitcher />
-      <OrgNotificationBell />
-      <Link to="/account" className="hover:underline">
-        {session.data.user.display_name}
-      </Link>
-      <button
-        type="button"
-        disabled={logout.isPending}
-        onClick={() => {
-          logout.mutate(undefined, { onSuccess: () => void navigate('/login') });
-        }}
-        className="text-fg-muted hover:underline disabled:opacity-60"
+    <div className="flex min-h-screen flex-col bg-bg text-fg">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[70] focus:rounded focus:bg-surface focus:px-3 focus:py-2 focus:shadow"
       >
-        Sign out
-      </button>
-      {logout.isError ? (
-        <span role="alert" className="text-danger">
-          Sign-out failed. Try again.
-        </span>
-      ) : null}
+        Skip to content
+      </a>
+      <TopBar />
+      <div className="flex min-h-0 flex-1">
+        <ProjectSidebar />
+        <div className="flex min-w-0 flex-1 flex-col">
+          {inProject ? <Breadcrumbs /> : null}
+          <main
+            id="main"
+            className={inProject ? 'flex-1 px-4 py-6' : 'mx-auto w-full max-w-6xl flex-1 px-4 py-8'}
+          >
+            <Outlet />
+          </main>
+        </div>
+      </div>
+      <MobileProjectDrawer />
     </div>
   );
 }
 
 export function AppShell() {
   return (
-    <div className="flex min-h-screen flex-col bg-bg text-fg">
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:rounded focus:bg-surface focus:px-3 focus:py-2 focus:shadow"
-      >
-        Skip to content
-      </a>
-      <header className="border-b border-line bg-surface">
-        <nav
-          aria-label="Primary"
-          className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4"
-        >
-          <Link to="/" className="text-lg font-semibold tracking-tight">
-            Jira Project
-          </Link>
-          <UserNav />
-        </nav>
-      </header>
-      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
-        <Outlet />
-      </main>
-    </div>
+    <ShellProvider>
+      <AppShellBody />
+    </ShellProvider>
   );
 }

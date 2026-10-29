@@ -36,7 +36,7 @@ async function signUpAndSignIn(page: Page, request: APIRequestContext, email: st
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: /sign in|log in/i }).click();
-  await expect(page.getByRole('link', { name: 'E2E User' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /E2E User/i })).toBeVisible();
 }
 
 async function expectNoSeriousViolations(page: Page) {
@@ -74,13 +74,13 @@ test('sign up, plan a project and move a card on the board', async ({ page, requ
   await page.goto(`/o/${slug}/p/${key}/issues`);
   await page.getByRole('button', { name: 'Create issue' }).click();
   await page.getByLabel('Summary').fill('Login button misaligned');
-  await page.getByRole('button', { name: 'Create', exact: true }).click();
+  await page.locator('#main').getByRole('button', { name: 'Create', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Login button misaligned' })).toBeVisible();
 
   // Search finds it by text.
   await page.goto(`/o/${slug}/p/${key}/issues`);
   await page.getByRole('searchbox', { name: 'Search issues' }).fill('login');
-  await page.getByRole('button', { name: 'Search' }).click();
+  await page.locator('#main').getByRole('button', { name: 'Search', exact: true }).click();
   await expect(page.getByText(`${key}-1`)).toBeVisible();
 
   await page.goto(`/o/${slug}/p/${key}/board`);

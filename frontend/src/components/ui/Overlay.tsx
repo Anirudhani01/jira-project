@@ -81,10 +81,12 @@ export function DropdownMenuContent({
 
 export function DropdownMenuItem({
   className,
+  asChild,
   ...props
 }: ComponentPropsWithoutRef<typeof DropdownPrimitive.Item>) {
   return (
     <DropdownPrimitive.Item
+      asChild={asChild}
       className={cn(
         'flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-surface-hover',
         className,

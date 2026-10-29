@@ -97,7 +97,10 @@ describe('AccountPage', () => {
     });
     const { router } = renderApp('/account');
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
+    await user.click(
+      await screen.findByRole('button', { name: new RegExp(SIGNED_IN.user.display_name, 'i') }),
+    );
+    await user.click(await screen.findByRole('menuitem', { name: 'Sign out' }));
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/login');
     });
@@ -115,9 +118,14 @@ describe('sign out failure', () => {
     });
     const { router } = renderApp('/account');
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
+    await user.click(
+      await screen.findByRole('button', { name: new RegExp(SIGNED_IN.user.display_name, 'i') }),
+    );
+    await user.click(await screen.findByRole('menuitem', { name: 'Sign out' }));
     expect(await screen.findByText('Sign-out failed. Try again.')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/account');
-    expect(screen.getByRole('link', { name: SIGNED_IN.user.display_name })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: new RegExp(SIGNED_IN.user.display_name, 'i') }),
+    ).toBeInTheDocument();
   });
 });
