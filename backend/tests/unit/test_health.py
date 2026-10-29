@@ -112,6 +112,37 @@ async def test_readiness_database_check_logs_sanitized_db_diagnostics(
     assert DB_PASSWORD not in json.dumps(payload)
 
 
+async def test_readiness_redis_check_logs_sanitized_diagnostics(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    redis_password = "unit-test-redis-password-not-real"
+    probe = _probe()
+    probe._timeout = 0.05
+    redis = AsyncMock()
+    redis.ping = AsyncMock(
+        side_effect=TimeoutError(
+            f"Error while reading from rediss://default:{redis_password}@cache.example:6379"
+        )
+    )
+    probe._redis = redis
+
+    with caplog.at_level(logging.WARNING, logger="app.health"):
+        state = await probe._check_redis()
+
+    assert state == "degraded"
+    record = next(r for r in caplog.records if r.message == "readiness: redis degraded")
+    payload = _json_payload(record)
+    assert payload["check"] == "redis"
+    assert payload["error_type"] == "builtins.TimeoutError"
+    assert payload["timeout_scope"] == "readiness_deadline"
+    assert payload["timeout_seconds"] == "0.05"
+    error_message = payload["error_message"]
+    assert isinstance(error_message, str)
+    assert "Error while reading" in error_message
+    assert redis_password not in error_message
+    assert redis_password not in json.dumps(payload)
+
+
 async def test_healthz_is_ok(client: httpx.AsyncClient) -> None:
     response = await client.get("/healthz")
     assert response.status_code == 200
