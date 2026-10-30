@@ -28,7 +28,6 @@ import hashlib
 import json
 import uuid
 from dataclasses import dataclass, replace
-from datetime import datetime
 from typing import Any
 
 from sqlalchemy import func
@@ -45,6 +44,7 @@ from app.modules.identity.deps import IdentityServices
 from app.modules.identity.directory import visible_users
 from app.modules.issues import rank as ranking
 from app.modules.issues import repository
+from app.modules.issues.list_sort import decode_list_cursor, encode_list_cursor
 from app.modules.issues.models import Issue, Label
 from app.modules.issues.repository import IssueFilter, NewIssue
 from app.modules.issues.schemas import (
@@ -380,22 +380,6 @@ async def get_issue(services: IdentityServices, ref: IssueRef) -> IssueResponse:
         return await _issue_response(session, issue.id)
 
 
-def encode_cursor(sort: str, value: datetime, last_id: uuid.UUID) -> str:
-    raw = json.dumps([sort, value.isoformat(), str(last_id)]).encode()
-    return base64.urlsafe_b64encode(raw).decode().rstrip("=")
-
-
-def decode_cursor(cursor: str, sort: str) -> tuple[datetime, uuid.UUID]:
-    try:
-        raw = base64.urlsafe_b64decode(cursor + "=" * (-len(cursor) % 4))
-        cursor_sort, value, last_id = json.loads(raw)
-        if cursor_sort != sort:
-            raise invalid_cursor()
-        return datetime.fromisoformat(value), uuid.UUID(last_id)
-    except (ValueError, TypeError, binascii.Error) as error:
-        raise invalid_cursor() from error
-
-
 @dataclass(frozen=True, slots=True)
 class ListQuery:
     project_key: str | None
@@ -409,7 +393,7 @@ class ListQuery:
 async def list_issues(
     services: IdentityServices, access: OrgAccess, query: ListQuery
 ) -> tuple[list[IssueResponse], str | None]:
-    after = decode_cursor(query.cursor, query.sort) if query.cursor else None
+    after = decode_list_cursor(query.cursor, query.sort) if query.cursor else None
     async with org_transaction(services, access, Permission.ORG_VIEW) as (session, current):
         filters = query.filters
         if query.assignee == "me":
@@ -439,9 +423,7 @@ async def list_issues(
         items = await issue_responses(session, rows[: query.limit])
     next_cursor = None
     if len(rows) > query.limit:
-        last = rows[query.limit - 1].Issue
-        column = last.updated_at if query.sort.endswith("updated_at") else last.created_at
-        next_cursor = encode_cursor(query.sort, column, last.id)
+        next_cursor = encode_list_cursor(query.sort, rows[query.limit - 1])
     return items, next_cursor
 
 

@@ -26,6 +26,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.tenant import require_org_context
+from app.modules.issues.list_sort import keyset_condition, list_order
 from app.modules.issues.models import IdempotencyKey, Issue, IssueActivity, IssueLabel, Label
 from app.modules.issues.rank import spread
 from app.modules.orgs.models import IssueType, Priority
@@ -555,6 +556,9 @@ class IssueFilter:
     priority_id: uuid.UUID | None = None
     assignee: uuid.UUID | None = None
     unassigned: bool = False
+    label_id: uuid.UUID | None = None
+    sprint_id: uuid.UUID | None = None
+    backlog_only: bool = False
     updated_since: datetime | None = None
     q: str | None = None
 
@@ -570,6 +574,8 @@ def _view_query() -> Any:
             IssueType.kind.label("type_kind"),
             Priority.name.label("priority_name"),
             Priority.color.label("priority_color"),
+            Priority.sort_order.label("priority_sort_order"),
+            WorkflowStatus.position.label("status_position"),
             Sprint.name.label("sprint_name"),
             Sprint.state.label("sprint_state"),
         )
@@ -629,6 +635,14 @@ def _filter_conditions(filters: IssueFilter) -> list[ColumnElement[bool]]:
         conditions.append(Issue.updated_at >= filters.updated_since)
     if filters.q:
         conditions.append(_search_condition(filters.q))
+    if filters.label_id is not None:
+        conditions.append(
+            Issue.id.in_(select(IssueLabel.issue_id).where(IssueLabel.label_id == filters.label_id))
+        )
+    if filters.backlog_only:
+        conditions.append(Issue.sprint_id.is_(None))
+    elif filters.sprint_id is not None:
+        conditions.append(Issue.sprint_id == filters.sprint_id)
     return conditions
 
 
@@ -638,14 +652,12 @@ async def list_issue_views(
     *,
     all_projects: bool,
     sort: str,
-    after: tuple[datetime, uuid.UUID] | None,
+    after: tuple[Any, ...] | None,
     limit: int,
 ) -> list[Any]:
     """One keyset-paginated query. Non-admins see only projects they belong to (checked
     here; RLS enforces the same rule)."""
     context = require_org_context(session)
-    column = Issue.updated_at if sort.endswith("updated_at") else Issue.created_at
-    descending = sort.startswith("-")
     conditions: list[ColumnElement[bool]] = [
         Issue.org_id == context.org_id,
         Issue.deleted_at.is_(None),
@@ -661,12 +673,8 @@ async def list_issue_views(
         )
     conditions.extend(_filter_conditions(filters))
     if after is not None:
-        value, last_id = after
-        if descending:
-            conditions.append(or_(column < value, and_(column == value, Issue.id < last_id)))
-        else:
-            conditions.append(or_(column > value, and_(column == value, Issue.id > last_id)))
-    order = (column.desc(), Issue.id.desc()) if descending else (column.asc(), Issue.id.asc())
+        conditions.append(keyset_condition(sort, after))
+    order = list_order(sort)
     return list(
         await session.execute(_view_query().where(*conditions).order_by(*order).limit(limit))
     )

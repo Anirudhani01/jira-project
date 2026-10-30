@@ -4066,6 +4066,40 @@
           },
           {
             "in": "query",
+            "name": "label",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Label"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sprint",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sprint"
+            }
+          },
+          {
+            "in": "query",
             "name": "updated_since",
             "required": false,
             "schema": {
@@ -4108,7 +4142,13 @@
                 "-updated_at",
                 "updated_at",
                 "-created_at",
-                "created_at"
+                "created_at",
+                "-key",
+                "key",
+                "-priority",
+                "priority",
+                "-status",
+                "status"
               ],
               "title": "Sort",
               "type": "string"

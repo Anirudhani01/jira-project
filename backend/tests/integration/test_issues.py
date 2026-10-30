@@ -457,6 +457,9 @@ async def test_list_filters_combine_and_paginate_stably(ctx: Ctx) -> None:
     assert await keys("project=NOPE") == []
     assert (await ctx.http.get(f"{base}?assignee=bogus")).status_code == 422
     assert (await ctx.http.get(f"{base}?sort=summary")).status_code == 422
+    assert await keys("project=WEB&sort=key") == ["WEB-1", "WEB-2", "WEB-3"]
+    assert await keys("project=WEB&sort=-key") == ["WEB-3", "WEB-2", "WEB-1"]
+    assert await keys("project=WEB&sort=priority") == ["WEB-2", "WEB-1", "WEB-3"]
     assert (await ctx.http.get(f"{base}?limit=101")).status_code == 422
 
     seen: list[str] = []
@@ -472,6 +475,22 @@ async def test_list_filters_combine_and_paginate_stably(ctx: Ctx) -> None:
     assert wrong_sort.status_code == 400
     assert wrong_sort.json()["code"] == "invalid_cursor"
     assert (await ctx.http.get(f"{base}?cursor=garbage")).status_code == 400
+
+
+async def test_list_label_filter(ctx: Ctx) -> None:
+    await new_issue(ctx.http, ctx, ctx.body("Unlabeled"))
+    label_resp = await ctx.http.post(
+        f"/api/v1/orgs/{ctx.slug}/projects/WEB/labels",
+        json={"name": "tagged", "color": "#112233"},
+        headers={"X-CSRF-Token": await _csrf(ctx.http)},
+    )
+    assert label_resp.status_code == 201
+    label_id = label_resp.json()["id"]
+    await new_issue(ctx.http, ctx, ctx.body("Tagged only", label_ids=[label_id]))
+    base = f"/api/v1/orgs/{ctx.slug}/issues"
+    response = await ctx.http.get(f"{base}?project=WEB&label={label_id}")
+    assert response.status_code == 200, response.text
+    assert [i["key"] for i in response.json()["items"]] == ["WEB-2"]
 
 
 async def test_list_query_count_does_not_grow_with_results(ctx: Ctx) -> None:

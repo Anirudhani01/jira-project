@@ -11,7 +11,18 @@ from pydantic import BaseModel, ConfigDict, StringConstraints
 
 Summary = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)]
 Description = Annotated[str, StringConstraints(max_length=32000)]
-SortOrder = Literal["-updated_at", "updated_at", "-created_at", "created_at"]
+SortOrder = Literal[
+    "-updated_at",
+    "updated_at",
+    "-created_at",
+    "created_at",
+    "-key",
+    "key",
+    "-priority",
+    "priority",
+    "-status",
+    "status",
+]
 StatusCategory = Literal["todo", "in_progress", "done"]
 
 

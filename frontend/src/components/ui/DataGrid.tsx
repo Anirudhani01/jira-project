@@ -107,12 +107,18 @@ export function DataGridDividedCell({
   );
 }
 
-export function DataGridHead({ children }: { children: ReactNode }) {
+export function DataGridHead({
+  children,
+  sticky = false,
+}: {
+  children: ReactNode;
+  sticky?: boolean;
+}) {
   const columns = useDataGridColumns();
   const style: CSSProperties = { gridTemplateColumns: columns };
   return (
-    <div role="rowgroup">
-      <div role="row" className="grid border-b border-line bg-surface-2" style={style}>
+    <div role="rowgroup" className={sticky ? 'sticky top-0 z-10' : undefined}>
+      <div role="row" className="grid border-b border-line bg-surface-2 shadow-sm" style={style}>
         {children}
       </div>
     </div>

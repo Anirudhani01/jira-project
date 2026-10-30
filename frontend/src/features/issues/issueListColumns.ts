@@ -4,11 +4,13 @@ import { useCallback, useState } from 'react';
 export const ISSUE_LIST_FIXED_COLUMN_COUNT = 3;
 
 /** Optional columns in the issue table (Issue, Type, and Priority are always shown). */
-export type IssueListColumnId = 'status' | 'assignee';
+export type IssueListColumnId = 'status' | 'assignee' | 'labels' | 'updated';
 
 export const ISSUE_LIST_COLUMNS: { id: IssueListColumnId; label: string }[] = [
   { id: 'status', label: 'Status' },
   { id: 'assignee', label: 'Assignee' },
+  { id: 'labels', label: 'Labels' },
+  { id: 'updated', label: 'Updated' },
 ];
 
 export type IssueListColumnVisibility = Record<IssueListColumnId, boolean>;
@@ -16,6 +18,8 @@ export type IssueListColumnVisibility = Record<IssueListColumnId, boolean>;
 export const DEFAULT_ISSUE_LIST_COLUMNS: IssueListColumnVisibility = {
   status: true,
   assignee: true,
+  labels: false,
+  updated: false,
 };
 
 function storageKey(org: string, projectKey: string): string {
@@ -36,6 +40,8 @@ export function readIssueListColumns(org: string, projectKey: string): IssueList
     return {
       status: parsed.status ?? DEFAULT_ISSUE_LIST_COLUMNS.status,
       assignee: parsed.assignee ?? DEFAULT_ISSUE_LIST_COLUMNS.assignee,
+      labels: parsed.labels ?? DEFAULT_ISSUE_LIST_COLUMNS.labels,
+      updated: parsed.updated ?? DEFAULT_ISSUE_LIST_COLUMNS.updated,
     };
   } catch {
     return { ...DEFAULT_ISSUE_LIST_COLUMNS };
