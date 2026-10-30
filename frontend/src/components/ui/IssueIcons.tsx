@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 
 import { cn } from '../../lib/cn';
-import { Badge } from './Badge';
+
+import { statusLozengeClassName } from './statusStyles';
 
 interface TypeEntry {
   icon: LucideIcon;
@@ -86,11 +87,32 @@ export function PriorityIcon({ name, className }: { name: string; className?: st
   );
 }
 
-const CATEGORY_TONE = { todo: 'neutral', in_progress: 'info', done: 'success' } as const;
+function statusCategoryLabel(category: string): string {
+  const labels: Record<string, string> = {
+    todo: 'to do',
+    in_progress: 'in progress',
+    done: 'done',
+  };
+  return labels[category] ?? category.replace(/_/g, ' ');
+}
 
-/** Status lozenge coloured by workflow category (the category, not the name, drives colour). */
-export function StatusLozenge({ name, category }: { name: string; category: string }) {
-  const tone =
-    category in CATEGORY_TONE ? CATEGORY_TONE[category as keyof typeof CATEGORY_TONE] : 'neutral';
-  return <Badge tone={tone}>{name}</Badge>;
+/** Status lozenge with a distinct colour per default status name (falls back to category). */
+export function StatusLozenge({
+  name,
+  category,
+  className,
+}: {
+  name: string;
+  category: string;
+  className?: string;
+}) {
+  const categoryLabel = statusCategoryLabel(category);
+  return (
+    <span
+      className={statusLozengeClassName(name, category, className)}
+      aria-label={`${name}, ${categoryLabel} category`}
+    >
+      {name}
+    </span>
+  );
 }

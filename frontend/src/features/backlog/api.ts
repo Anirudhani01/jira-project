@@ -11,11 +11,12 @@ const sprintPath = (org: string, id: string) =>
 const backlogKey = (org: string, project: string) =>
   ['org', org.toLowerCase(), 'backlog', project.toUpperCase()] as const;
 
-export function useBacklog(org: string, project: string) {
+export function useBacklog(org: string, project: string, enabled = true) {
   return useQuery({
     queryKey: backlogKey(org, project),
     queryFn: () => apiFetch<Backlog>(`${projectPath(org, project)}/backlog`),
     refetchInterval: 30_000,
+    enabled: enabled && Boolean(org && project),
   });
 }
 

@@ -73,6 +73,10 @@ frontend-dev: node-version-check
 migrate: ## Apply migrations to the dev database (as app_owner)
 	$(UV) run alembic upgrade head
 
+.PHONY: seed-demo
+seed-demo: infra-up ## Demo org/issues for local UI (API on :8000; see app/scripts/seed_demo.py)
+	$(UV) run python -m app.scripts.seed_demo
+
 migrate-roundtrip: ## Upgrade -> downgrade base -> upgrade on the test database
 	$(UV) run env MIGRATION_DATABASE_URL="$(TEST_MIGRATION_DATABASE_URL)" alembic upgrade head
 	$(UV) run env MIGRATION_DATABASE_URL="$(TEST_MIGRATION_DATABASE_URL)" alembic downgrade base
@@ -133,11 +137,31 @@ frontend-test: node-version-check
 e2e: node-version-check ## Playwright journeys against a running stack (make dev: API, worker, UI, Mailpit)
 	$(PNPM) e2e
 
+.PHONY: e2e-journeys
+e2e-journeys: node-version-check ## PLAN §1.2 MVP suite only (requires make dev)
+	$(PNPM) e2e:journeys
+
+.PHONY: e2e-journeys-smoke
+e2e-journeys-smoke: node-version-check ## MVP smoke scenarios (@mvp-smoke; requires make dev)
+	$(PNPM) e2e:journeys:smoke
+
 .PHONY: e2e-pr3
 e2e-pr3: node-version-check ## Axe + light/dark screenshots for PR 3 routes (requires make dev)
 	$(PNPM) exec playwright test \
 		e2e/login.spec.ts e2e/signup.spec.ts e2e/org-home.spec.ts \
 		e2e/template-overview.spec.ts e2e/create-project.spec.ts e2e/account.spec.ts
+
+.PHONY: e2e-pr4
+e2e-pr4: node-version-check ## Axe + light/dark screenshots for PR 4 board (requires make dev)
+	$(PNPM) exec playwright test e2e/board.spec.ts
+
+.PHONY: e2e-pr8
+e2e-pr8: node-version-check ## Axe + light/dark screenshots for issue list (requires make dev)
+	$(PNPM) exec playwright test e2e/issue-list.spec.ts
+
+.PHONY: e2e-pr10-settings
+e2e-pr10-settings: node-version-check ## Axe + light/dark screenshots for project settings (requires make dev)
+	$(PNPM) exec playwright test e2e/project-settings.spec.ts
 
 .PHONY: openapi openapi-check
 openapi: node-version-check ## Regenerate backend/openapi.json and frontend API types

@@ -496,6 +496,25 @@ async def _hierarchy_changes(
     return changes
 
 
+async def _reporter_change(
+    session: AsyncSession,
+    project: Project,
+    issue: Any,
+    body: UpdateIssueRequest,
+    fields: set[str],
+) -> list[tuple[str, Any, str, Any, Any]]:
+    if "reporter_id" not in fields or body.reporter_id == issue.reporter_id:
+        return []
+    reporter_id = body.reporter_id
+    _required("reporter_id", reporter_id)
+    if reporter_id is None:
+        raise invalid_field("reporter_id", "validation_error", "This field cannot be empty.")
+    await _validate_assignee(session, project, reporter_id)
+    old_reporter = {"id": str(issue.reporter_id)}
+    new_reporter = {"id": str(reporter_id)}
+    return [("reporter_id", reporter_id, "reporter", old_reporter, new_reporter)]
+
+
 async def _changes(
     session: AsyncSession,
     project: Project,
@@ -541,6 +560,7 @@ async def _changes(
         old_assignee = {"id": str(issue.assignee_id)} if issue.assignee_id else None
         new_assignee = {"id": str(body.assignee_id)} if body.assignee_id else None
         changes.append(("assignee_id", body.assignee_id, "assignee", old_assignee, new_assignee))
+    changes += await _reporter_change(session, project, issue, body, fields)
     return changes
 
 

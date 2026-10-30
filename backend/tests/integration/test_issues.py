@@ -218,9 +218,11 @@ async def test_server_owned_fields_are_rejected(ctx: Ctx) -> None:
         response = await new_issue(ctx.http, ctx, ctx.body(**extra))
         assert response.status_code == 422, extra
     assert (await new_issue(ctx.http, ctx)).status_code == 201
-    for field in ("status_id", "version", "reporter_id", "key"):
+    for field in ("status_id", "version", "key"):
         response = await patch(ctx.http, ctx.slug, "WEB-1", {field: None}, '"v1"')
         assert response.status_code == 422, field
+    response = await patch(ctx.http, ctx.slug, "WEB-1", {"reporter_id": None}, '"v1"')
+    assert response.status_code == 422
     row = await issue_row(ctx.tenant.org_id, 1)
     assert row.version == 1
     assert row.reporter_id == ctx.tenant.user_id

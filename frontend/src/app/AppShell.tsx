@@ -29,7 +29,7 @@ function AppShellBody() {
             id="main"
             className={
               inProject
-                ? 'flex-1 px-4 py-6'
+                ? 'flex-1 px-4 py-6 sm:px-6 lg:px-8'
                 : authRoute
                   ? 'flex-1 px-4 py-6 lg:px-6'
                   : 'mx-auto w-full max-w-6xl flex-1 px-4 py-8'

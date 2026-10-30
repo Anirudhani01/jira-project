@@ -3,7 +3,7 @@ import * as DropdownPrimitive from '@radix-ui/react-dropdown-menu';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
-import { X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { cn } from '../../lib/cn';
@@ -93,6 +93,31 @@ export function DropdownMenuItem({
       )}
       {...props}
     />
+  );
+}
+
+export function DropdownMenuCheckboxItem({
+  className,
+  children,
+  checked,
+  ...props
+}: ComponentPropsWithoutRef<typeof DropdownPrimitive.CheckboxItem>) {
+  return (
+    <DropdownPrimitive.CheckboxItem
+      checked={checked}
+      className={cn(
+        'relative flex cursor-pointer select-none items-center gap-2 rounded-sm py-1.5 pl-7 pr-2 outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-surface-hover',
+        className,
+      )}
+      {...props}
+    >
+      <span className="pointer-events-none absolute left-2 flex size-4 items-center justify-center">
+        <DropdownPrimitive.ItemIndicator>
+          <Check className="size-4 text-accent" aria-hidden="true" />
+        </DropdownPrimitive.ItemIndicator>
+      </span>
+      {children}
+    </DropdownPrimitive.CheckboxItem>
   );
 }
 

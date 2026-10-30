@@ -25,6 +25,7 @@ provisioned paid resources without explicit owner approval (decision D14).
 
 - Architecture plan (with Revisions 1–3): [`docs/architecture/phase-1-plan.md`](docs/architecture/phase-1-plan.md)
 - Decision log: [`docs/decisions.md`](docs/decisions.md) · ADRs: [`docs/adr/`](docs/adr/README.md)
+- UI redesign roadmap and progress: [`docs/ui-redesign-plan.md`](docs/ui-redesign-plan.md) (per-PR notes under [`docs/ui-redesign/`](docs/ui-redesign/))
 
 ## Prerequisites
 
@@ -151,6 +152,6 @@ role (superuser, BYPASSRLS, object owner, …). See
 backend/    FastAPI app (app/), Alembic migrations (migrations/), tests (unit/, integration/)
 frontend/   React + Vite SPA (src/), nginx config for the production image
 infra/      docker-compose.yml and PostgreSQL role provisioning
-docs/       architecture plan, ADRs, decision log
+docs/       architecture plan, ADRs, decision log, ui-redesign plans
 .github/    CI workflow (runs `make ci`) and Dependabot
 ```

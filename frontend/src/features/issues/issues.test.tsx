@@ -97,6 +97,52 @@ describe('issue list', () => {
     });
   });
 
+  it('omits optional column headers when hidden in storage', async () => {
+    localStorage.setItem(
+      'jira.issues.columns.acme.WEB',
+      JSON.stringify({ status: false, assignee: false }),
+    );
+    mockApi({
+      ...CONFIG,
+      'GET /orgs/acme/issues': () => json({ items: [ISSUE], next_cursor: null }),
+    });
+    renderApp('/o/acme/p/WEB/issues');
+    await screen.findByText('Login button misaligned');
+    const table = screen.getByRole('table', { name: 'Issues' });
+    expect(within(table).getAllByRole('columnheader')).toHaveLength(3);
+    expect(within(table).getByRole('columnheader', { name: 'Issue' })).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: 'Type' })).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: 'Priority' })).toBeInTheDocument();
+  });
+
+  it('shows assignee column after enabling it in the picker', async () => {
+    localStorage.setItem(
+      'jira.issues.columns.acme.WEB',
+      JSON.stringify({ status: true, assignee: false }),
+    );
+    mockApi({
+      ...CONFIG,
+      'GET /orgs/acme/issues': () => json({ items: [ISSUE], next_cursor: null }),
+    });
+    renderApp('/o/acme/p/WEB/issues');
+    await screen.findByText('Login button misaligned');
+    const table = screen.getByRole('table', { name: 'Issues' });
+    expect(within(table).getAllByRole('columnheader')).toHaveLength(4);
+    expect(within(table).queryByRole('columnheader', { name: 'Assignee' })).not.toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Choose visible columns' }));
+    const assigneeToggle = await screen.findByRole('menuitemcheckbox', { name: 'Assignee' });
+    expect(assigneeToggle).toHaveAttribute('aria-checked', 'false');
+    await user.click(assigneeToggle);
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.getByRole('columnheader', { name: 'Assignee' })).toBeInTheDocument();
+    });
+    expect(
+      within(screen.getByRole('table', { name: 'Issues' })).getAllByRole('columnheader'),
+    ).toHaveLength(5);
+  });
+
   it('hides creation without the permission', async () => {
     mockApi({
       ...CONFIG,
@@ -104,7 +150,7 @@ describe('issue list', () => {
       'GET /orgs/acme/issues': () => json({ items: [], next_cursor: null }),
     });
     renderApp('/o/acme/p/WEB/issues');
-    expect(await screen.findByText('No issues match these filters.')).toBeInTheDocument();
+    expect(await screen.findByText('No issues match these filters')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Create issue' })).not.toBeInTheDocument();
   });
 });
@@ -187,8 +233,10 @@ describe('issue detail: M7 (transitions, assignee, labels)', () => {
         json({ ...ISSUE, status: DONE, version: 4 }),
     });
     renderApp('/o/acme/issues/WEB-1');
-    await userEvent.selectOptions(await screen.findByLabelText('Status'), 'Done');
-    await userEvent.click(screen.getByRole('button', { name: 'Move' }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Status: To Do\. Choose a new status/i }),
+    );
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Done/i }));
     await waitFor(() => {
       expect(calls.some((c) => c.method === 'POST' && c.path.endsWith('/transitions'))).toBe(true);
     });
@@ -213,15 +261,18 @@ describe('issue detail: M7 (transitions, assignee, labels)', () => {
         json({ ...ISSUE, assignee: { id: MEMBER.user_id, display_name: MEMBER.display_name } }),
     });
     renderApp('/o/acme/issues/WEB-1');
-    await userEvent.click(await screen.findByRole('button', { name: 'Edit assignee' }));
-    await userEvent.selectOptions(screen.getByLabelText('Assignee'), MEMBER.user_id);
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Assignee: Unassigned\. Choose assignee/i }),
+    );
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Bea Example/i }));
     await waitFor(() => {
       expect(calls.some((c) => c.method === 'PATCH')).toBe(true);
     });
     const patch = calls.find((c) => c.method === 'PATCH');
     expect(patch?.body).toEqual({ assignee_id: MEMBER.user_id });
-    expect(await screen.findByText('Bea Example')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: /Assignee: Bea Example\. Choose assignee/i }),
+    ).toBeInTheDocument();
   });
 
   it('replaces the full label set from the picker', async () => {

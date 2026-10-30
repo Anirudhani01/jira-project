@@ -1,8 +1,13 @@
-import { useState } from 'react';
+import { Pencil } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 
 import { NotFoundPage } from '../../app/pages/NotFoundPage';
+import { Button, IconButton } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
 import { FormError } from '../../components/ui/Form';
+import { StatusLozenge } from '../../components/ui/IssueIcons';
+import { Input, Textarea } from '../../components/ui/Input';
 import { ErrorState, LoadingState } from '../../components/ui/States';
 import { ApiError } from '../../lib/api/errors';
 import type { Issue } from '../../lib/api/types';
@@ -12,19 +17,61 @@ import { CommentsSection } from '../comments/CommentsSection';
 import { useProject, useProjectMembers } from '../projects/api';
 
 import {
-  useApplyTransition,
   useChildren,
   useDeleteIssue,
   useIssue,
   useIssueTypes,
   useLabels,
   usePriorities,
-  useTransitions,
   useUpdateIssue,
   type IssueChanges,
 } from './api';
+import {
+  IssueListAssigneeMenu,
+  IssueListPriorityMenu,
+  IssueListReporterMenu,
+  IssueListStatusMenu,
+  IssueListTypeMenu,
+} from './IssueListRowMenus';
 
-type Field = 'summary' | 'description' | 'type_id' | 'priority_id' | 'assignee_id';
+type Field = 'summary' | 'description';
+
+const fieldLabelClass = 'pt-2.5 text-[13px] font-medium text-fg-muted sm:pt-0';
+const fieldValueClass = 'min-h-9 flex items-center';
+
+function InlineEditPanel({
+  children,
+  onSave,
+  onCancel,
+  saving,
+  saveDisabled,
+}: {
+  children: ReactNode;
+  onSave: () => void;
+  onCancel: () => void;
+  saving: boolean;
+  saveDisabled?: boolean;
+}) {
+  return (
+    <div className="rounded-lg border border-line bg-surface p-4 shadow-sm ring-1 ring-accent/10 sm:p-5">
+      <div className="space-y-4">{children}</div>
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-line pt-4">
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          disabled={saving || saveDisabled}
+          onClick={onSave}
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 /** Issue detail: inline edits are sent with If-Match. On 412 the user's draft is kept and a
  * conflict banner offers to reload the latest version. */
@@ -81,18 +128,13 @@ function IssueView({
   const priorities = usePriorities(org);
   const members = useProjectMembers(org, issue.project_key);
   const labels = useLabels(org, issue.project_key);
-  const transitions = useTransitions(org, issue.key);
   const children = useChildren(org, issue.key);
   const update = useUpdateIssue(org, issue.key);
-  const transition = useApplyTransition(org, issue.key);
   const remove = useDeleteIssue(org, issue.key);
   const [editing, setEditing] = useState<Field | null>(null);
   const [draft, setDraft] = useState('');
   const [labelDraft, setLabelDraft] = useState<string[] | null>(null);
-  const [transitionId, setTransitionId] = useState('');
-  const conflict =
-    (update.error instanceof ApiError && update.error.status === 412) ||
-    (transition.error instanceof ApiError && transition.error.status === 412);
+  const conflict = update.error instanceof ApiError && update.error.status === 412;
 
   const start = (field: Field, value: string) => {
     update.reset();
@@ -101,11 +143,7 @@ function IssueView({
   };
   const save = (field: Field) => {
     const changes: IssueChanges =
-      field === 'description'
-        ? { description: draft || null }
-        : field === 'assignee_id'
-          ? { assignee_id: draft || null }
-          : { [field]: draft };
+      field === 'description' ? { description: draft || null } : { [field]: draft };
     update.mutate(
       { changes, version: issue.version },
       {
@@ -115,62 +153,10 @@ function IssueView({
       },
     );
   };
-  const editor = (field: Field, input: React.ReactNode) => (
-    <div className="space-y-2">
-      {input}
-      <div className="flex gap-3">
-        <button
-          type="button"
-          className="rounded bg-blue-700 px-3 py-1 text-white"
-          disabled={update.isPending}
-          onClick={() => {
-            save(field);
-          }}
-        >
-          Save
-        </button>
-        <button
-          type="button"
-          className="underline"
-          onClick={() => {
-            setEditing(null);
-            update.reset();
-          }}
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-  const editButton = (field: Field, label: string, value: string, allowed: boolean) =>
-    allowed && editing === null ? (
-      <button
-        type="button"
-        className="text-sm text-blue-700 underline"
-        onClick={() => {
-          start(field, value);
-        }}
-      >
-        Edit {label}
-      </button>
-    ) : null;
-  const choice = (options: { id: string; name: string }[], label: string) => (
-    <select
-      aria-label={label}
-      className="rounded border border-slate-300 px-2 py-1"
-      value={draft}
-      onChange={(e) => {
-        setDraft(e.target.value);
-      }}
-    >
-      {options.map((o) => (
-        <option key={o.id} value={o.id}>
-          {o.name}
-        </option>
-      ))}
-    </select>
-  );
-
+  const cancelEdit = () => {
+    setEditing(null);
+    update.reset();
+  };
   const currentLabels = issue.labels;
   const activeLabelIds = labelDraft ?? currentLabels.map((l) => l.id);
   const saveLabels = () => {
@@ -186,195 +172,200 @@ function IssueView({
   };
 
   return (
-    <article aria-labelledby="issue-title" className="space-y-6">
-      <p className="text-sm">
-        <Link className="text-blue-700 underline" to={`/o/${org}/p/${issue.project_key}/issues`}>
+    <article aria-labelledby="issue-title" className="w-full space-y-6">
+      <nav aria-label="Issue location" className="text-sm text-fg-muted">
+        <Link
+          className="font-medium text-accent hover:underline"
+          to={`/o/${org}/p/${issue.project_key}/issues`}
+        >
           {issue.project_key} issues
-        </Link>{' '}
-        / <span className="font-mono">{issue.key}</span>
-      </p>
+        </Link>
+        <span aria-hidden="true"> / </span>
+        <span className="font-mono text-fg">{issue.key}</span>
+      </nav>
+
       {conflict ? (
-        <div role="alert" className="rounded border border-amber-300 bg-amber-50 p-3 text-sm">
+        <div
+          role="alert"
+          className="rounded-lg border border-warning/40 bg-warning-soft px-4 py-3 text-sm text-fg"
+        >
           Someone else changed this issue. Your edit was not saved; your draft is kept below.{' '}
-          <button
+          <Button
             type="button"
-            className="font-medium underline"
+            variant="link"
+            size="sm"
+            className="h-auto px-0 py-0"
             onClick={() => {
               update.reset();
-              transition.reset();
               onReload();
             }}
           >
             Reload latest version
-          </button>
+          </Button>
         </div>
       ) : (
-        <>
-          <FormError>{update.error ? describeError(update.error) : null}</FormError>
-          <FormError>{transition.error ? describeError(transition.error) : null}</FormError>
-        </>
+        <FormError>{update.error ? describeError(update.error) : null}</FormError>
       )}
       <FormError>{remove.error ? describeError(remove.error) : null}</FormError>
-      {editing === 'summary' ? (
-        editor(
-          'summary',
-          <input
-            aria-label="Summary"
-            className="w-full rounded border border-slate-300 px-2 py-1 text-xl"
-            maxLength={255}
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-            }}
-          />,
-        )
-      ) : (
-        <div className="flex items-center gap-3">
-          <h1 id="issue-title" className="text-2xl font-semibold">
-            {issue.summary}
-          </h1>
-          {editButton('summary', 'summary', issue.summary, canEdit)}
-        </div>
-      )}
-      {issue.parent ? (
-        <p className="text-sm text-slate-600">
-          Part of{' '}
-          <Link className="text-blue-700 underline" to={`/o/${org}/issues/${issue.parent.key}`}>
-            {issue.parent.key} {issue.parent.summary}
-          </Link>
+
+      <header className="space-y-2">
+        <p className="font-mono text-xs font-medium uppercase tracking-wide text-fg-subtle">
+          {issue.key}
         </p>
-      ) : null}
-      <dl className="grid grid-cols-[8rem_1fr] gap-2 text-sm">
-        <dt className="font-medium">Status</dt>
-        <dd className="flex items-center gap-2">
-          <span>{issue.status.name}</span>
-          {canTransition && (transitions.data ?? []).length > 0 ? (
-            <>
-              <select
-                aria-label="Status"
-                className="rounded border border-slate-300 px-2 py-1"
-                value={transitionId}
-                onChange={(e) => {
-                  setTransitionId(e.target.value);
-                }}
-              >
-                <option value="">Move to…</option>
-                {(transitions.data ?? []).map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.to_status.name}
-                  </option>
-                ))}
-              </select>
-              <button
+        {editing === 'summary' ? (
+          <InlineEditPanel
+            saving={update.isPending}
+            saveDisabled={!draft.trim()}
+            onSave={() => {
+              save('summary');
+            }}
+            onCancel={cancelEdit}
+          >
+            <Input
+              autoFocus
+              aria-label="Summary"
+              className="h-11 text-xl font-semibold sm:text-2xl"
+              maxLength={255}
+              value={draft}
+              onChange={(e) => {
+                setDraft(e.target.value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  cancelEdit();
+                }
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (draft.trim() && !update.isPending) save('summary');
+                }
+              }}
+            />
+          </InlineEditPanel>
+        ) : (
+          <div className="flex flex-wrap items-start gap-2">
+            <h1 id="issue-title" className="text-2xl font-semibold leading-snug text-fg">
+              {issue.summary}
+            </h1>
+            {canEdit && editing === null ? (
+              <IconButton
                 type="button"
-                className="rounded bg-blue-700 px-2 py-1 text-xs text-white disabled:opacity-60"
-                disabled={!transitionId || transition.isPending}
+                size="sm"
+                label="Edit summary"
+                className="mt-1 shrink-0 text-fg-muted hover:text-fg"
                 onClick={() => {
-                  transition.mutate(
-                    { transitionId, version: issue.version },
-                    {
-                      onSuccess: () => {
-                        setTransitionId('');
-                      },
-                    },
-                  );
+                  start('summary', issue.summary);
                 }}
               >
-                Move
-              </button>
-            </>
+                <Pencil className="size-4" aria-hidden="true" />
+              </IconButton>
+            ) : null}
+          </div>
+        )}
+        {issue.parent ? (
+          <p className="text-sm text-fg-muted">
+            Part of{' '}
+            <Link
+              className="font-medium text-accent hover:underline"
+              to={`/o/${org}/issues/${issue.parent.key}`}
+            >
+              {issue.parent.key} {issue.parent.summary}
+            </Link>
+          </p>
+        ) : null}
+      </header>
+
+      <Card className="p-5 sm:p-6">
+        <dl className="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-[minmax(7.5rem,9rem)_1fr]">
+          <dt className={fieldLabelClass}>Status</dt>
+          <dd className={fieldValueClass}>
+            {canTransition ? (
+              <IssueListStatusMenu org={org} issue={issue} canTransition={canTransition} />
+            ) : (
+              <StatusLozenge name={issue.status.name} category={issue.status.category} />
+            )}
+          </dd>
+
+          <dt className={fieldLabelClass}>Type</dt>
+          <dd className={fieldValueClass}>
+            <IssueListTypeMenu org={org} issue={issue} types={types.data ?? []} canEdit={canEdit} />
+          </dd>
+
+          <dt className={fieldLabelClass}>Priority</dt>
+          <dd className={fieldValueClass}>
+            <IssueListPriorityMenu
+              org={org}
+              issue={issue}
+              priorities={priorities.data ?? []}
+              canEdit={canEdit}
+            />
+          </dd>
+
+          <dt className={fieldLabelClass}>Reporter</dt>
+          <dd className={fieldValueClass}>
+            <IssueListReporterMenu
+              org={org}
+              issue={issue}
+              members={members.data ?? []}
+              canEdit={canEdit}
+            />
+          </dd>
+
+          <dt className={fieldLabelClass}>Assignee</dt>
+          <dd className={fieldValueClass}>
+            <IssueListAssigneeMenu
+              org={org}
+              issue={issue}
+              members={members.data ?? []}
+              canAssign={canAssign}
+            />
+          </dd>
+        </dl>
+      </Card>
+
+      <Card className="space-y-4 p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="labels-title" className="text-base font-semibold text-fg">
+            Labels
+          </h2>
+          {canEdit && labelDraft === null && editing === null ? (
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="h-auto px-0 py-0"
+              onClick={() => {
+                setLabelDraft(currentLabels.map((l) => l.id));
+              }}
+            >
+              Edit labels
+            </Button>
           ) : null}
-        </dd>
-        <dt className="font-medium">Type</dt>
-        <dd>
-          {editing === 'type_id' ? (
-            editor('type_id', choice(types.data ?? [], 'Type'))
-          ) : (
-            <>
-              {issue.type.name} {editButton('type_id', 'type', issue.type.id, canEdit)}
-            </>
-          )}
-        </dd>
-        <dt className="font-medium">Priority</dt>
-        <dd>
-          {editing === 'priority_id' ? (
-            editor('priority_id', choice(priorities.data ?? [], 'Priority'))
-          ) : (
-            <>
-              {issue.priority.name}{' '}
-              {editButton('priority_id', 'priority', issue.priority.id, canEdit)}
-            </>
-          )}
-        </dd>
-        <dt className="font-medium">Reporter</dt>
-        <dd>{issue.reporter.display_name}</dd>
-        <dt className="font-medium">Assignee</dt>
-        <dd>
-          {editing === 'assignee_id' ? (
-            editor(
-              'assignee_id',
-              <select
-                aria-label="Assignee"
-                className="rounded border border-slate-300 px-2 py-1"
-                value={draft}
-                onChange={(e) => {
-                  setDraft(e.target.value);
-                }}
-              >
-                <option value="">Unassigned</option>
-                {(members.data ?? []).map((m) => (
-                  <option key={m.user_id} value={m.user_id}>
-                    {m.display_name}
-                  </option>
-                ))}
-              </select>,
-            )
-          ) : (
-            <>
-              {issue.assignee?.display_name ?? 'Unassigned'}{' '}
-              {editButton('assignee_id', 'assignee', issue.assignee?.id ?? '', canAssign)}
-            </>
-          )}
-        </dd>
-      </dl>
-      <section aria-labelledby="labels-title" className="space-y-2">
-        <h2 id="labels-title" className="text-sm font-medium">
-          Labels
-        </h2>
+        </div>
         {labelDraft === null ? (
           <div className="flex flex-wrap items-center gap-2">
             {currentLabels.length === 0 ? (
-              <span className="text-sm text-slate-500">No labels.</span>
+              <span className="text-sm text-fg-muted">No labels.</span>
             ) : (
               currentLabels.map((l) => (
                 <span
                   key={l.id}
-                  className="rounded-full px-2 py-0.5 text-xs text-white"
-                  style={{ backgroundColor: l.color }}
+                  className="rounded-full px-2.5 py-0.5 text-xs font-medium text-fg"
+                  style={{ backgroundColor: `${l.color}33`, borderLeft: `3px solid ${l.color}` }}
                 >
                   {l.name}
                 </span>
               ))
             )}
-            {canEdit && editing === null ? (
-              <button
-                type="button"
-                className="text-sm text-blue-700 underline"
-                onClick={() => {
-                  setLabelDraft(currentLabels.map((l) => l.id));
-                }}
-              >
-                Edit labels
-              </button>
-            ) : null}
           </div>
         ) : (
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-3">
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
               {(labels.data ?? []).map((l) => (
-                <label key={l.id} className="flex items-center gap-1 text-sm">
+                <label key={l.id} className="flex items-center gap-2 text-sm text-fg">
                   <input
                     type="checkbox"
+                    className="size-4 rounded border-line-strong accent-accent"
                     checked={activeLabelIds.includes(l.id)}
                     onChange={(e) => {
                       setLabelDraft((ids) => {
@@ -389,75 +380,111 @@ function IssueView({
                 </label>
               ))}
             </div>
-            <div className="flex gap-3">
-              <button
+            <div className="flex flex-wrap gap-2">
+              <Button
                 type="button"
-                className="rounded bg-blue-700 px-3 py-1 text-white"
+                variant="primary"
+                size="sm"
                 disabled={update.isPending}
                 onClick={saveLabels}
               >
                 Save
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="underline"
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setLabelDraft(null);
                   update.reset();
                 }}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         )}
-      </section>
-      <section aria-labelledby="description-title" className="space-y-2">
-        <h2 id="description-title" className="text-lg font-semibold">
-          Description
-        </h2>
+      </Card>
+
+      <Card className="space-y-4 p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="description-title" className="text-base font-semibold text-fg">
+            Description
+          </h2>
+          {canEdit && editing !== 'description' ? (
+            <IconButton
+              type="button"
+              size="sm"
+              label="Edit description"
+              className="shrink-0 text-fg-muted hover:text-fg"
+              onClick={() => {
+                start('description', issue.description ?? '');
+              }}
+            >
+              <Pencil className="size-4" aria-hidden="true" />
+            </IconButton>
+          ) : null}
+        </div>
         {editing === 'description' ? (
-          editor(
-            'description',
-            <textarea
+          <InlineEditPanel
+            saving={update.isPending}
+            onSave={() => {
+              save('description');
+            }}
+            onCancel={cancelEdit}
+          >
+            <Textarea
+              autoFocus
               aria-label="Description"
-              className="w-full rounded border border-slate-300 px-2 py-1"
-              rows={6}
+              className="min-h-[10rem] text-sm leading-relaxed"
+              rows={8}
               maxLength={32000}
               value={draft}
               onChange={(e) => {
                 setDraft(e.target.value);
               }}
-            />,
-          )
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  cancelEdit();
+                }
+              }}
+            />
+          </InlineEditPanel>
         ) : (
-          <>
-            <p className="whitespace-pre-wrap">{issue.description ?? 'No description.'}</p>
-            {editButton('description', 'description', issue.description ?? '', canEdit)}
-          </>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-fg">
+            {issue.description ?? <span className="text-fg-muted">No description.</span>}
+          </p>
         )}
-      </section>
+      </Card>
+
       {(children.data ?? []).length > 0 ? (
-        <section aria-labelledby="children-title" className="space-y-2">
-          <h2 id="children-title" className="text-lg font-semibold">
+        <Card className="space-y-3 p-5 sm:p-6">
+          <h2 id="children-title" className="text-base font-semibold text-fg">
             Children
           </h2>
-          <ul className="space-y-1 text-sm">
+          <ul className="space-y-2 text-sm">
             {(children.data ?? []).map((child) => (
-              <li key={child.id}>
-                <Link className="text-blue-700 underline" to={`/o/${org}/issues/${child.key}`}>
+              <li key={child.id} className="flex flex-wrap items-center gap-2">
+                <Link
+                  className="font-mono text-xs font-medium text-accent hover:underline"
+                  to={`/o/${org}/issues/${child.key}`}
+                >
                   {child.key}
-                </Link>{' '}
-                {child.summary} · {child.status.name}
+                </Link>
+                <span className="text-fg">{child.summary}</span>
+                <StatusLozenge name={child.status.name} category={child.status.category} />
               </li>
             ))}
           </ul>
-        </section>
+        </Card>
       ) : null}
+
       {canDelete ? (
-        <button
+        <Button
           type="button"
-          className="text-red-700 underline"
+          variant="link"
+          className="text-danger hover:text-danger"
           onClick={() => {
             if (window.confirm(`Delete ${issue.key}?`)) {
               remove.mutate(undefined, {
@@ -467,15 +494,18 @@ function IssueView({
           }}
         >
           Delete issue
-        </button>
+        </Button>
       ) : null}
-      <CommentsSection
-        org={org}
-        issueKey={issue.key}
-        currentUserId={session.data?.user.id ?? ''}
-        canComment={canComment}
-        canDeleteAny={canDeleteAnyComment}
-      />
+
+      <Card className="p-5 sm:p-6">
+        <CommentsSection
+          org={org}
+          issueKey={issue.key}
+          currentUserId={session.data?.user.id ?? ''}
+          canComment={canComment}
+          canDeleteAny={canDeleteAnyComment}
+        />
+      </Card>
     </article>
   );
 }

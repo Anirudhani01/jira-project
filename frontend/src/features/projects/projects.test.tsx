@@ -152,7 +152,9 @@ describe('ProjectPage', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'WEB — Website' }),
     ).toBeInTheDocument();
-    expect(await screen.findByText('To Do: To Do')).toBeInTheDocument();
+    expect(await screen.findByRole('table', { name: 'Board columns' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Column' })).toBeInTheDocument();
+    expect(screen.getAllByText('To Do').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByRole('button', { name: 'Archive project' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Remove Ann/ })).toBeNull();
   });

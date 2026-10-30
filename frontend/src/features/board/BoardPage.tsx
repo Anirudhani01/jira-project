@@ -1,27 +1,37 @@
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
-  useDraggable,
-  useDroppable,
+  pointerWithin,
+  rectIntersection,
   useSensor,
   useSensors,
   type Announcements,
+  type CollisionDetection,
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 
 import { NotFoundPage } from '../../app/pages/NotFoundPage';
-import { ErrorState, LoadingState } from '../../components/ui/States';
+import { EmptyState } from '../../components/ui/Card';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { ErrorState } from '../../components/ui/States';
 import { ApiError } from '../../lib/api/errors';
-import type { Board, BoardColumn, Issue } from '../../lib/api/types';
+import type { Board } from '../../lib/api/types';
+import { useSession } from '../auth/api';
+import { CreateIssueDialog } from '../issues/CreateIssueDialog';
 import { useProject } from '../projects/api';
 
 import { useBoard, useMoveCard } from './api';
+import { BoardColumnView, COLUMN_PREFIX } from './BoardColumn';
+import { BoardQuickFilters } from './BoardQuickFilters';
+import { BoardSkeleton } from './BoardSkeleton';
+import { BoardSprintHeader } from './BoardSprintHeader';
+import { boardFiltersActive, filterBoardIssues, parseBoardFilters } from './boardFilters';
+import { IssueCard } from './IssueCard';
 import { allowedColumnIds, findCard, planMove } from './boardState';
-
-const COLUMN_PREFIX = 'column:';
 
 function describeCard(board: Board, id: string | number | undefined): string {
   const found = typeof id === 'string' ? findCard(board, id) : null;
@@ -39,6 +49,13 @@ function describeTarget(board: Board, id: string | number | undefined): string {
     : 'a card';
 }
 
+/** Prefer the droppable under the cursor; fall back to rectangle overlap (empty column space). */
+const boardCollision: CollisionDetection = (args) => {
+  const hits = pointerWithin(args);
+  if (hits.length > 0) return hits;
+  return rectIntersection(args);
+};
+
 function announcements(board: Board): Announcements {
   return {
     onDragStart: ({ active }) => `Picked up ${describeCard(board, active.id)}.`,
@@ -52,128 +69,38 @@ function announcements(board: Board): Announcements {
   };
 }
 
-interface CardProps {
-  card: Issue;
-  org: string;
-  board: Board;
-  canMove: boolean;
-  onMoveTo: (key: string, columnId: string) => void;
-}
-
-function Card({ card, org, board, canMove, onMoveTo }: CardProps) {
-  const {
-    setNodeRef: setDragRef,
-    attributes,
-    listeners,
-    isDragging,
-  } = useDraggable({
-    id: card.key,
-    disabled: !canMove,
-  });
-  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: card.key });
-  const allowed = allowedColumnIds(board, card);
-  const current = board.columns.find((c) => c.status_ids.includes(card.status.id));
-  return (
-    <li
-      ref={(node) => {
-        setDragRef(node);
-        setDropRef(node);
-      }}
-      className={`rounded border bg-white p-2 text-sm shadow-sm ${isDragging ? 'opacity-50' : ''} ${isOver ? 'border-blue-500' : 'border-slate-200'}`}
-    >
-      <div className="flex items-start gap-2">
-        {canMove ? (
-          <button
-            type="button"
-            {...attributes}
-            {...listeners}
-            aria-label={`Drag ${card.key}: ${card.summary}. Press space to pick up.`}
-            className="cursor-grab rounded px-1 text-slate-500 hover:bg-slate-100"
-          >
-            <span aria-hidden="true">⠿</span>
-          </button>
-        ) : null}
-        <div>
-          <Link className="text-blue-700 underline" to={`/o/${org}/issues/${card.key}`}>
-            {card.key}
-          </Link>{' '}
-          {card.summary}
-        </div>
-      </div>
-      <div className="mt-1 flex items-center justify-between text-xs text-slate-600">
-        <span>{card.assignee?.display_name ?? 'Unassigned'}</span>
-        {canMove ? (
-          <label>
-            <span className="sr-only">Move {card.key} to</span>
-            <select
-              className="rounded border border-slate-300 px-1"
-              value={current?.id ?? ''}
-              onChange={(e) => {
-                onMoveTo(card.key, e.target.value);
-              }}
-            >
-              {board.columns.map((column) => (
-                <option key={column.id} value={column.id} disabled={!allowed.has(column.id)}>
-                  {column.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-      </div>
-    </li>
-  );
-}
-
-function Column(props: { column: BoardColumn; dimmed: boolean } & Omit<CardProps, 'card'>) {
-  const { column, dimmed, ...rest } = props;
-  const { setNodeRef, isOver } = useDroppable({
-    id: `${COLUMN_PREFIX}${column.id}`,
-    disabled: dimmed,
-  });
-  return (
-    <section
-      ref={setNodeRef}
-      aria-labelledby={`col-${column.id}`}
-      className={`flex w-72 shrink-0 flex-col rounded bg-slate-100 p-2 ${dimmed ? 'opacity-40' : ''} ${isOver ? 'ring-2 ring-blue-500' : ''}`}
-    >
-      <h2 id={`col-${column.id}`} className="mb-2 flex justify-between text-sm font-semibold">
-        <span>{column.name}</span>
-        <span className={column.over_wip_limit ? 'font-bold text-red-700' : 'text-slate-600'}>
-          {column.count}
-          {column.wip_limit !== null ? ` / ${String(column.wip_limit)}` : ''}
-          {column.over_wip_limit ? ' (over WIP limit)' : ''}
-        </span>
-      </h2>
-      <ul className="min-h-12 space-y-2">
-        {column.issues.map((card) => (
-          <Card key={card.key} card={card} {...rest} />
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-/** Kanban board: drag with pointer or keyboard, or use each card's "Move to" menu. */
+/** Kanban / scrum board with quick filters, rich cards, and drag-and-drop. */
 export function BoardPage() {
   const { org = '', key = '' } = useParams();
+  const navigate = useNavigate();
   const project = useProject(org, key);
   const board = useBoard(org, key);
+  const session = useSession();
   const move = useMoveCard(org, key);
   const [dragging, setDragging] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [search] = useSearchParams();
+  const filters = parseBoardFilters(search);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor),
   );
 
-  if (project.isPending || board.isPending) return <LoadingState label="Loading board" />;
+  if (project.isPending || board.isPending) return <BoardSkeleton />;
   if (project.error instanceof ApiError && project.error.status === 404) return <NotFoundPage />;
   if (project.isError) return <ErrorState error={project.error} />;
   if (board.isError) return <ErrorState error={board.error} />;
+
   const data = board.data;
+  const meId = session.data?.user.id;
+  const filtersActive = boardFiltersActive(filters);
+  const filtered = filterBoardIssues(data, filters, meId);
   const draggedCard = dragging ? findCard(data, dragging)?.card : undefined;
   const allowedForDrag = draggedCard ? allowedColumnIds(data, draggedCard) : null;
   const canMove = project.data.permissions.includes('issue.transition') && !project.data.archived;
+  const canCreate = project.data.permissions.includes('issue.create') && !project.data.archived;
+  const canManageSprint =
+    project.data.permissions.includes('sprint.manage') && !project.data.archived;
 
   const startMove = (cardKey: string, columnId: string, index: number) => {
     const plan = planMove(data, cardKey, columnId, index);
@@ -185,7 +112,6 @@ export function BoardPage() {
   const moveTo = (cardKey: string, columnId: string) => {
     const target = data.columns.find((c) => c.id === columnId);
     if (!target) return;
-    // Menu moves append to the end of the column.
     startMove(cardKey, columnId, target.issues.filter((c) => c.key !== cardKey).length);
   };
 
@@ -210,59 +136,115 @@ export function BoardPage() {
     startMove(cardKey, column.id, below ? overIndex + 1 : overIndex);
   };
 
+  const cardProps = {
+    org,
+    board: data,
+    canMove,
+    onMoveTo: moveTo,
+  };
+
   return (
-    <section aria-labelledby="board-title" className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 id="board-title" className="text-2xl font-semibold">
-          {data.project_key} board
-          {data.sprint ? ` — ${data.sprint.name}` : ''}
-        </h1>
-        <Link className="text-blue-700 underline" to={`/o/${org}/p/${data.project_key}/issues`}>
-          List view
-        </Link>
-      </div>
+    <section aria-labelledby="board-title" className="space-y-6">
+      <PageHeader
+        titleId="board-title"
+        title={`${data.project_key} board`}
+        {...(data.sprint ? { description: data.sprint.name } : {})}
+        actions={
+          <Link
+            className="text-sm font-medium text-accent hover:underline"
+            to={`/o/${org}/p/${data.project_key}/issues`}
+          >
+            List view
+          </Link>
+        }
+      />
+
+      <BoardSprintHeader
+        board={data}
+        org={org}
+        projectKey={data.project_key}
+        canManageSprint={canManageSprint}
+      />
+
+      <BoardQuickFilters board={data} currentUserId={meId} />
+
       {move.isError ? (
-        <p role="alert" className="rounded bg-red-50 p-2 text-sm text-red-800">
+        <p
+          role="alert"
+          className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
+        >
           Could not move the card: {move.error.message} The board was restored.
         </p>
       ) : null}
+
       {data.board_type === 'scrum' && !data.sprint ? (
-        <p className="text-sm text-slate-600">
-          No active sprint. Start one from the{' '}
-          <Link className="text-blue-700 underline" to={`/o/${org}/p/${data.project_key}/backlog`}>
-            backlog
-          </Link>
-          .
+        <EmptyState
+          title="No active sprint"
+          description="Start a sprint from the backlog to see issues on the board."
+          action={{
+            label: 'Open backlog',
+            onClick: () => {
+              void navigate(`/o/${org}/p/${data.project_key}/backlog`);
+            },
+          }}
+        />
+      ) : null}
+
+      {data.truncated ? (
+        <p className="text-sm text-fg-muted">
+          Showing the first 500 cards. Quick filters apply to loaded cards only.
         </p>
       ) : null}
-      {data.truncated ? (
-        <p className="text-sm text-slate-600">Showing the first 500 cards.</p>
+
+      {!(data.board_type === 'scrum' && !data.sprint) ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={boardCollision}
+          accessibility={{ announcements: announcements(data) }}
+          onDragStart={({ active: dragged }) => {
+            setDragging(String(dragged.id));
+          }}
+          onDragCancel={() => {
+            setDragging(null);
+          }}
+          onDragEnd={onDragEnd}
+        >
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {filtered.columns.map((column, index) => (
+              <BoardColumnView
+                key={column.id}
+                column={column}
+                sourceColumn={data.columns[index] as (typeof data.columns)[number]}
+                dimmed={allowedForDrag !== null && !allowedForDrag.has(column.id)}
+                filteredCount={column.issues.length}
+                filtersActive={filtersActive}
+                canCreate={canCreate}
+                onCreate={() => {
+                  setCreating(true);
+                }}
+                {...cardProps}
+              />
+            ))}
+          </div>
+          <DragOverlay dropAnimation={null}>
+            {draggedCard ? (
+              <ul className="w-[17.5rem] list-none">
+                <IssueCard card={draggedCard} {...cardProps} overlay />
+              </ul>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       ) : null}
-      <DndContext
-        sensors={sensors}
-        accessibility={{ announcements: announcements(data) }}
-        onDragStart={({ active: dragged }) => {
-          setDragging(String(dragged.id));
-        }}
-        onDragCancel={() => {
-          setDragging(null);
-        }}
-        onDragEnd={onDragEnd}
-      >
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          {data.columns.map((column) => (
-            <Column
-              key={column.id}
-              column={column}
-              dimmed={allowedForDrag !== null && !allowedForDrag.has(column.id)}
-              org={org}
-              board={data}
-              canMove={canMove}
-              onMoveTo={moveTo}
-            />
-          ))}
-        </div>
-      </DndContext>
+
+      {creating ? (
+        <CreateIssueDialog
+          org={org}
+          project={data.project_key}
+          onClose={() => {
+            setCreating(false);
+          }}
+        />
+      ) : null}
     </section>
   );
 }
