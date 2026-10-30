@@ -1,8 +1,10 @@
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, ChevronDown, Target } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 
+import { useBoardShell } from '../../app/shell/useBoardShell';
 import { Button } from '../../components/ui/Button';
+import { cn } from '../../lib/cn';
 import { FormError } from '../../components/ui/Form';
 import { Dialog, DialogContent, DialogTrigger } from '../../components/ui/Overlay';
 import { describeError } from '../../lib/forms';
@@ -27,11 +29,13 @@ function CompleteSprintDialog({
   futures,
   org,
   project,
+  boardChrome,
 }: {
   sprint: Sprint;
   futures: Sprint[];
   org: string;
   project: string;
+  boardChrome: boolean;
 }) {
   const complete = useCompleteSprint(org, project);
   const [target, setTarget] = useState('backlog');
@@ -40,8 +44,14 @@ function CompleteSprintDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" size="sm" variant="primary">
+        <Button
+          type="button"
+          size="sm"
+          variant="primary"
+          className={cn(boardChrome && 'board-btn-primary gap-1 rounded-lg px-3')}
+        >
           Complete sprint
+          {boardChrome ? <ChevronDown className="size-3.5 opacity-90" aria-hidden="true" /> : null}
         </Button>
       </DialogTrigger>
       <DialogContent
@@ -112,6 +122,7 @@ export function BoardSprintHeader({
   projectKey: string;
   canManageSprint: boolean;
 }) {
+  const boardChrome = useBoardShell();
   const backlog = useBacklog(org, projectKey, board.board_type === 'scrum');
   const sprintRef = board.sprint;
   if (board.board_type !== 'scrum' || !sprintRef) return null;
@@ -122,35 +133,84 @@ export function BoardSprintHeader({
   const left = daysLeft(detail?.end_at);
 
   return (
-    <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-line bg-surface px-4 py-3">
-      <div className="space-y-1">
-        <div className="flex items-center gap-2 text-sm text-fg-muted">
-          <CalendarDays className="size-4" aria-hidden="true" />
-          <span className="font-semibold text-fg">{sprintRef.name}</span>
+    <div
+      className={cn(
+        'flex flex-wrap items-start justify-between gap-4 rounded-lg border border-line bg-surface px-4 py-3',
+        boardChrome &&
+          'board-sprint-card border-[var(--board-border)] bg-[var(--board-surface)] px-5 py-4',
+      )}
+    >
+      <div className="min-w-0 space-y-2">
+        <div
+          className={cn(
+            'flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-muted',
+            boardChrome && 'text-[var(--board-muted)]',
+          )}
+        >
+          <CalendarDays
+            className={cn('size-4 shrink-0', boardChrome && 'text-[var(--board-accent)]')}
+            aria-hidden="true"
+          />
+          <span className={cn('font-semibold text-fg', boardChrome && 'text-[var(--board-text)]')}>
+            {sprintRef.name}
+          </span>
           {detail ? (
-            <span>
-              {formatDate(detail.start_at)} → {formatDate(detail.end_at)}
+            <>
+              <span className="hidden sm:inline" aria-hidden="true">
+                ·
+              </span>
+              <span className="whitespace-nowrap">
+                {formatDate(detail.start_at)} → {formatDate(detail.end_at)}
+              </span>
               {left !== null ? (
-                <span className="ml-2 text-fg-muted">
-                  ·{' '}
-                  {left < 0
-                    ? `${String(Math.abs(left))} days overdue`
-                    : `${String(left)} days left`}
-                </span>
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="whitespace-nowrap">
+                    {left < 0
+                      ? `${String(Math.abs(left))} days overdue`
+                      : `${String(left)} days left`}
+                  </span>
+                </>
               ) : null}
-            </span>
+            </>
           ) : backlog.isPending ? (
             <span>Loading dates…</span>
           ) : null}
         </div>
-        {detail?.goal ? <p className="max-w-2xl text-sm text-fg-muted">{detail.goal}</p> : null}
+        {detail?.goal ? (
+          <p
+            className={cn(
+              'flex max-w-3xl items-start gap-2 text-sm text-fg-muted',
+              boardChrome && 'text-[var(--board-muted)]',
+            )}
+          >
+            {boardChrome ? (
+              <Target
+                className="mt-0.5 size-4 shrink-0 text-[var(--board-accent)]"
+                aria-hidden="true"
+              />
+            ) : null}
+            <span>{detail.goal}</span>
+          </p>
+        ) : null}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Button asChild variant="secondary" size="sm">
+        <Button
+          asChild
+          variant="secondary"
+          size="sm"
+          className={cn(boardChrome && 'board-btn-secondary rounded-lg')}
+        >
           <Link to={`/o/${org}/p/${projectKey}/backlog`}>Backlog</Link>
         </Button>
         {canManageSprint && detail ? (
-          <CompleteSprintDialog sprint={detail} futures={futures} org={org} project={projectKey} />
+          <CompleteSprintDialog
+            sprint={detail}
+            futures={futures}
+            org={org}
+            project={projectKey}
+            boardChrome={boardChrome}
+          />
         ) : null}
       </div>
     </div>

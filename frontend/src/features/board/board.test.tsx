@@ -84,6 +84,10 @@ describe('board page', () => {
     });
     renderApp('/o/acme/p/WEB/board');
     expect(await screen.findByRole('heading', { name: 'WEB board' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Advanced filters — not available yet/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/over limit/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'More actions for WEB-1' }));
     await userEvent.click(screen.getByRole('menuitem', { name: 'Doing' }));
@@ -95,7 +99,7 @@ describe('board page', () => {
     expect(post?.body).toEqual({ to_status_id: DOING, after_key: 'WEB-3' });
     const doing = screen.getByRole('region', { name: /Doing/ });
     await waitFor(() => {
-      expect(within(doing).getByRole('link', { name: /WEB-1/i })).toBeInTheDocument();
+      expect(within(doing).getByRole('link', { name: 'WEB-1' })).toBeInTheDocument();
     });
   });
 
@@ -112,7 +116,7 @@ describe('board page', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: 'Doing' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('The board was restored');
     const todo = screen.getByRole('region', { name: /To Do/ });
-    expect(within(todo).getByRole('link', { name: /WEB-1/i })).toBeInTheDocument();
+    expect(within(todo).getByRole('link', { name: 'WEB-1' })).toBeInTheDocument();
   });
 
   it('offers no move controls without the transition permission', async () => {
@@ -137,8 +141,20 @@ describe('board page', () => {
     });
     renderApp('/o/acme/p/WEB/board');
     await screen.findByRole('heading', { name: 'WEB board' });
-    await userEvent.click(screen.getByRole('link', { name: /WEB-1/i }));
+    const todo = screen.getByRole('region', { name: /To Do/ });
+    await userEvent.click(within(todo).getByRole('link', { name: 'Summary WEB-1' }));
     expect(await screen.findByRole('heading', { name: /WEB-1/i })).toBeInTheDocument();
+  });
+
+  it('shows filter-empty copy when filters hide all cards in a column', async () => {
+    mockApi({
+      'GET /auth/session': () => json(SESSION),
+      'GET /orgs/acme/projects/WEB': () => json(PROJECT),
+      'GET /orgs/acme/projects/WEB/board': () => json(board()),
+    });
+    renderApp('/o/acme/p/WEB/board?q=nomatch');
+    await screen.findByRole('heading', { name: 'WEB board' });
+    expect(screen.getAllByText('No issues match filters').length).toBeGreaterThan(0);
   });
 
   it('filters cards client-side from the URL', async () => {
@@ -149,7 +165,7 @@ describe('board page', () => {
     });
     renderApp('/o/acme/p/WEB/board?q=WEB-2');
     await screen.findByRole('heading', { name: 'WEB board' });
-    expect(screen.queryByRole('link', { name: /WEB-1/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /WEB-2/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'WEB-1' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'WEB-2' })).toBeInTheDocument();
   });
 });

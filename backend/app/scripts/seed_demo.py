@@ -9,7 +9,7 @@ Usage (from repo root):
 
 Login after seeding:
   Email:    demo@gmail.com
-  Password: Demo@0707
+  Password: Winter2026!Mob
   Org:      demo  →  SHOP kanban board, MOBILE scrum board (+ backlog items)
 """
 
@@ -27,7 +27,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 DEMO_EMAIL = "demo@gmail.com"
-DEMO_PASSWORD = "Demo@0707"  # noqa: S105  # gitleaks:allow local demo only
+DEMO_PASSWORD = "Winter2026!Mob"  # noqa: S105  # gitleaks:allow local demo only (12+ chars, no "demo")
 DEMO_NAME = "Demo User"
 DEMO_ORG_SLUG = "demo"
 DEMO_ORG_NAME = "Demo Org"
@@ -83,6 +83,25 @@ async def ensure_user(http: httpx.AsyncClient) -> None:
         raise RuntimeError(f"login failed after verify: {again.status_code} {again.text}")
 
 
+async def ensure_org_membership() -> None:
+    """Attach the demo user to the demo org (handles slug already taken by another seed)."""
+    await superuser_sql(
+        """
+        INSERT INTO org_memberships (org_id, user_id, role, can_create_projects)
+        SELECT o.id, u.id, 'owner', true
+        FROM organizations o
+        JOIN users u ON lower(u.email) = lower(:email)
+        WHERE o.slug = :slug
+        ON CONFLICT (org_id, user_id) DO UPDATE SET
+          removed_at = NULL,
+          role = EXCLUDED.role,
+          can_create_projects = EXCLUDED.can_create_projects
+        """,
+        email=DEMO_EMAIL,
+        slug=DEMO_ORG_SLUG,
+    )
+
+
 async def ensure_org(http: httpx.AsyncClient) -> None:
     session = (await http.get("/api/v1/auth/session")).json()
     if any(o["slug"] == DEMO_ORG_SLUG for o in session.get("orgs", [])):
@@ -94,6 +113,12 @@ async def ensure_org(http: httpx.AsyncClient) -> None:
     )
     if response.status_code not in (201, 409):
         raise RuntimeError(f"create org failed: {response.status_code} {response.text}")
+    if response.status_code == 409:
+        await ensure_org_membership()
+        return
+    session = (await http.get("/api/v1/auth/session")).json()
+    if not any(o["slug"] == DEMO_ORG_SLUG for o in session.get("orgs", [])):
+        await ensure_org_membership()
 
 
 async def org_config(org_id: uuid.UUID) -> tuple[dict[str, uuid.UUID], dict[str, uuid.UUID]]:

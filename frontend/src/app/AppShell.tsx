@@ -1,45 +1,69 @@
 import { Outlet } from 'react-router';
 
 import { cn } from '../lib/cn';
+import { useAuthRoute } from '../features/auth/useAuthRoute';
+
 import { Breadcrumbs } from './shell/Breadcrumbs';
+import { MobileOrgDrawer, OrgSidebar } from './shell/OrgSidebar';
 import { MobileProjectDrawer, ProjectSidebar } from './shell/ProjectSidebar';
 import { ShellProvider } from './shell/ShellContext';
 import { TopBar } from './shell/TopBar';
-import { useAuthRoute } from '../features/auth/useAuthRoute';
-
+import { useBoardShell } from './shell/useBoardShell';
+import { useOrgDashboardHome, useShowOrgSidebar } from './shell/useOrgShell';
 import { useShowProjectSidebar } from './shell/useProjectContext';
 
 function AppShellBody() {
   const inProject = useShowProjectSidebar();
+  const inOrgShell = useShowOrgSidebar();
+  const orgDashboardHome = useOrgDashboardHome();
+  const boardShell = useBoardShell();
   const authRoute = useAuthRoute();
 
   return (
-    <div className={cn('flex min-h-screen flex-col text-fg', authRoute ? 'bg-surface' : 'bg-bg')}>
+    <div
+      className={cn(
+        'flex min-h-screen flex-col text-fg',
+        authRoute && 'bg-surface',
+        !authRoute && orgDashboardHome && 'org-dashboard-shell',
+        !authRoute && boardShell && 'board-shell w-full min-w-0 overflow-x-hidden',
+        !authRoute && !orgDashboardHome && !boardShell && 'bg-bg',
+      )}
+    >
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[70] focus:rounded focus:bg-surface focus:px-3 focus:py-2 focus:shadow"
       >
         Skip to content
       </a>
-      <TopBar />
-      <div className="flex min-h-0 flex-1">
+      <TopBar orgDashboardHome={orgDashboardHome} boardShell={boardShell} />
+      <div
+        className={cn('flex min-h-0 flex-1', boardShell && 'min-w-0 max-w-full overflow-x-hidden')}
+      >
+        <OrgSidebar />
         <ProjectSidebar />
         <div className="flex min-w-0 flex-1 flex-col">
-          {inProject ? <Breadcrumbs /> : null}
+          {inProject && !boardShell ? <Breadcrumbs /> : null}
           <main
             id="main"
-            className={
-              inProject
-                ? 'flex-1 px-4 py-6 sm:px-6 lg:px-8'
-                : authRoute
-                  ? 'flex-1 p-0'
-                  : 'mx-auto w-full max-w-6xl flex-1 px-4 py-8'
-            }
+            className={cn(
+              'flex-1 min-w-0',
+              inProject && boardShell && 'board-main px-3 py-4 sm:px-4 lg:px-5',
+              inProject && !boardShell && 'px-4 py-6 sm:px-6 lg:px-8',
+              authRoute && 'p-0',
+              !inProject &&
+                !authRoute &&
+                (orgDashboardHome
+                  ? 'px-4 py-6 sm:px-6 lg:px-8'
+                  : inOrgShell
+                    ? 'mx-auto w-full max-w-6xl px-4 py-8'
+                    : 'mx-auto w-full max-w-6xl px-4 py-8'),
+            )}
           >
             <Outlet />
           </main>
         </div>
       </div>
+      <MobileOrgDrawer />
       <MobileProjectDrawer />
     </div>
   );

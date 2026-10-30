@@ -111,7 +111,7 @@ export function e2eIdentity(prefix: string) {
 
 /** Issue links include the summary in the accessible name — match by key substring. */
 export function issueLink(page: Page, issueKey: string) {
-  return page.getByRole('link', { name: new RegExp(issueKey, 'i') });
+  return page.getByRole('link', { name: issueKey, exact: true });
 }
 
 /** Project settings → Members card (avoids matching org-level “member” copy). */
@@ -195,7 +195,9 @@ export async function expectNoSeriousViolations(page: Page, excludeSelectors: st
   const serious = results.violations.filter((v) =>
     ['serious', 'critical'].includes(v.impact ?? ''),
   );
-  expect(serious.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+  expect(
+    serious.map((v) => `${v.id}: ${v.help} → ${v.nodes.map((n) => n.target.join(' ')).join('; ')}`),
+  ).toEqual([]);
 }
 
 export async function setTheme(page: Page, theme: 'light' | 'dark') {

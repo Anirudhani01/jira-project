@@ -5,10 +5,12 @@ import { cn } from '../../lib/cn';
 import { ProjectSidebarNav } from './ProjectSidebarNav';
 import { readSidebarCollapsed } from './storage';
 import { useShell } from './ShellContext';
+import { useBoardShell } from './useBoardShell';
 import { useShowProjectSidebar } from './useProjectContext';
 
 export function ProjectSidebar() {
   const show = useShowProjectSidebar();
+  const boardShell = useBoardShell();
   const [collapsed, setCollapsed] = useState(() => readSidebarCollapsed());
 
   if (!show) return null;
@@ -17,7 +19,8 @@ export function ProjectSidebar() {
     <aside
       className={cn(
         'hidden shrink-0 border-r border-line bg-surface lg:block',
-        collapsed ? 'w-14' : 'w-56',
+        boardShell && !collapsed && 'board-sidebar',
+        collapsed ? 'w-14' : boardShell ? 'w-[240px]' : 'w-56',
       )}
     >
       <ProjectSidebarNav collapsed={collapsed} onCollapsedChange={setCollapsed} />

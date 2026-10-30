@@ -10,9 +10,10 @@ export interface AuditFilters {
 }
 
 /** Owner/admin audit log, newest first, cursor-paginated (plan §4.4). */
-export function useAuditEvents(org: string, filters: AuditFilters) {
+export function useAuditEvents(org: string, filters: AuditFilters, enabled = true) {
   return useInfiniteQuery({
     queryKey: ['org', org.toLowerCase(), 'audit', filters],
+    enabled,
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) => {
       const params = new URLSearchParams(

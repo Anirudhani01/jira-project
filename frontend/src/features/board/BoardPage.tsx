@@ -12,11 +12,12 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 
 import { NotFoundPage } from '../../app/pages/NotFoundPage';
 import { EmptyState } from '../../components/ui/Card';
-import { PageHeader } from '../../components/ui/PageHeader';
+import { useBoardShell } from '../../app/shell/useBoardShell';
+import { cn } from '../../lib/cn';
 import { ErrorState } from '../../components/ui/States';
 import { ApiError } from '../../lib/api/errors';
 import type { Board } from '../../lib/api/types';
@@ -26,6 +27,7 @@ import { useProject } from '../projects/api';
 
 import { useBoard, useMoveCard } from './api';
 import { BoardColumnView, COLUMN_PREFIX } from './BoardColumn';
+import { BoardPageHeader } from './BoardPageHeader';
 import { BoardQuickFilters } from './BoardQuickFilters';
 import { BoardSkeleton } from './BoardSkeleton';
 import { BoardSprintHeader } from './BoardSprintHeader';
@@ -81,6 +83,7 @@ export function BoardPage() {
   const [creating, setCreating] = useState(false);
   const [search] = useSearchParams();
   const filters = parseBoardFilters(search);
+  const boardChrome = useBoardShell();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor),
@@ -144,19 +147,17 @@ export function BoardPage() {
   };
 
   return (
-    <section aria-labelledby="board-title" className="space-y-6">
-      <PageHeader
+    <section
+      aria-labelledby="board-title"
+      className={cn('space-y-6', boardChrome && 'board-page min-w-0 space-y-4')}
+    >
+      <BoardPageHeader
+        org={org}
+        projectKey={data.project_key}
         titleId="board-title"
         title={`${data.project_key} board`}
-        {...(data.sprint ? { description: data.sprint.name } : {})}
-        actions={
-          <Link
-            className="text-sm font-medium text-accent hover:underline"
-            to={`/o/${org}/p/${data.project_key}/issues`}
-          >
-            List view
-          </Link>
-        }
+        sprintName={data.sprint?.name ?? null}
+        boardType={data.board_type}
       />
 
       <BoardSprintHeader
@@ -209,23 +210,49 @@ export function BoardPage() {
           }}
           onDragEnd={onDragEnd}
         >
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {filtered.columns.map((column, index) => (
-              <BoardColumnView
-                key={column.id}
-                column={column}
-                sourceColumn={data.columns[index] as (typeof data.columns)[number]}
-                dimmed={allowedForDrag !== null && !allowedForDrag.has(column.id)}
-                filteredCount={column.issues.length}
-                filtersActive={filtersActive}
-                canCreate={canCreate}
-                onCreate={() => {
-                  setCreating(true);
-                }}
-                {...cardProps}
-              />
-            ))}
-          </div>
+          {boardChrome ? (
+            <div className="board-columns-wrap w-full min-w-0 max-w-full overflow-x-auto pb-2">
+              <div className="board-columns-track w-max min-w-full">
+                <div className="board-columns grid min-w-0 grid-flow-col auto-cols-[minmax(260px,1fr)] gap-2.5 xl:grid-flow-row xl:grid-cols-4 xl:gap-3">
+                  {filtered.columns.map((column, index) => (
+                    <BoardColumnView
+                      key={column.id}
+                      column={column}
+                      sourceColumn={data.columns[index] as (typeof data.columns)[number]}
+                      boardData={data}
+                      dimmed={allowedForDrag !== null && !allowedForDrag.has(column.id)}
+                      filteredCount={column.issues.length}
+                      filtersActive={filtersActive}
+                      canCreate={canCreate}
+                      onCreate={() => {
+                        setCreating(true);
+                      }}
+                      {...cardProps}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {filtered.columns.map((column, index) => (
+                <BoardColumnView
+                  key={column.id}
+                  column={column}
+                  sourceColumn={data.columns[index] as (typeof data.columns)[number]}
+                  boardData={data}
+                  dimmed={allowedForDrag !== null && !allowedForDrag.has(column.id)}
+                  filteredCount={column.issues.length}
+                  filtersActive={filtersActive}
+                  canCreate={canCreate}
+                  onCreate={() => {
+                    setCreating(true);
+                  }}
+                  {...cardProps}
+                />
+              ))}
+            </div>
+          )}
           <DragOverlay dropAnimation={null}>
             {draggedCard ? (
               <ul className="w-[17.5rem] list-none">

@@ -84,28 +84,32 @@ describe('CreateOrgPage', () => {
 });
 
 describe('OrgHomePage', () => {
-  it('shows the organization and its settings link for managers', async () => {
+  it('shows the organization dashboard header and tabs for managers', async () => {
     mockApi({
       'GET /auth/session': () => json({ ...VERIFIED, orgs: [ACME] }),
       'GET /orgs/acme': () => json(ORG),
+      'GET /orgs/acme/projects': () => json({ items: [] }),
     });
     renderApp('/o/acme');
     expect(await screen.findByRole('heading', { level: 1, name: 'Acme' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute(
-      'href',
-      '/o/acme/settings',
-    );
-    expect(screen.getByRole('heading', { name: 'Projects' })).toBeInTheDocument();
+    expect(screen.getByText('Welcome back,')).toBeInTheDocument();
+    const tabs = screen.getByRole('navigation', { name: 'Organization sections' });
+    expect(tabs).toBeInTheDocument();
+    expect(tabs.querySelector('a[aria-current="page"]')).toHaveTextContent('Projects');
+    const createLinks = screen.getAllByRole('link', { name: 'Create project' });
+    expect(createLinks.some((el) => el.getAttribute('href') === '/o/acme/projects/new')).toBe(true);
   });
 
-  it('hides settings from members', async () => {
+  it('hides org manage settings in the header for members but keeps sidebar settings', async () => {
     mockApi({
       'GET /auth/session': () => json({ ...VERIFIED, orgs: [ACME] }),
       'GET /orgs/acme': () => json({ ...ORG, role: 'member', permissions: ['org.view'] }),
+      'GET /orgs/acme/projects': () => json({ items: [] }),
     });
     renderApp('/o/acme');
     await screen.findByRole('heading', { level: 1, name: 'Acme' });
-    expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
+    expect(screen.getAllByRole('link', { name: 'Settings' }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('navigation', { name: 'Organization' })).toBeInTheDocument();
   });
 
   it('renders not-found for inaccessible organizations', async () => {
