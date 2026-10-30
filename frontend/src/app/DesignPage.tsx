@@ -25,7 +25,17 @@ import {
   TabsTrigger,
   Tooltip,
 } from '../components/ui/Overlay';
+import {
+  UxEmptyState,
+  UxErrorState,
+  UxOfflineNotice,
+  UxPermissionDenied,
+  UxSearchEmpty,
+  UxSlowHint,
+} from '../components/ux';
+import { ErrorState, LoadingState, ProjectGridSkeleton } from '../components/ui/States';
 import { useToast } from '../components/ui/Toast';
+import { ApiError, networkError } from '../lib/api/errors';
 import { useTheme, type ThemePreference } from '../theme/ThemeProvider';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -152,6 +162,115 @@ export function DesignPage() {
             description="Create the first issue to start planning this sprint."
             action={{ label: 'Create issue', onClick: () => undefined }}
           />
+        </div>
+      </Section>
+
+      <Section title="Global UX standards (M1)">
+        <p className="max-w-prose text-sm text-fg-muted">
+          Presentational demos for the ten application-wide UX standards. Feature pages are not
+          migrated in M1.
+        </p>
+        <div className="grid gap-8">
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-fg-muted">1. Empty state</h3>
+            <UxEmptyState
+              title="No issues yet"
+              description="Create the first issue to start planning this sprint."
+              reason="no_data"
+              action={{ label: 'Create issue', onClick: () => undefined }}
+            />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-fg-muted">2. Loading state</h3>
+            <LoadingState label="Loading issues" />
+            <ProjectGridSkeleton />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-fg-muted">3. Error state</h3>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <UxErrorState error={networkError(new TypeError('Failed to fetch'))} />
+              <UxErrorState
+                error={
+                  new ApiError({
+                    status: 503,
+                    code: 'service_unavailable',
+                    title: 'Unavailable',
+                    requestId: 'req-design-demo',
+                  })
+                }
+                onRetry={() => undefined}
+              />
+            </div>
+            <ErrorState
+              error={new ApiError({ status: 500, code: 'internal', title: 'Error' })}
+              onRetry={() => undefined}
+            />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-fg-muted">4. Offline notice</h3>
+            <UxOfflineNotice offline variant="banner" />
+            <UxOfflineNotice offline={false} variant="inline" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-fg-muted">5. Slow connection hint</h3>
+            <UxSlowHint visible stage="Still loading issues…" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-fg-muted">6. No search results</h3>
+            <UxSearchEmpty
+              query="acme-mobile"
+              scope="issues"
+              filtersActive
+              onClearFilters={() => undefined}
+              onClearQuery={() => undefined}
+              suggestion={{ label: 'acme-mobile-app', onApply: () => undefined }}
+            />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-fg-muted">7. Permission denied</h3>
+            <UxPermissionDenied
+              capability="organization audit log"
+              reason="Only organization admins can view audit events."
+              backAction={{ label: 'Back to org home', href: '/orgs/demo' }}
+              contactAdmin={{ label: 'View members', href: '/orgs/demo/members' }}
+            />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-fg-muted">8. Session expired</h3>
+            <UxErrorState
+              error={
+                new ApiError({
+                  status: 401,
+                  code: 'unauthenticated',
+                  title: 'Authentication required',
+                })
+              }
+              context={{ hadEstablishedSession: true }}
+            />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-fg-muted">9. Form validation</h3>
+            <div className="max-w-md">
+              <Field label="Email" error="Enter a valid email address.">
+                {(props) => <Input defaultValue="not-an-email" {...props} />}
+              </Field>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-fg-muted">10. Success state</h3>
+            <Button
+              variant="primary"
+              onClick={() => {
+                toast({
+                  title: 'Issue created',
+                  description: 'PROJ-42 is ready on the backlog.',
+                  variant: 'success',
+                });
+              }}
+            >
+              Show success toast
+            </Button>
+          </div>
         </div>
       </Section>
 

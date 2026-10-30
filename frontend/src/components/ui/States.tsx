@@ -1,6 +1,6 @@
-import { Button } from './Button';
+import { UxErrorState } from '../ux/UxErrorState';
+
 import { Skeleton } from './Card';
-import { ApiError } from '../../lib/api/errors';
 
 export function LoadingState({ label }: { label: string }) {
   return (
@@ -14,25 +14,12 @@ export function LoadingState({ label }: { label: string }) {
 }
 
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
-  const requestId = error instanceof ApiError ? error.requestId : null;
   return (
-    <div
-      role="alert"
-      className="space-y-3 rounded-lg border border-danger/30 bg-danger/10 p-4 text-fg"
-    >
-      <p className="font-medium text-danger">Something went wrong. Please try again.</p>
-      {requestId ? (
-        <p className="text-sm text-fg-muted">
-          Reference:{' '}
-          <code className="rounded bg-surface px-1 py-0.5 font-mono text-xs">{requestId}</code>
-        </p>
-      ) : null}
-      {onRetry ? (
-        <Button type="button" variant="secondary" size="sm" onClick={onRetry}>
-          Retry
-        </Button>
-      ) : null}
-    </div>
+    <UxErrorState
+      error={error}
+      {...(onRetry ? { onRetry } : {})}
+      context={{ hadEstablishedSession: false, surface: 'default' }}
+    />
   );
 }
 
