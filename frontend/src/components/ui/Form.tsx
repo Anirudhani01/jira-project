@@ -96,7 +96,7 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
             type="button"
             variant="ghost"
             size="sm"
-            className="absolute right-0 top-0 h-8 w-9 px-0"
+            className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 px-0"
             aria-label={visible ? `Hide password for ${label}` : `Show password for ${label}`}
             aria-pressed={visible}
             onClick={() => {
@@ -160,13 +160,21 @@ export function SubmitButton({
   pending,
   disabled,
   children,
+  className,
 }: {
   pending: boolean;
   disabled?: boolean;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <Button type="submit" variant="primary" disabled={pending || disabled} aria-busy={pending}>
+    <Button
+      type="submit"
+      variant="primary"
+      className={className}
+      disabled={pending || disabled}
+      aria-busy={pending}
+    >
       {children}
     </Button>
   );

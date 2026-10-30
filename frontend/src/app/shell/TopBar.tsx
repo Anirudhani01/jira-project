@@ -1,5 +1,5 @@
-import { Menu, Plus, Search } from 'lucide-react';
-import { Link, useNavigate } from 'react-router';
+import { LayoutGrid, Menu, Plus, Search } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router';
 
 import { Button, IconButton } from '../../components/ui/Button';
 import { useSession } from '../../features/auth/api';
@@ -13,12 +13,17 @@ import { ThemeToggle } from './ThemeToggle';
 import { useProjectContext, useShowProjectSidebar } from './useProjectContext';
 
 function GuestNav() {
+  const { pathname } = useLocation();
   return (
-    <div className="flex items-center gap-2 text-sm">
-      <Button variant="ghost" size="sm" asChild>
-        <Link to="/login">Sign in</Link>
-      </Button>
-      <Button variant="primary" size="sm" asChild>
+    <div className="flex items-center gap-4 text-sm">
+      {pathname === '/login' ? (
+        <span className="font-medium text-accent">Sign in</span>
+      ) : (
+        <Link to="/login" className="font-medium text-fg-muted no-underline hover:text-accent">
+          Sign in
+        </Link>
+      )}
+      <Button variant="primary" size="sm" className="rounded-lg px-4" asChild>
         <Link to="/signup">Sign up</Link>
       </Button>
     </div>
@@ -72,7 +77,7 @@ export function TopBar() {
 
   return (
     <header className="border-b border-line bg-surface">
-      <nav aria-label="Primary" className="flex h-14 items-center gap-2 px-4">
+      <nav aria-label="Primary" className="flex h-14 items-center gap-2 px-5 lg:px-8">
         {showSidebar ? (
           <IconButton
             label="Open project navigation"
@@ -87,8 +92,11 @@ export function TopBar() {
         ) : null}
         <Link
           to="/"
-          className="shrink-0 text-lg font-semibold tracking-tight text-accent no-underline hover:text-accent-hover"
+          className="flex shrink-0 items-center gap-2 text-lg font-semibold tracking-tight text-fg no-underline hover:text-accent"
         >
+          <span className="flex size-8 items-center justify-center rounded-lg bg-accent text-accent-fg">
+            <LayoutGrid className="size-4" aria-hidden="true" />
+          </span>
           Jira Project
         </Link>
         {signedIn ? (
