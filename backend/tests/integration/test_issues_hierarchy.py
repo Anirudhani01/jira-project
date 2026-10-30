@@ -244,7 +244,10 @@ async def test_children_endpoint_lists_direct_children_only(ctx: Ctx) -> None:
     ).json()
 
     epic_children = await ctx.http.get(f"/api/v1/orgs/{ctx.slug}/issues/{epic['key']}/children")
-    assert [c["id"] for c in epic_children.json()["items"]] == [story["id"]]
+    epic_body = epic_children.json()
+    assert [c["id"] for c in epic_body["items"]] == [story["id"]]
+    assert epic_body["total"] == 1
+    assert epic_body["done"] == 0
     story_children = await ctx.http.get(f"/api/v1/orgs/{ctx.slug}/issues/{story['key']}/children")
     assert [c["id"] for c in story_children.json()["items"]] == [subtask["id"]]
     subtask_children = await ctx.http.get(

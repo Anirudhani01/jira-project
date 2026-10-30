@@ -1,6 +1,8 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { GripVertical, MoreHorizontal } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
+
+import { issueDetailLinkProps } from '../issues/issueDetailNavigation';
 
 import { useBoardShell } from '../../app/shell/useBoardShell';
 import { Avatar } from '../../components/ui/Avatar';
@@ -70,7 +72,7 @@ function IssueCardMoveMenu({
   allowed,
   currentColumnId,
   onMoveTo,
-  issueHref,
+  detailLink,
   boardChrome,
   className,
 }: {
@@ -79,7 +81,7 @@ function IssueCardMoveMenu({
   allowed: Set<string>;
   currentColumnId: string | undefined;
   onMoveTo: (key: string, columnId: string) => void;
-  issueHref: string;
+  detailLink: ReturnType<typeof issueDetailLinkProps>;
   boardChrome?: boolean;
   className?: string;
 }) {
@@ -114,7 +116,7 @@ function IssueCardMoveMenu({
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link to={issueHref}>Open issue</Link>
+          <Link {...detailLink}>Open issue</Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -172,7 +174,11 @@ export function IssueCard({
 
   const dragLabel = `Drag ${card.key}: ${card.summary}. Press space to pick up.`;
 
-  const issueHref = `/o/${org}/issues/${card.key}`;
+  const location = useLocation();
+  const detailLink = issueDetailLinkProps(org, card.key, location);
+  const parentDetailLink = card.parent
+    ? issueDetailLinkProps(org, card.parent.key, location)
+    : null;
 
   const cardShellClass = cn(
     'group text-sm transition-shadow',
@@ -233,7 +239,7 @@ export function IssueCard({
               <div className="flex min-w-0 items-center gap-1.5">
                 <TypeIcon kind={card.type.kind} name={card.type.name} className="size-4 shrink-0" />
                 <Link
-                  to={issueHref}
+                  {...detailLink}
                   className="board-issue-key truncate font-mono text-xs font-semibold no-underline outline-none hover:underline focus-visible:ring-2 focus-visible:ring-[var(--board-accent)]"
                 >
                   {card.key}
@@ -246,20 +252,20 @@ export function IssueCard({
                   allowed={allowed}
                   currentColumnId={current?.id}
                   onMoveTo={onMoveTo}
-                  issueHref={issueHref}
+                  detailLink={detailLink}
                   boardChrome
                 />
               ) : null}
             </div>
             <Link
-              to={issueHref}
+              {...detailLink}
               className="board-issue-summary line-clamp-2 min-h-[2.35rem] text-[13px] leading-snug text-[var(--board-text)] no-underline outline-none hover:text-[var(--board-link)] focus-visible:ring-2 focus-visible:ring-[var(--board-accent)]"
             >
               {card.summary}
             </Link>
-            {card.parent ? (
+            {card.parent && parentDetailLink ? (
               <Link
-                to={`/o/${org}/issues/${card.parent.key}`}
+                {...parentDetailLink}
                 className="inline-flex max-w-full items-center gap-1 truncate rounded bg-[var(--board-accent-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--board-link)] no-underline hover:underline"
                 title={card.parent.summary}
               >
@@ -291,7 +297,7 @@ export function IssueCard({
             <TypeIcon kind={card.type.kind} name={card.type.name} className="mt-0.5" />
             <div className="min-w-0 flex-1">
               <Link
-                to={issueHref}
+                {...detailLink}
                 className="block rounded-sm outline-none ring-accent hover:bg-surface-hover focus-visible:ring-2"
               >
                 <span className="font-mono text-xs font-medium text-accent">{card.key}</span>
@@ -307,14 +313,14 @@ export function IssueCard({
                 allowed={allowed}
                 currentColumnId={current?.id}
                 onMoveTo={onMoveTo}
-                issueHref={issueHref}
+                detailLink={detailLink}
               />
             ) : null}
           </div>
 
-          {card.parent ? (
+          {card.parent && parentDetailLink ? (
             <Link
-              to={`/o/${org}/issues/${card.parent.key}`}
+              {...parentDetailLink}
               className="inline-flex max-w-full items-center gap-1 rounded-sm bg-accent-soft px-1.5 py-0.5 text-[11px] font-medium text-accent hover:underline"
               title={card.parent.summary}
             >

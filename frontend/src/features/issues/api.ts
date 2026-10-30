@@ -153,7 +153,7 @@ export function useDeleteIssue(org: string, key: string) {
 export function useChildren(org: string, key: string) {
   return useQuery({
     queryKey: [...issueKey(org, key), 'children'],
-    queryFn: () => apiFetch<ChildrenList>(`${issuePath(org, key)}/children`).then((r) => r.items),
+    queryFn: () => apiFetch<ChildrenList>(`${issuePath(org, key)}/children`),
   });
 }
 

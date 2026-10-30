@@ -1170,8 +1170,12 @@ export interface components {
         };
         /** ChildrenResponse */
         ChildrenResponse: {
+            /** Done */
+            done: number;
             /** Items */
             items: components["schemas"]["IssueResponse"][];
+            /** Total */
+            total: number;
         };
         /** ColumnInput */
         ColumnInput: {

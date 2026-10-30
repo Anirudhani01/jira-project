@@ -9,7 +9,9 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { useState, type SyntheticEvent } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useLocation, useParams } from 'react-router';
+
+import { issueDetailLinkProps } from '../issues/issueDetailNavigation';
 
 import { NotFoundPage } from '../../app/pages/NotFoundPage';
 import { FormError } from '../../components/ui/Form';
@@ -39,6 +41,8 @@ interface RowProps {
 }
 
 function IssueRow({ issue, org, canPlan, targets, onMove }: RowProps) {
+  const location = useLocation();
+  const detailLink = issueDetailLinkProps(org, issue.key, location);
   const { setNodeRef, attributes, listeners, isDragging } = useDraggable({
     id: issue.key,
     disabled: !canPlan,
@@ -61,7 +65,7 @@ function IssueRow({ issue, org, canPlan, targets, onMove }: RowProps) {
           </button>
         ) : null}
         <span>
-          <Link className="text-blue-700 underline" to={`/o/${org}/issues/${issue.key}`}>
+          <Link className="text-blue-700 underline" {...detailLink}>
             {issue.key}
           </Link>{' '}
           {issue.summary}

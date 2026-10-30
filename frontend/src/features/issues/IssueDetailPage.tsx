@@ -1,19 +1,32 @@
-import { Pencil } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { MoreHorizontal, Pencil } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 
 import { NotFoundPage } from '../../app/pages/NotFoundPage';
 import { Button, IconButton } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../components/ui/Overlay';
+import { useToast } from '../../components/ui/Toast';
+import { formatRelativeTime } from '../../lib/relativeTime';
 import { FormError } from '../../components/ui/Form';
 import { StatusLozenge } from '../../components/ui/IssueIcons';
-import { Input, Textarea } from '../../components/ui/Input';
+import { Input } from '../../components/ui/Input';
 import { ErrorState, LoadingState } from '../../components/ui/States';
 import { ApiError } from '../../lib/api/errors';
 import type { Issue } from '../../lib/api/types';
 import { describeError } from '../../lib/forms';
 import { useSession } from '../auth/api';
-import { CommentsSection } from '../comments/CommentsSection';
+import { IssueActivitySection } from './IssueActivitySection';
+import { IssueChildrenSection } from './IssueChildrenSection';
+import { IssueDescriptionSection } from './IssueDescriptionSection';
 import { useProject, useProjectMembers } from '../projects/api';
 
 import {
@@ -33,11 +46,22 @@ import {
   IssueListStatusMenu,
   IssueListTypeMenu,
 } from './IssueListRowMenus';
+import {
+  issueDetailLinkProps,
+  issueDetailPath,
+  readIssueDetailModalState,
+} from './issueDetailNavigation';
 
 type Field = 'summary' | 'description';
 
-const fieldLabelClass = 'pt-2.5 text-[13px] font-medium text-fg-muted sm:pt-0';
-const fieldValueClass = 'min-h-9 flex items-center';
+function SidebarField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium text-fg-muted">{label}</p>
+      <div className="min-h-8 text-sm">{children}</div>
+    </div>
+  );
+}
 
 function InlineEditPanel({
   children,
@@ -75,7 +99,7 @@ function InlineEditPanel({
 
 /** Issue detail: inline edits are sent with If-Match. On 412 the user's draft is kept and a
  * conflict banner offers to reload the latest version. */
-export function IssueDetailPage() {
+export function IssueDetailPage({ presentation = 'page' }: { presentation?: 'page' | 'modal' }) {
   const { org = '', issueKey = '' } = useParams();
   const issue = useIssue(org, issueKey);
   const projectKey = issue.data?.project_key ?? issueKey.split('-')[0] ?? '';
@@ -90,6 +114,7 @@ export function IssueDetailPage() {
     <IssueView
       org={org}
       issue={issue.data}
+      presentation={presentation}
       canEdit={writable && permissions.includes('issue.edit')}
       canDelete={writable && permissions.includes('issue.delete')}
       canAssign={writable && permissions.includes('issue.assign')}
@@ -104,6 +129,7 @@ export function IssueDetailPage() {
 function IssueView({
   org,
   issue,
+  presentation,
   canEdit,
   canDelete,
   canAssign,
@@ -114,6 +140,7 @@ function IssueView({
 }: {
   org: string;
   issue: Issue;
+  presentation: 'page' | 'modal';
   canEdit: boolean;
   canDelete: boolean;
   canAssign: boolean;
@@ -123,6 +150,7 @@ function IssueView({
   onReload: () => void;
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const session = useSession();
   const types = useIssueTypes(org);
   const priorities = usePriorities(org);
@@ -134,7 +162,25 @@ function IssueView({
   const [editing, setEditing] = useState<Field | null>(null);
   const [draft, setDraft] = useState('');
   const [labelDraft, setLabelDraft] = useState<string[] | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const toast = useToast();
+  const conflictNotified = useRef(false);
   const conflict = update.error instanceof ApiError && update.error.status === 412;
+
+  useEffect(() => {
+    if (conflict) {
+      if (!conflictNotified.current) {
+        toast({
+          title: 'Updated by someone else',
+          description: 'Your edit was not saved. Reload to see the latest version.',
+          variant: 'error',
+        });
+        conflictNotified.current = true;
+      }
+      return;
+    }
+    conflictNotified.current = false;
+  }, [conflict, toast]);
 
   const start = (field: Field, value: string) => {
     update.reset();
@@ -171,18 +217,39 @@ function IssueView({
     );
   };
 
+  const deleteIssue = () => {
+    remove.mutate(undefined, {
+      onSuccess: () => {
+        setDeleteOpen(false);
+        const modal = readIssueDetailModalState(location.state);
+        if (modal) {
+          const { pathname, search, hash } = modal.backgroundLocation;
+          void navigate(`${pathname}${search}${hash}`, { replace: true, state: null });
+          return;
+        }
+        void navigate(`/o/${org}/p/${issue.project_key}/issues`);
+      },
+    });
+  };
+
+  const childItems = children.data?.items ?? [];
+  const childDone = children.data?.done ?? 0;
+  const childTotal = children.data?.total ?? 0;
+
   return (
     <article aria-labelledby="issue-title" className="w-full space-y-6">
-      <nav aria-label="Issue location" className="text-sm text-fg-muted">
-        <Link
-          className="font-medium text-accent hover:underline"
-          to={`/o/${org}/p/${issue.project_key}/issues`}
-        >
-          {issue.project_key} issues
-        </Link>
-        <span aria-hidden="true"> / </span>
-        <span className="font-mono text-fg">{issue.key}</span>
-      </nav>
+      {presentation === 'page' ? (
+        <nav aria-label="Issue location" className="text-sm text-fg-muted">
+          <Link
+            className="font-medium text-accent hover:underline"
+            to={`/o/${org}/p/${issue.project_key}/issues`}
+          >
+            {issue.project_key} issues
+          </Link>
+          <span aria-hidden="true"> / </span>
+          <span className="font-mono text-fg">{issue.key}</span>
+        </nav>
+      ) : null}
 
       {conflict ? (
         <div
@@ -267,7 +334,9 @@ function IssueView({
             Part of{' '}
             <Link
               className="font-medium text-accent hover:underline"
-              to={`/o/${org}/issues/${issue.parent.key}`}
+              {...(presentation === 'modal'
+                ? issueDetailLinkProps(org, issue.parent.key, location)
+                : { to: issueDetailPath(org, issue.parent.key) })}
             >
               {issue.parent.key} {issue.parent.summary}
             </Link>
@@ -275,237 +344,244 @@ function IssueView({
         ) : null}
       </header>
 
-      <Card className="p-5 sm:p-6">
-        <dl className="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-[minmax(7.5rem,9rem)_1fr]">
-          <dt className={fieldLabelClass}>Status</dt>
-          <dd className={fieldValueClass}>
-            {canTransition ? (
-              <IssueListStatusMenu org={org} issue={issue} canTransition={canTransition} />
-            ) : (
-              <StatusLozenge name={issue.status.name} category={issue.status.category} />
-            )}
-          </dd>
-
-          <dt className={fieldLabelClass}>Type</dt>
-          <dd className={fieldValueClass}>
-            <IssueListTypeMenu org={org} issue={issue} types={types.data ?? []} canEdit={canEdit} />
-          </dd>
-
-          <dt className={fieldLabelClass}>Priority</dt>
-          <dd className={fieldValueClass}>
-            <IssueListPriorityMenu
-              org={org}
-              issue={issue}
-              priorities={priorities.data ?? []}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17.5rem] lg:items-start">
+        <div className="min-w-0 space-y-6">
+          <Card className="p-5 sm:p-6">
+            <IssueDescriptionSection
+              description={issue.description}
               canEdit={canEdit}
-            />
-          </dd>
-
-          <dt className={fieldLabelClass}>Reporter</dt>
-          <dd className={fieldValueClass}>
-            <IssueListReporterMenu
-              org={org}
-              issue={issue}
-              members={members.data ?? []}
-              canEdit={canEdit}
-            />
-          </dd>
-
-          <dt className={fieldLabelClass}>Assignee</dt>
-          <dd className={fieldValueClass}>
-            <IssueListAssigneeMenu
-              org={org}
-              issue={issue}
-              members={members.data ?? []}
-              canAssign={canAssign}
-            />
-          </dd>
-        </dl>
-      </Card>
-
-      <Card className="space-y-4 p-5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 id="labels-title" className="text-base font-semibold text-fg">
-            Labels
-          </h2>
-          {canEdit && labelDraft === null && editing === null ? (
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              className="h-auto px-0 py-0"
-              onClick={() => {
-                setLabelDraft(currentLabels.map((l) => l.id));
-              }}
-            >
-              Edit labels
-            </Button>
-          ) : null}
-        </div>
-        {labelDraft === null ? (
-          <div className="flex flex-wrap items-center gap-2">
-            {currentLabels.length === 0 ? (
-              <span className="text-sm text-fg-muted">No labels.</span>
-            ) : (
-              currentLabels.map((l) => (
-                <span
-                  key={l.id}
-                  className="rounded-full px-2.5 py-0.5 text-xs font-medium text-fg"
-                  style={{ backgroundColor: `${l.color}33`, borderLeft: `3px solid ${l.color}` }}
-                >
-                  {l.name}
-                </span>
-              ))
-            )}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-x-4 gap-y-2">
-              {(labels.data ?? []).map((l) => (
-                <label key={l.id} className="flex items-center gap-2 text-sm text-fg">
-                  <input
-                    type="checkbox"
-                    className="size-4 rounded border-line-strong accent-accent"
-                    checked={activeLabelIds.includes(l.id)}
-                    onChange={(e) => {
-                      setLabelDraft((ids) => {
-                        const base = ids ?? [];
-                        return e.target.checked
-                          ? [...base, l.id]
-                          : base.filter((id) => id !== l.id);
-                      });
-                    }}
-                  />
-                  {l.name}
-                </label>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                disabled={update.isPending}
-                onClick={saveLabels}
-              >
-                Save
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setLabelDraft(null);
-                  update.reset();
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )}
-      </Card>
-
-      <Card className="space-y-4 p-5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 id="description-title" className="text-base font-semibold text-fg">
-            Description
-          </h2>
-          {canEdit && editing !== 'description' ? (
-            <IconButton
-              type="button"
-              size="sm"
-              label="Edit description"
-              className="shrink-0 text-fg-muted hover:text-fg"
-              onClick={() => {
+              saving={update.isPending}
+              editing={editing === 'description'}
+              draft={draft}
+              onStartEdit={() => {
                 start('description', issue.description ?? '');
               }}
-            >
-              <Pencil className="size-4" aria-hidden="true" />
-            </IconButton>
-          ) : null}
-        </div>
-        {editing === 'description' ? (
-          <InlineEditPanel
-            saving={update.isPending}
-            onSave={() => {
-              save('description');
-            }}
-            onCancel={cancelEdit}
-          >
-            <Textarea
-              autoFocus
-              aria-label="Description"
-              className="min-h-[10rem] text-sm leading-relaxed"
-              rows={8}
-              maxLength={32000}
-              value={draft}
-              onChange={(e) => {
-                setDraft(e.target.value);
+              onDraftChange={setDraft}
+              onSave={() => {
+                save('description');
               }}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  e.preventDefault();
-                  cancelEdit();
-                }
-              }}
+              onCancel={cancelEdit}
             />
-          </InlineEditPanel>
-        ) : (
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-fg">
-            {issue.description ?? <span className="text-fg-muted">No description.</span>}
-          </p>
-        )}
-      </Card>
+          </Card>
 
-      {(children.data ?? []).length > 0 ? (
-        <Card className="space-y-3 p-5 sm:p-6">
-          <h2 id="children-title" className="text-base font-semibold text-fg">
-            Children
-          </h2>
-          <ul className="space-y-2 text-sm">
-            {(children.data ?? []).map((child) => (
-              <li key={child.id} className="flex flex-wrap items-center gap-2">
-                <Link
-                  className="font-mono text-xs font-medium text-accent hover:underline"
-                  to={`/o/${org}/issues/${child.key}`}
+          {childTotal > 0 ? (
+            <Card className="p-5 sm:p-6">
+              <IssueChildrenSection
+                org={org}
+                presentation={presentation}
+                items={childItems}
+                done={childDone}
+                total={childTotal}
+              />
+            </Card>
+          ) : null}
+
+          <Card className="p-5 sm:p-6">
+            <IssueActivitySection
+              org={org}
+              issueKey={issue.key}
+              currentUserId={session.data?.user.id ?? ''}
+              canComment={canComment}
+              canDeleteAny={canDeleteAnyComment}
+            />
+          </Card>
+        </div>
+
+        <aside className="min-w-0 space-y-4 lg:sticky lg:top-2">
+          <Card className="space-y-4 p-4">
+            <div className="[&_button]:flex [&_button]:w-full [&_button]:justify-between">
+              <SidebarField label="Status">
+                {canTransition ? (
+                  <IssueListStatusMenu org={org} issue={issue} canTransition={canTransition} />
+                ) : (
+                  <StatusLozenge name={issue.status.name} category={issue.status.category} />
+                )}
+              </SidebarField>
+            </div>
+            <SidebarField label="Type">
+              <IssueListTypeMenu
+                org={org}
+                issue={issue}
+                types={types.data ?? []}
+                canEdit={canEdit}
+              />
+            </SidebarField>
+            <SidebarField label="Priority">
+              <IssueListPriorityMenu
+                org={org}
+                issue={issue}
+                priorities={priorities.data ?? []}
+                canEdit={canEdit}
+              />
+            </SidebarField>
+            <SidebarField label="Assignee">
+              <IssueListAssigneeMenu
+                org={org}
+                issue={issue}
+                members={members.data ?? []}
+                canAssign={canAssign}
+              />
+            </SidebarField>
+            <SidebarField label="Reporter">
+              <IssueListReporterMenu
+                org={org}
+                issue={issue}
+                members={members.data ?? []}
+                canEdit={canEdit}
+              />
+            </SidebarField>
+            {issue.sprint ? (
+              <SidebarField label="Sprint">
+                <span className="text-fg">{issue.sprint.name}</span>
+              </SidebarField>
+            ) : null}
+            <SidebarField label="Created">
+              <time className="text-fg-muted" dateTime={issue.created_at}>
+                {formatRelativeTime(issue.created_at)}
+              </time>
+            </SidebarField>
+            <SidebarField label="Last updated">
+              <time className="text-fg-muted" dateTime={issue.updated_at}>
+                {formatRelativeTime(issue.updated_at)}
+              </time>
+            </SidebarField>
+          </Card>
+
+          <Card className="space-y-3 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <h2 id="labels-title" className="text-sm font-semibold text-fg">
+                Labels
+              </h2>
+              {canEdit && labelDraft === null && editing === null ? (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto px-0 py-0"
+                  onClick={() => {
+                    setLabelDraft(currentLabels.map((l) => l.id));
+                  }}
                 >
-                  {child.key}
-                </Link>
-                <span className="text-fg">{child.summary}</span>
-                <StatusLozenge name={child.status.name} category={child.status.category} />
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
+                  Edit labels
+                </Button>
+              ) : null}
+            </div>
+            {labelDraft === null ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {currentLabels.length === 0 ? (
+                  <span className="text-sm text-fg-muted">None</span>
+                ) : (
+                  currentLabels.map((l) => (
+                    <span
+                      key={l.id}
+                      className="rounded-full px-2.5 py-0.5 text-xs font-medium text-fg"
+                      style={{
+                        backgroundColor: `${l.color}33`,
+                        borderLeft: `3px solid ${l.color}`,
+                      }}
+                    >
+                      {l.name}
+                    </span>
+                  ))
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex max-h-40 flex-col gap-2 overflow-y-auto">
+                  {(labels.data ?? []).map((l) => (
+                    <label key={l.id} className="flex items-center gap-2 text-sm text-fg">
+                      <input
+                        type="checkbox"
+                        className="size-4 rounded border-line-strong accent-accent"
+                        checked={activeLabelIds.includes(l.id)}
+                        onChange={(e) => {
+                          setLabelDraft((ids) => {
+                            const base = ids ?? [];
+                            return e.target.checked
+                              ? [...base, l.id]
+                              : base.filter((id) => id !== l.id);
+                          });
+                        }}
+                      />
+                      {l.name}
+                    </label>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    disabled={update.isPending}
+                    onClick={saveLabels}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setLabelDraft(null);
+                      update.reset();
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {canDelete ? (
+            <div className="flex justify-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <IconButton label="Issue actions" size="sm">
+                    <MoreHorizontal className="size-4" aria-hidden="true" />
+                  </IconButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    className="text-danger focus:text-danger"
+                    onSelect={() => {
+                      setDeleteOpen(true);
+                    }}
+                  >
+                    Delete issue
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : null}
+        </aside>
+      </div>
 
       {canDelete ? (
-        <Button
-          type="button"
-          variant="link"
-          className="text-danger hover:text-danger"
-          onClick={() => {
-            if (window.confirm(`Delete ${issue.key}?`)) {
-              remove.mutate(undefined, {
-                onSuccess: () => void navigate(`/o/${org}/p/${issue.project_key}/issues`),
-              });
-            }
-          }}
-        >
-          Delete issue
-        </Button>
+        <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <DialogContent
+            title={`Delete ${issue.key}?`}
+            description="This cannot be undone. Child issues may also be removed depending on type."
+          >
+            <div className="flex justify-end gap-2">
+              <DialogClose asChild>
+                <Button type="button" variant="ghost" size="sm">
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                disabled={remove.isPending}
+                onClick={deleteIssue}
+              >
+                {remove.isPending ? 'Deleting…' : 'Delete'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       ) : null}
-
-      <Card className="p-5 sm:p-6">
-        <CommentsSection
-          org={org}
-          issueKey={issue.key}
-          currentUserId={session.data?.user.id ?? ''}
-          canComment={canComment}
-          canDeleteAny={canDeleteAnyComment}
-        />
-      </Card>
     </article>
   );
 }

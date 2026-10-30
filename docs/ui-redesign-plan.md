@@ -218,9 +218,9 @@ screenshots; `make lint test` stays green.
 |---|---|---|---|
 | 1 Foundations | **Done (#31)** — tokens (violet), fonts, Radix primitives, toasts, theme provider, `/__design` (dev), axe E2E light+dark | **OK — none needed** | Dark mode is opt-in until PR 12; product pages still use legacy light markup until later PRs. |
 | 2 App shell | **Done (#33)** — top bar, sidebar, breadcrumbs, drawer; legacy org `<select>` removed | **OK — none** | Screenshots: add to `docs/ui-redesign/after/` before merge. |
-| 3 Auth + org home + account | **Done (local)** — `AuthLayout`, project cards + templates, `Field`/`PasswordField`, account cards, skeleton/error states on touched routes | **OK — none** | Open-issue count omitted (`ProjectSummary` has no counts). Screenshots before merge. |
-| 4 Board | **Done (local)** — rich cards, quick filters (URL), WIP bar, sprint header, DnD overlay, menu move; card **key+summary** opens issue (drag on grip only) | **OK — none** | See [`docs/ui-redesign/pr-4-board-plan.md`](ui-redesign/pr-4-board-plan.md). Comment count omitted; screenshots via `make e2e-pr4`. |
-| 5 Issue detail | **Partial (local)** — full-page design-system layout, inline summary/description, shared row menus, reporter on PATCH; **no modal-over-board route yet** | **Partial** — `reporter_id` on issue PATCH (local); still need `done`/`total` on `GET …/issues/{key}/children` for PR 5 complete | Activity tabs / modal pattern remain PR 5. |
+| 3 Auth + org home + account | **Done** — `AuthLayout`, templates, account; **org home dashboard** (tabs, project cards, sidebar, global search) on PR #38 | **OK — none** | Supersedes simple project-card org home. Screenshots: `03-org-home-*`, `org-dashboard-m*.png`. |
+| 4 Board | **Done** — PR 4 behaviour + **M1–M5 board shell** (blue chrome, in-page header, columns, cards, mobile overflow) on PR #38 | **OK — none** | [`pr-4-board-plan.md`](ui-redesign/pr-4-board-plan.md); `06-board-*`, `mobile-scrum-board-m*.png`. |
+| 5 Issue detail | **Done (local)** — modal + page, two-column, activity tabs, markdown, child progress; `make e2e-pr5` → `07-issue-detail-*` | **Done (local)** — children `done`/`total` on `GET …/children` | Phased plan: [`pr-5-issue-detail-plan.md`](ui-redesign/pr-5-issue-detail-plan.md). |
 | 6 Create issue + comboboxes | **Pending** — modal, cmdk comboboxes, idempotency | **OK — none** | Members, labels, issues search already exist. |
 | 7 Backlog | **Pending** — panels, row grid, multi-select, drag | **OK — none** | Sprint/backlog mutations already exist. |
 | 8 Issue list + search | **Partial (local)** — `DataGrid` table, filters in URL, row menus, column picker (Status/Assignee optional, persisted); not sortable server-side, no label filter chip | **Needed (PR 8)** — additive `sort` for `key`, `priority`, `status`; `label` filter on `GET /issues` | Progress + screenshots: [`pr-8-issue-list-plan.md`](ui-redesign/pr-8-issue-list-plan.md) (`make e2e-pr8` → `05-issues-list-{light,dark}.png`). |
@@ -242,6 +242,7 @@ Full build/test specs for each UI PR: section 8d.
 **Incremental plan docs** (local work not yet merged as full PRs):
 
 - [`docs/ui-redesign/pr-4-board-plan.md`](ui-redesign/pr-4-board-plan.md)
+- [`docs/ui-redesign/pr-5-issue-detail-plan.md`](ui-redesign/pr-5-issue-detail-plan.md)
 - [`docs/ui-redesign/pr-8-issue-list-plan.md`](ui-redesign/pr-8-issue-list-plan.md)
 - [`docs/ui-redesign/pr-project-settings-plan.md`](ui-redesign/pr-project-settings-plan.md)
 

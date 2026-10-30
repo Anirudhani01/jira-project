@@ -1,6 +1,6 @@
-import { Outlet } from 'react-router';
-
 import { cn } from '../lib/cn';
+
+import { MainOutlet } from './MainOutlet';
 import { useAuthRoute } from '../features/auth/useAuthRoute';
 
 import { Breadcrumbs } from './shell/Breadcrumbs';
@@ -59,7 +59,7 @@ function AppShellBody() {
                     : 'mx-auto w-full max-w-6xl px-4 py-8'),
             )}
           >
-            <Outlet />
+            <MainOutlet />
           </main>
         </div>
       </div>
