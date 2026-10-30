@@ -38,18 +38,16 @@ function GetStartedCard({
 
   if (disabled) {
     return (
-      <div
-        className="h-full cursor-not-allowed"
-        title={disabledReason}
-        aria-disabled="true"
-      >
+      <div className="h-full cursor-not-allowed" title={disabledReason} aria-disabled="true">
         <Card className="org-dash-card flex h-full flex-col gap-3 p-4 opacity-90">
           <span className="org-dash-on-accent-soft flex size-10 items-center justify-center rounded-lg bg-[var(--org-dash-accent-soft)]">
             <Icon className="size-5" aria-hidden />
           </span>
           <div>
             <h3 className="text-sm font-semibold text-[var(--org-dash-muted)]">{title}</h3>
-            <p className="mt-1 text-sm leading-relaxed text-[var(--org-dash-muted)]">{description}</p>
+            <p className="mt-1 text-sm leading-relaxed text-[var(--org-dash-muted)]">
+              {description}
+            </p>
           </div>
         </Card>
       </div>

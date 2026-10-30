@@ -49,13 +49,9 @@ export function GlobalSearchBar({
   const showProjectResults =
     expanded && value.trim().length > 0 && matches.length > 0 && (Boolean(orgSlug) || onBoard);
 
-  const label = boardChrome
-    ? 'Search issues and projects'
-    : 'Search projects, issues, or people';
+  const label = boardChrome ? 'Search issues and projects' : 'Search projects, issues, or people';
 
-  const placeholder = boardChrome
-    ? 'Search…'
-    : 'Search projects, issues, or people...';
+  const placeholder = boardChrome ? 'Search…' : 'Search projects, issues, or people...';
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

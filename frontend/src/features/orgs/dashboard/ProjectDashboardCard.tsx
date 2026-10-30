@@ -81,7 +81,9 @@ export function ProjectDashboardCard({
         </span>
       ) : null}
       {project.archived ? (
-        <span className="rounded-md bg-warning-soft px-2 py-0.5 font-medium text-warning">Archived</span>
+        <span className="rounded-md bg-warning-soft px-2 py-0.5 font-medium text-warning">
+          Archived
+        </span>
       ) : (
         <span className="inline-flex items-center gap-1 text-[var(--org-dash-muted)]">
           <span className="size-1.5 rounded-full bg-success" aria-hidden />
@@ -132,7 +134,9 @@ export function ProjectDashboardCard({
             <p className="truncate font-semibold text-[var(--org-dash-text)]">{project.name}</p>
             <p className="font-mono text-xs text-[var(--org-dash-muted)]">{project.key}</p>
             {description ? (
-              <p className="mt-1 line-clamp-1 text-sm text-[var(--org-dash-muted)]">{description}</p>
+              <p className="mt-1 line-clamp-1 text-sm text-[var(--org-dash-muted)]">
+                {description}
+              </p>
             ) : null}
             <ProjectStatsLine stats={stats} pending={statsPending} />
           </div>

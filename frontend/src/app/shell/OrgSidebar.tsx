@@ -1,11 +1,4 @@
-import {
-  BarChart3,
-  Home,
-  KanbanSquare,
-  LayoutGrid,
-  LayoutList,
-  Settings,
-} from 'lucide-react';
+import { BarChart3, Home, KanbanSquare, LayoutGrid, LayoutList, Settings } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router';
 
@@ -90,24 +83,20 @@ function OrgSidebarNav({
           <LayoutGrid className="size-4 shrink-0" aria-hidden />,
           () => false,
         )}
-        {issuesTo ? (
-          link(issuesTo, 'Issues', <LayoutList className="size-4 shrink-0" aria-hidden />)
-        ) : (
-          unavailable(
-            'Issues',
-            'Create a project to browse issues',
-            <LayoutList className="size-4 shrink-0" aria-hidden />,
-          )
-        )}
-        {boardTo ? (
-          link(boardTo, 'Boards', <KanbanSquare className="size-4 shrink-0" aria-hidden />)
-        ) : (
-          unavailable(
-            'Boards',
-            'Create a project to open a board',
-            <KanbanSquare className="size-4 shrink-0" aria-hidden />,
-          )
-        )}
+        {issuesTo
+          ? link(issuesTo, 'Issues', <LayoutList className="size-4 shrink-0" aria-hidden />)
+          : unavailable(
+              'Issues',
+              'Create a project to browse issues',
+              <LayoutList className="size-4 shrink-0" aria-hidden />,
+            )}
+        {boardTo
+          ? link(boardTo, 'Boards', <KanbanSquare className="size-4 shrink-0" aria-hidden />)
+          : unavailable(
+              'Boards',
+              'Create a project to open a board',
+              <KanbanSquare className="size-4 shrink-0" aria-hidden />,
+            )}
         {unavailable(
           'Reports',
           'Reports are not available yet',
@@ -146,7 +135,9 @@ function OrgSidebarNav({
                   className={({ isActive }) =>
                     cn(
                       'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm no-underline',
-                      isActive ? 'bg-surface-2 font-medium' : 'text-fg-muted hover:bg-surface-hover',
+                      isActive
+                        ? 'bg-surface-2 font-medium'
+                        : 'text-fg-muted hover:bg-surface-hover',
                       dashboardHome &&
                         (isActive
                           ? 'bg-[var(--org-dash-accent-soft)] text-[var(--org-dash-accent)]'
@@ -177,7 +168,8 @@ export function OrgSidebar() {
     <aside
       className={cn(
         'org-dash-sidebar hidden w-[232px] shrink-0 border-r border-line bg-surface lg:block',
-        dashboardHome && 'org-dash-sidebar border-[var(--org-dash-border)] bg-[var(--org-dash-surface)]',
+        dashboardHome &&
+          'org-dash-sidebar border-[var(--org-dash-border)] bg-[var(--org-dash-surface)]',
       )}
     >
       <OrgSidebarNav dashboardHome={dashboardHome} />

@@ -4,10 +4,7 @@ export function memberDisplayNameByUserId(members: Member[]): Map<string, string
   return new Map(members.map((m) => [m.user_id, m.display_name]));
 }
 
-export function describeAuditEvent(
-  event: AuditEvent,
-  membersById: Map<string, string>,
-): string {
+export function describeAuditEvent(event: AuditEvent, membersById: Map<string, string>): string {
   const actor = event.actor_user_id
     ? (membersById.get(event.actor_user_id) ?? 'A team member')
     : 'System';

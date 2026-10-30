@@ -128,8 +128,7 @@ export function TopBar({
   const showOrgNav = useShowOrgSidebar();
   const ctx = useProjectContext();
   const signedIn = Boolean(session.data);
-  const showGlobalSearch =
-    signedIn && Boolean(ctx?.org) && (!ctx?.projectKey || boardShell);
+  const showGlobalSearch = signedIn && Boolean(ctx?.org) && (!ctx?.projectKey || boardShell);
 
   return (
     <header
@@ -180,11 +179,7 @@ export function TopBar({
           >
             <LayoutGrid className="size-4" aria-hidden="true" />
           </span>
-          {boardShell ? (
-            <span className="hidden sm:inline">Jira Project</span>
-          ) : (
-            'Jira Project'
-          )}
+          {boardShell ? <span className="hidden sm:inline">Jira Project</span> : 'Jira Project'}
         </Link>
         {signedIn ? (
           boardShell ? (
@@ -212,11 +207,7 @@ export function TopBar({
         ) : (
           <div className="flex-1" />
         )}
-        {signedIn ? (
-          <SignedInActions boardShell={boardShell} />
-        ) : (
-          <GuestNav />
-        )}
+        {signedIn ? <SignedInActions boardShell={boardShell} /> : <GuestNav />}
       </nav>
     </header>
   );

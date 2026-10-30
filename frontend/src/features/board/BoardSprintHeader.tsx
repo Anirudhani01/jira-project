@@ -136,7 +136,8 @@ export function BoardSprintHeader({
     <div
       className={cn(
         'flex flex-wrap items-start justify-between gap-4 rounded-lg border border-line bg-surface px-4 py-3',
-        boardChrome && 'board-sprint-card border-[var(--board-border)] bg-[var(--board-surface)] px-5 py-4',
+        boardChrome &&
+          'board-sprint-card border-[var(--board-border)] bg-[var(--board-surface)] px-5 py-4',
       )}
     >
       <div className="min-w-0 space-y-2">
@@ -184,7 +185,10 @@ export function BoardSprintHeader({
             )}
           >
             {boardChrome ? (
-              <Target className="mt-0.5 size-4 shrink-0 text-[var(--board-accent)]" aria-hidden="true" />
+              <Target
+                className="mt-0.5 size-4 shrink-0 text-[var(--board-accent)]"
+                aria-hidden="true"
+              />
             ) : null}
             <span>{detail.goal}</span>
           </p>

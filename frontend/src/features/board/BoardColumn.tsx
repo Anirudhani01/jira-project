@@ -149,22 +149,21 @@ export function BoardColumnView({
           ? 'board-column min-h-[28rem] min-w-0 flex-1 border-[var(--board-border)] bg-[var(--board-col-bg)]'
           : 'w-[17.5rem]',
         dimmed && 'opacity-40',
-        isOver && !dimmed && (boardChrome ? 'ring-2 ring-[var(--board-accent)]/35' : 'ring-2 ring-accent/40'),
+        isOver &&
+          !dimmed &&
+          (boardChrome ? 'ring-2 ring-[var(--board-accent)]/35' : 'ring-2 ring-accent/40'),
       )}
     >
       <header
         className={cn(
           'space-y-2 border-b border-line px-3 py-2.5',
-            boardChrome && 'board-column-header border-[var(--board-border)] px-3 py-2.5',
+          boardChrome && 'board-column-header border-[var(--board-border)] px-3 py-2.5',
         )}
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 flex-1 items-center gap-2">
             {boardChrome ? (
-              <span
-                className={columnDotClassName(visualKind)}
-                aria-hidden="true"
-              />
+              <span className={columnDotClassName(visualKind)} aria-hidden="true" />
             ) : null}
             <h2
               id={`col-${column.id}`}

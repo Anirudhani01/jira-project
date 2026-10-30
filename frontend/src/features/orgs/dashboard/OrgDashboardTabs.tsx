@@ -10,13 +10,7 @@ const TAB_CLASS = ({ isActive }: { isActive: boolean }) =>
       : 'border-transparent text-[var(--org-dash-muted)] hover:border-[var(--org-dash-border)] hover:text-[var(--org-dash-text)]',
   );
 
-export function OrgDashboardTabs({
-  orgSlug,
-  showAudit,
-}: {
-  orgSlug: string;
-  showAudit: boolean;
-}) {
+export function OrgDashboardTabs({ orgSlug, showAudit }: { orgSlug: string; showAudit: boolean }) {
   return (
     <nav
       aria-label="Organization sections"

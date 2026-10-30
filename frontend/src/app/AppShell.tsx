@@ -37,10 +37,7 @@ function AppShellBody() {
       </a>
       <TopBar orgDashboardHome={orgDashboardHome} boardShell={boardShell} />
       <div
-        className={cn(
-          'flex min-h-0 flex-1',
-          boardShell && 'min-w-0 max-w-full overflow-x-hidden',
-        )}
+        className={cn('flex min-h-0 flex-1', boardShell && 'min-w-0 max-w-full overflow-x-hidden')}
       >
         <OrgSidebar />
         <ProjectSidebar />

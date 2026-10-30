@@ -36,9 +36,7 @@ export function useOrgDashboardStats(org: string) {
   const noProjects = projects.isSuccess && activeKeys.length === 0;
 
   return {
-    projectCount: projects.isSuccess
-      ? projects.data.filter((p) => !p.archived).length
-      : null,
+    projectCount: projects.isSuccess ? projects.data.filter((p) => !p.archived).length : null,
     memberCount: members.isSuccess ? members.data.length : null,
     issueTotal: noProjects ? 0 : (issueTotal.data ?? null),
     issueTotalPending:

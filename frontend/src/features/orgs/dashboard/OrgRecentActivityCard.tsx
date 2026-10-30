@@ -6,7 +6,11 @@ import { ErrorState, LoadingState } from '../../../components/ui/States';
 import type { AuditEvent, Member } from '../../../lib/api/types';
 import { useAuditEvents } from '../../audit/api';
 
-import { describeAuditEvent, formatRelativeTime, memberDisplayNameByUserId } from './formatAuditActivity';
+import {
+  describeAuditEvent,
+  formatRelativeTime,
+  memberDisplayNameByUserId,
+} from './formatAuditActivity';
 
 const PREVIEW_LIMIT = 5;
 
@@ -50,9 +54,7 @@ function AuditActivityPreview({
 
   return (
     <>
-      {events.isPending || membersPending ? (
-        <LoadingState label="Loading activity" />
-      ) : null}
+      {events.isPending || membersPending ? <LoadingState label="Loading activity" /> : null}
       {events.isError ? <ErrorState error={events.error} /> : null}
       {events.isSuccess && items.length === 0 ? (
         <p className="mt-3 text-sm text-[var(--org-dash-muted)]">No recent activity yet.</p>

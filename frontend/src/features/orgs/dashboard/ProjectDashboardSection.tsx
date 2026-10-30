@@ -43,13 +43,7 @@ function useProjectDescriptions(org: string, keys: string[]) {
   }, [keys, queries]);
 }
 
-export function ProjectDashboardSection({
-  org,
-  canCreate,
-}: {
-  org: string;
-  canCreate: boolean;
-}) {
+export function ProjectDashboardSection({ org, canCreate }: { org: string; canCreate: boolean }) {
   const [params, setParams] = useSearchParams();
   const filters = parseProjectDashboardFilters(params);
   const projects = useProjects(org);
@@ -59,7 +53,8 @@ export function ProjectDashboardSection({
       const next = { ...filters, ...patch };
       const sp = new URLSearchParams();
       if (next.q.trim()) sp.set('q', next.q.trim());
-      if (next.boardType !== DEFAULT_PROJECT_DASHBOARD_FILTERS.boardType) sp.set('type', next.boardType);
+      if (next.boardType !== DEFAULT_PROJECT_DASHBOARD_FILTERS.boardType)
+        sp.set('type', next.boardType);
       if (next.status !== DEFAULT_PROJECT_DASHBOARD_FILTERS.status) sp.set('status', next.status);
       if (next.sort !== DEFAULT_PROJECT_DASHBOARD_FILTERS.sort) sp.set('sort', next.sort);
       if (next.view !== DEFAULT_PROJECT_DASHBOARD_FILTERS.view) sp.set('view', next.view);

@@ -29,7 +29,9 @@ export function parseProjectDashboardFilters(params: URLSearchParams): ProjectDa
   return {
     q: params.get('q') ?? '',
     boardType:
-      boardType === 'kanban' || boardType === 'scrum' ? boardType : DEFAULT_PROJECT_DASHBOARD_FILTERS.boardType,
+      boardType === 'kanban' || boardType === 'scrum'
+        ? boardType
+        : DEFAULT_PROJECT_DASHBOARD_FILTERS.boardType,
     status:
       status === 'archived' || status === 'all' ? status : DEFAULT_PROJECT_DASHBOARD_FILTERS.status,
     sort:

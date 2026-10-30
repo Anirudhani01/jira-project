@@ -94,7 +94,9 @@ describe('app shell (PR 2)', () => {
     expect(await screen.findByRole('navigation', { name: 'Organization' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
     await screen.findByRole('heading', { level: 1, name: 'Acme' });
-    expect(screen.getByRole('combobox', { name: /search projects, issues, or people/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('combobox', { name: /search projects, issues, or people/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Search projects' })).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Project' })).toBeNull();
   });

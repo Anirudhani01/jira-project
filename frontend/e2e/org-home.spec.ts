@@ -12,8 +12,12 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page.getByRole('navigation', { name: 'Organization sections' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Organization overview' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Get started' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Plan, track, and ship great work' })).toBeVisible();
-    const globalSearch = page.getByRole('combobox', { name: /search projects, issues, or people/i });
+    await expect(
+      page.getByRole('heading', { name: 'Plan, track, and ship great work' }),
+    ).toBeVisible();
+    const globalSearch = page.getByRole('combobox', {
+      name: /search projects, issues, or people/i,
+    });
     await globalSearch.fill('org-home');
     await expect(page).toHaveURL(/\?q=org-home/);
     await expectThemed(page, theme);

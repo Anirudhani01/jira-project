@@ -5,7 +5,13 @@ import { fetchProjectSecondaryStats } from './fetchProjectSecondaryStats';
 export type ProjectCardStats = { issueCount: number; memberCount: number };
 
 const statsKey = (org: string, keys: string[]) =>
-  ['org', org.toLowerCase(), 'dashboard', 'project-card-stats', [...keys].sort().join(',')] as const;
+  [
+    'org',
+    org.toLowerCase(),
+    'dashboard',
+    'project-card-stats',
+    [...keys].sort().join(','),
+  ] as const;
 
 /**
  * Loads per-project issue/member counts after the project list is shown.

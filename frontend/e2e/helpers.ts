@@ -196,10 +196,7 @@ export async function expectNoSeriousViolations(page: Page, excludeSelectors: st
     ['serious', 'critical'].includes(v.impact ?? ''),
   );
   expect(
-    serious.map(
-      (v) =>
-        `${v.id}: ${v.help} → ${v.nodes.map((n) => n.target.join(' ')).join('; ')}`,
-    ),
+    serious.map((v) => `${v.id}: ${v.help} → ${v.nodes.map((n) => n.target.join(' ')).join('; ')}`),
   ).toEqual([]);
 }
 

@@ -29,7 +29,15 @@ export interface IssueCardProps {
   overlay?: boolean;
 }
 
-function LabelChip({ name, color, boardChrome }: { name: string; color: string; boardChrome?: boolean }) {
+function LabelChip({
+  name,
+  color,
+  boardChrome,
+}: {
+  name: string;
+  color: string;
+  boardChrome?: boolean;
+}) {
   if (boardChrome) {
     return (
       <span
@@ -190,7 +198,9 @@ export function IssueCard({
         <LabelChip key={label.id} name={label.name} color={label.color} boardChrome={boardChrome} />
       ))}
       {card.labels.length > 3 ? (
-        <span className={cn('text-[10px]', boardChrome ? 'text-[var(--board-muted)]' : 'text-fg-muted')}>
+        <span
+          className={cn('text-[10px]', boardChrome ? 'text-[var(--board-muted)]' : 'text-fg-muted')}
+        >
           +{card.labels.length - 3}
         </span>
       ) : null}

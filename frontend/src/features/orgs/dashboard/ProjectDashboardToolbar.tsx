@@ -96,7 +96,8 @@ export function ProjectDashboardToolbar({
               label="Grid view"
               size="sm"
               className={cn(
-                filters.view === 'grid' && 'org-dash-on-accent-soft bg-[var(--org-dash-accent-soft)]',
+                filters.view === 'grid' &&
+                  'org-dash-on-accent-soft bg-[var(--org-dash-accent-soft)]',
               )}
               aria-pressed={filters.view === 'grid'}
               onClick={() => {
@@ -109,7 +110,8 @@ export function ProjectDashboardToolbar({
               label="List view"
               size="sm"
               className={cn(
-                filters.view === 'list' && 'org-dash-on-accent-soft bg-[var(--org-dash-accent-soft)]',
+                filters.view === 'list' &&
+                  'org-dash-on-accent-soft bg-[var(--org-dash-accent-soft)]',
               )}
               aria-pressed={filters.view === 'list'}
               onClick={() => {

@@ -4,7 +4,9 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg bg-[var(--org-dash-bg)] px-3 py-2.5">
       <p className="text-xs font-medium text-[var(--org-dash-muted)]">{label}</p>
-      <p className="mt-0.5 text-lg font-semibold tabular-nums text-[var(--org-dash-text)]">{value}</p>
+      <p className="mt-0.5 text-lg font-semibold tabular-nums text-[var(--org-dash-text)]">
+        {value}
+      </p>
     </div>
   );
 }
