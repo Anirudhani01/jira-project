@@ -177,7 +177,7 @@ async def list_activity(
 async def list_children(ref: ViewIssue, services: Services) -> ChildrenResponse:
     """Direct children only: a sub-task has none; a standard issue's are sub-tasks; an
     epic's are standard issues (plan M7)."""
-    return ChildrenResponse(items=await service.list_children(services, ref))
+    return await service.list_children(services, ref)
 
 
 @router.get("/issues/{issue_key}/transitions", response_model=TransitionListResponse)

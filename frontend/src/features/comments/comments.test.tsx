@@ -68,7 +68,7 @@ const CONFIG = {
   'GET /orgs/acme/issues/WEB-1': () => json(ISSUE),
   'GET /orgs/acme/issues/WEB-1/activity': () => json({ items: [], next_cursor: null }),
   'GET /orgs/acme/issues/WEB-1/transitions': () => json({ items: [] }),
-  'GET /orgs/acme/issues/WEB-1/children': () => json({ items: [] }),
+  'GET /orgs/acme/issues/WEB-1/children': () => json({ items: [], done: 0, total: 0 }),
 };
 
 afterEach(() => {
@@ -213,7 +213,7 @@ describe('activity timeline', () => {
     expect(rows[1]?.textContent).toMatch(/My own comment/);
   });
 
-  it('paginates activity independently of comments via "Load more activity", with no duplicates', async () => {
+  it('paginates activity independently of comments via "Load more history", with no duplicates', async () => {
     const nextCursor = 'dGhlLWFjdGl2aXR5LWN1cnNvcg'; // opaque token like the real API (base64 id)
     const calls = mockApi({
       ...CONFIG,
@@ -244,7 +244,7 @@ describe('activity timeline', () => {
     expect(activityGets()).toHaveLength(1);
     expect(new URLSearchParams(activityGets()[0]?.search.slice(1) ?? '').get('cursor')).toBeNull();
 
-    const loadMore = screen.getByRole('button', { name: 'Load more activity' });
+    const loadMore = screen.getByRole('button', { name: 'Load more history' });
     await userEvent.click(loadMore);
 
     await waitFor(() => {
@@ -260,7 +260,7 @@ describe('activity timeline', () => {
     // exactly once, ordered after the comment (03:00 > 01:00).
     expect(rows.filter((r) => /created/.test(r.textContent))).toHaveLength(1);
     expect(rows[2]?.textContent).toMatch(/changed status/);
-    expect(screen.queryByRole('button', { name: 'Load more activity' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Load more history' })).not.toBeInTheDocument();
   });
 
   it('shows a loading state while activity is in flight and clears it once resolved', async () => {

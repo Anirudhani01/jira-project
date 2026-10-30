@@ -16,6 +16,14 @@ Full spec: [`ui-redesign-plan.md`](../ui-redesign-plan.md) §8d PR 8. This doc t
 | Detail polish | `IssueDetailPage` — design-system layout, inline summary/description edit, shared row menus |
 | Tests | `issueListColumns.test.ts`, `issues.test.tsx` (column headers + picker), `ui.test.tsx` (DataGrid) |
 
+## Phases (after PR 5a modal routing)
+
+| Phase | Scope | Status |
+|-------|--------|--------|
+| **8a** | Backend: `sort` by `key`, `priority`, `status`; `label` filter on issue list | Pending |
+| **8b** | Sortable headers (URL `sort`); label + sprint filter chips; sticky header; optional Labels/Updated columns; row overflow menu; open issue in **modal** from list | Pending |
+| **8c** | `make e2e-pr8`, journey selector updates, mark PR 8 done in master plan | Pending |
+
 ## Not done (still PR 8 scope)
 
 - Server **sort** by `key`, `priority`, `status` (today: `updated_at` / `created_at` only)
@@ -23,6 +31,8 @@ Full spec: [`ui-redesign-plan.md`](../ui-redesign-plan.md) §8d PR 8. This doc t
 - Sticky header, label column, sprint filter chip, row overflow actions menu
 - `/` focus shortcut (PR 9), saved filters (PR 14)
 - Full E2E journey updates (main `journey.spec.ts` still uses legacy link selectors in places)
+
+**Blocked on:** PR **5a** for list → modal open (same as board).
 
 ## Screenshots (`docs/ui-redesign/after/`)
 

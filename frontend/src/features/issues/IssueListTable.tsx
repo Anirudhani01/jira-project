@@ -1,4 +1,6 @@
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
+
+import { issueDetailLinkProps } from './issueDetailNavigation';
 
 import {
   DataGrid,
@@ -97,13 +99,16 @@ function IssueListTableRow({
   canAssign: boolean;
   canTransition: boolean;
 }) {
+  const location = useLocation();
+  const detailLink = issueDetailLinkProps(org, issue.key, location);
+
   return (
     <DataGridRow>
       <DataGridDividedCell>
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Link
             className="w-[5.5rem] shrink-0 font-mono text-xs font-medium text-accent hover:underline sm:w-24"
-            to={`/o/${org}/issues/${issue.key}`}
+            {...detailLink}
           >
             {issue.key}
           </Link>

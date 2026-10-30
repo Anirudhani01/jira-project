@@ -124,6 +124,8 @@ class ActivityListResponse(BaseModel):
 
 class ChildrenResponse(BaseModel):
     items: list[IssueResponse]
+    done: int
+    total: int
 
 
 class TransitionRef(BaseModel):

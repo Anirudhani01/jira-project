@@ -26,39 +26,42 @@ import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { RouteErrorBoundary } from './RouteErrorBoundary';
 
+/** Child routes rendered under `/` (used by `MainOutlet` for modal background matching). */
+export const appShellChildRoutes: RouteObject[] = [
+  { index: true, element: <HomePage /> },
+  // Component gallery for visual QA; never part of a production build.
+  ...(import.meta.env.DEV ? [{ path: '__design', element: <DesignPage /> }] : []),
+  { path: 'login', element: <LoginPage /> },
+  { path: 'signup', element: <SignupPage /> },
+  { path: 'verify-email', element: <VerifyEmailPage /> },
+  { path: 'forgot-password', element: <ForgotPasswordPage /> },
+  { path: 'reset-password', element: <ResetPasswordPage /> },
+  { path: 'invitations/accept', element: <AcceptInvitationPage /> },
+  {
+    element: <RequireAuth />,
+    children: [
+      { path: 'account', element: <AccountPage /> },
+      { path: 'orgs/new', element: <CreateOrgPage /> },
+      { path: 'o/:org', element: <OrgHomePage /> },
+      { path: 'o/:org/settings', element: <OrgSettingsPage /> },
+      { path: 'o/:org/settings/members', element: <OrgMembersPage /> },
+      { path: 'o/:org/settings/audit', element: <AuditPage /> },
+      { path: 'o/:org/projects/new', element: <CreateProjectPage /> },
+      { path: 'o/:org/p/:key', element: <ProjectPage /> },
+      { path: 'o/:org/p/:key/issues', element: <IssueListPage /> },
+      { path: 'o/:org/p/:key/board', element: <BoardPage /> },
+      { path: 'o/:org/p/:key/backlog', element: <BacklogPage /> },
+      { path: 'o/:org/issues/:issueKey', element: <IssueDetailPage /> },
+    ],
+  },
+  { path: '*', element: <NotFoundPage /> },
+];
+
 export const routes: RouteObject[] = [
   {
     path: '/',
     element: <AppShell />,
     errorElement: <RouteErrorBoundary />,
-    children: [
-      { index: true, element: <HomePage /> },
-      // Component gallery for visual QA; never part of a production build.
-      ...(import.meta.env.DEV ? [{ path: '__design', element: <DesignPage /> }] : []),
-      { path: 'login', element: <LoginPage /> },
-      { path: 'signup', element: <SignupPage /> },
-      { path: 'verify-email', element: <VerifyEmailPage /> },
-      { path: 'forgot-password', element: <ForgotPasswordPage /> },
-      { path: 'reset-password', element: <ResetPasswordPage /> },
-      { path: 'invitations/accept', element: <AcceptInvitationPage /> },
-      {
-        element: <RequireAuth />,
-        children: [
-          { path: 'account', element: <AccountPage /> },
-          { path: 'orgs/new', element: <CreateOrgPage /> },
-          { path: 'o/:org', element: <OrgHomePage /> },
-          { path: 'o/:org/settings', element: <OrgSettingsPage /> },
-          { path: 'o/:org/settings/members', element: <OrgMembersPage /> },
-          { path: 'o/:org/settings/audit', element: <AuditPage /> },
-          { path: 'o/:org/projects/new', element: <CreateProjectPage /> },
-          { path: 'o/:org/p/:key', element: <ProjectPage /> },
-          { path: 'o/:org/p/:key/issues', element: <IssueListPage /> },
-          { path: 'o/:org/p/:key/board', element: <BoardPage /> },
-          { path: 'o/:org/p/:key/backlog', element: <BacklogPage /> },
-          { path: 'o/:org/issues/:issueKey', element: <IssueDetailPage /> },
-        ],
-      },
-      { path: '*', element: <NotFoundPage /> },
-    ],
+    children: appShellChildRoutes,
   },
 ];

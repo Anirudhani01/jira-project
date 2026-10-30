@@ -228,7 +228,7 @@ describe('issue detail: M7 (transitions, assignee, labels)', () => {
       'GET /orgs/acme/issues/WEB-1/activity': () => json({ items: [], next_cursor: null }),
       'GET /orgs/acme/issues/WEB-1/transitions': () =>
         json({ items: [{ id: 't-done', name: 'Move to Done', to_status: DONE }] }),
-      'GET /orgs/acme/issues/WEB-1/children': () => json({ items: [] }),
+      'GET /orgs/acme/issues/WEB-1/children': () => json({ items: [], done: 0, total: 0 }),
       'POST /orgs/acme/issues/WEB-1/transitions': () =>
         json({ ...ISSUE, status: DONE, version: 4 }),
     });
@@ -256,7 +256,7 @@ describe('issue detail: M7 (transitions, assignee, labels)', () => {
       'GET /orgs/acme/issues/WEB-1': () => json(ISSUE),
       'GET /orgs/acme/issues/WEB-1/activity': () => json({ items: [], next_cursor: null }),
       'GET /orgs/acme/issues/WEB-1/transitions': () => json({ items: [] }),
-      'GET /orgs/acme/issues/WEB-1/children': () => json({ items: [] }),
+      'GET /orgs/acme/issues/WEB-1/children': () => json({ items: [], done: 0, total: 0 }),
       'PATCH /orgs/acme/issues/WEB-1': () =>
         json({ ...ISSUE, assignee: { id: MEMBER.user_id, display_name: MEMBER.display_name } }),
     });
@@ -283,11 +283,11 @@ describe('issue detail: M7 (transitions, assignee, labels)', () => {
       'GET /orgs/acme/issues/WEB-1': () => json(ISSUE),
       'GET /orgs/acme/issues/WEB-1/activity': () => json({ items: [], next_cursor: null }),
       'GET /orgs/acme/issues/WEB-1/transitions': () => json({ items: [] }),
-      'GET /orgs/acme/issues/WEB-1/children': () => json({ items: [] }),
+      'GET /orgs/acme/issues/WEB-1/children': () => json({ items: [], done: 0, total: 0 }),
       'PATCH /orgs/acme/issues/WEB-1': () => json({ ...ISSUE, labels: [BUG] }),
     });
     renderApp('/o/acme/issues/WEB-1');
-    expect(await screen.findByText('No labels.')).toBeInTheDocument();
+    expect(await screen.findByText('None')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Edit labels' }));
     await userEvent.click(screen.getByLabelText('bug'));
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));

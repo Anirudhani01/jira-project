@@ -155,6 +155,10 @@ e2e-pr3: node-version-check ## Axe + light/dark screenshots for PR 3 routes (req
 e2e-pr4: node-version-check ## Axe + light/dark screenshots for PR 4 board (requires make dev)
 	$(PNPM) exec playwright test e2e/board.spec.ts
 
+.PHONY: e2e-pr5
+e2e-pr5: node-version-check ## Axe + light/dark screenshots for issue detail (requires make dev)
+	$(PNPM) exec playwright test e2e/issue-detail.spec.ts
+
 .PHONY: e2e-pr8
 e2e-pr8: node-version-check ## Axe + light/dark screenshots for issue list (requires make dev)
 	$(PNPM) exec playwright test e2e/issue-list.spec.ts

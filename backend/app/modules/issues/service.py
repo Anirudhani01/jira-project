@@ -50,6 +50,7 @@ from app.modules.issues.repository import IssueFilter, NewIssue
 from app.modules.issues.schemas import (
     ActivityResponse,
     ApplyTransitionRequest,
+    ChildrenResponse,
     CreateIssueRequest,
     IssueRefShort,
     IssueResponse,
@@ -702,7 +703,7 @@ async def delete_issue(services: IdentityServices, ref: IssueRef, client: Client
 
 
 # ---------------------------------------------------------------------- hierarchy
-async def list_children(services: IdentityServices, ref: IssueRef) -> list[IssueResponse]:
+async def list_children(services: IdentityServices, ref: IssueRef) -> ChildrenResponse:
     async with project_transaction(services, ref.project, Permission.PROJECT_VIEW) as (
         session,
         project,
@@ -711,7 +712,9 @@ async def list_children(services: IdentityServices, ref: IssueRef) -> list[Issue
         issue = await _load(session, project, ref)
         children = await repository.find_children(session, project.id, issue.id)
         rows = await repository.issue_views_by_ids(session, [c.id for c in children])
-        return await issue_responses(session, rows)
+        items = await issue_responses(session, rows)
+        done = sum(1 for item in items if item.status.category == "done")
+        return ChildrenResponse(items=items, done=done, total=len(items))
 
 
 # --------------------------------------------------------------------- transitions
