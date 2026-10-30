@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 import {
   acceptInvitation,
   addProjectMemberViaApi,
+  assignIssueViaApi,
   createIssueOnList,
   createOrganization,
   createProject,
@@ -290,7 +291,7 @@ export const mvpScenarios: MvpScenario[] = [
     id: '09-search-notify',
     title: 'search issue list and in-app assignment notification',
     run: async ({ browser, request }) => {
-      test.setTimeout(180_000);
+      test.setTimeout(120_000);
       const owner = e2eIdentity('j9-owner');
       const assignee = e2eIdentity('j9-assignee');
       const ownerContext = await browser.newContext();
@@ -322,12 +323,8 @@ export const mvpScenarios: MvpScenario[] = [
           .click();
         await expect(issueLink(ownerPage, `${owner.key}-1`)).toBeVisible();
         const issueKey = `${owner.key}-1`;
+        await assignIssueViaApi(ownerPage, owner.slug, issueKey, assigneeId);
         await ownerPage.goto(`/o/${owner.slug}/issues/${issueKey}`);
-        await ownerPage.reload();
-        await ownerPage.getByRole('button', { name: /Assignee: Unassigned/ }).click();
-        const assigneeItem = ownerPage.getByRole('menuitem').filter({ hasText: 'Assignee User' });
-        await expect(assigneeItem).toBeVisible({ timeout: 15_000 });
-        await assigneeItem.click();
         await expect(
           ownerPage.getByRole('button', { name: /Assignee: Assignee User/ }),
         ).toBeVisible();

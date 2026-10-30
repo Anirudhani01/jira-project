@@ -265,6 +265,38 @@ export async function createProjectLabelViaApi(
   );
 }
 
+/** Assign issue via API (triggers same notification path as the detail assignee menu). */
+export async function assignIssueViaApi(
+  page: Page,
+  orgSlug: string,
+  issueKey: string,
+  assigneeId: string,
+) {
+  await page.evaluate(
+    async ({ orgSlug, issueKey, assigneeId }) => {
+      const session = (await fetch('/api/v1/auth/session', { credentials: 'include' }).then((r) =>
+        r.json(),
+      )) as { csrf_token?: string };
+      if (!session.csrf_token) throw new Error('No CSRF token in session');
+      const issue = (await fetch(`/api/v1/orgs/${orgSlug}/issues/${issueKey}`, {
+        credentials: 'include',
+      }).then((r) => r.json())) as { version: number };
+      const res = await fetch(`/api/v1/orgs/${orgSlug}/issues/${issueKey}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': session.csrf_token,
+          'If-Match': `"v${String(issue.version)}"`,
+        },
+        body: JSON.stringify({ assignee_id: assigneeId }),
+      });
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+    },
+    { orgSlug, issueKey, assigneeId },
+  );
+}
+
 /** Adds a project member when the UI has no invite form (journey 4). */
 export async function addProjectMemberViaApi(
   page: Page,
