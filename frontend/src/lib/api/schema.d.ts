@@ -1957,6 +1957,8 @@ export interface components {
             parent_id?: string | null;
             /** Priority Id */
             priority_id?: string | null;
+            /** Reporter Id */
+            reporter_id?: string | null;
             /** Summary */
             summary?: string | null;
             /** Type Id */

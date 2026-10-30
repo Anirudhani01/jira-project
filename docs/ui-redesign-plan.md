@@ -219,13 +219,13 @@ screenshots; `make lint test` stays green.
 | 1 Foundations | **Done (#31)** — tokens (violet), fonts, Radix primitives, toasts, theme provider, `/__design` (dev), axe E2E light+dark | **OK — none needed** | Dark mode is opt-in until PR 12; product pages still use legacy light markup until later PRs. |
 | 2 App shell | **Done (#33)** — top bar, sidebar, breadcrumbs, drawer; legacy org `<select>` removed | **OK — none** | Screenshots: add to `docs/ui-redesign/after/` before merge. |
 | 3 Auth + org home + account | **Done (local)** — `AuthLayout`, project cards + templates, `Field`/`PasswordField`, account cards, skeleton/error states on touched routes | **OK — none** | Open-issue count omitted (`ProjectSummary` has no counts). Screenshots before merge. |
-| 4 Board | **Pending** — rich cards, filters, sprint header, dnd polish | **OK — none** | Quick filters client-side on loaded cards (≤500). |
-| 5 Issue detail | **Pending** — modal + page, inline edit, activity tabs | **Needed (PR 5)** — additive `done`/`total` on `GET …/issues/{key}/children` | Rest uses existing issue/comment/transition APIs + `If-Match`. |
+| 4 Board | **Done (local)** — rich cards, quick filters (URL), WIP bar, sprint header, DnD overlay, menu move; card **key+summary** opens issue (drag on grip only) | **OK — none** | See [`docs/ui-redesign/pr-4-board-plan.md`](ui-redesign/pr-4-board-plan.md). Comment count omitted; screenshots via `make e2e-pr4`. |
+| 5 Issue detail | **Partial (local)** — full-page design-system layout, inline summary/description, shared row menus, reporter on PATCH; **no modal-over-board route yet** | **Partial** — `reporter_id` on issue PATCH (local); still need `done`/`total` on `GET …/issues/{key}/children` for PR 5 complete | Activity tabs / modal pattern remain PR 5. |
 | 6 Create issue + comboboxes | **Pending** — modal, cmdk comboboxes, idempotency | **OK — none** | Members, labels, issues search already exist. |
 | 7 Backlog | **Pending** — panels, row grid, multi-select, drag | **OK — none** | Sprint/backlog mutations already exist. |
-| 8 Issue list + search | **Pending** — sortable table, filter chips, column picker | **Needed (PR 8)** — additive `sort` for `key`, `priority`, `status`; `label` filter on `GET /issues` | Today: sort is `updated_at` / `created_at` only; no label filter param. |
+| 8 Issue list + search | **Partial (local)** — `DataGrid` table, filters in URL, row menus, column picker (Status/Assignee optional, persisted); not sortable server-side, no label filter chip | **Needed (PR 8)** — additive `sort` for `key`, `priority`, `status`; `label` filter on `GET /issues` | Progress + screenshots: [`pr-8-issue-list-plan.md`](ui-redesign/pr-8-issue-list-plan.md) (`make e2e-pr8` → `05-issues-list-{light,dark}.png`). |
 | 9 Command palette + shortcuts | **Pending** — `⌘K`, `C`, `/`, `G B/L/I`, help dialog | **OK — none** | |
-| 10 Notifications + settings + audit | **Pending** — popover, tabbed settings, column editor | **Needed (PR 10)** — additive `comment_id` on `issue_commented` notification payload | Today payload is e.g. `{"summary": …}` only; no comment deep link id. |
+| 10 Notifications + settings + audit | **Partial (local)** — project **Settings** route restyled (workflow read-only table, members list, archive); notifications/audit/org settings still legacy | **Needed (PR 10)** — additive `comment_id` on `issue_commented` notification payload | Settings progress + screenshots: [`pr-project-settings-plan.md`](ui-redesign/pr-project-settings-plan.md) (`make e2e-pr10-settings` → `10-project-settings-{light,dark}.png`). |
 | 11 Story points | **Pending** — estimate on create/detail/board/backlog | **Needed (PR 11)** — migration `issues.story_points`, create/update/activity, sprint `points_total` / `points_done` | Not in backend yet. |
 | 12 Responsive + visual QA | **Pending** — breakpoints, system theme default, screenshot CI | **OK — none** | Depends on 3–11 UI complete. |
 | 13 Swimlanes | **Pending** — group by assignee/epic (view only) | **OK — none** | Client grouping. |
@@ -238,6 +238,12 @@ screenshots; `make lint test` stays green.
 **Backend today (before UI PRs 5+):** API, auth, board, backlog, sprints, notifications (M11), search column (M12), retention role, etc. are in place for local/prod — **no backend blockers for starting PR 2–4, 6, 7, or 9**. Server work is **scoped to the PRs marked “Needed” above** (additive fields/endpoints only; contract in section 0 unchanged).
 
 Full build/test specs for each UI PR: section 8d.
+
+**Incremental plan docs** (local work not yet merged as full PRs):
+
+- [`docs/ui-redesign/pr-4-board-plan.md`](ui-redesign/pr-4-board-plan.md)
+- [`docs/ui-redesign/pr-8-issue-list-plan.md`](ui-redesign/pr-8-issue-list-plan.md)
+- [`docs/ui-redesign/pr-project-settings-plan.md`](ui-redesign/pr-project-settings-plan.md)
 
 ## 8d. PR-by-PR specification (PRs 2-18)
 

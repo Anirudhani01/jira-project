@@ -1,29 +1,14 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
-import { signUpAndSignIn } from './helpers';
+import { createOrganization, createProject, e2eIdentity, signUpAndSignIn } from './helpers';
 
 test('project sidebar: keyboard navigation Board → Backlog → Issues', async ({ page, request }) => {
-  const suffix = Date.now().toString(36);
-  const email = `shell-${suffix}@example.com`;
-  const slug = `sh${suffix}`.slice(0, 30);
-  const key = `S${suffix
-    .replace(/[^a-z]/g, '')
-    .toUpperCase()
-    .padEnd(2, 'X')
-    .slice(0, 4)}`;
+  const { email, slug, key, suffix } = e2eIdentity('shell');
 
   await signUpAndSignIn(page, request, email);
-
-  await page.goto('/orgs/new');
-  await page.getByLabel('Name').fill(`Shell ${suffix}`);
-  await page.getByLabel('Address').fill(slug);
-  await page.getByRole('button', { name: 'Create organization' }).click();
-
-  await page.goto(`/o/${slug}/projects/new?board_type=scrum&step=create`);
-  await page.getByLabel('Name').fill('Scrum app');
-  await page.getByLabel('Key').fill(key);
-  await page.getByRole('button', { name: 'Create project' }).click();
+  await createOrganization(page, slug, `Shell ${suffix}`);
+  await createProject(page, slug, key, 'Scrum app', 'scrum');
   await page.goto(`/o/${slug}/p/${key}/board`);
 
   const projectNav = page.getByRole('navigation', { name: 'Project' });

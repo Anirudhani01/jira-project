@@ -28,7 +28,10 @@ export function Breadcrumbs() {
   const page = showProject ? segmentLabel(location.pathname, projectKey) : null;
 
   return (
-    <nav aria-label="Breadcrumb" className="border-b border-line bg-surface px-4 py-2 text-sm">
+    <nav
+      aria-label="Breadcrumb"
+      className="border-b border-line bg-surface px-4 py-2.5 text-sm sm:px-6 lg:px-8"
+    >
       <ol className="flex flex-wrap items-center gap-1 text-fg-muted">
         <li>
           <Link to={`/o/${ctx.org}`} className="hover:text-fg hover:underline">

@@ -6,6 +6,19 @@ import { ThemeProvider, useTheme } from '../../theme/ThemeProvider';
 
 import { Avatar, initials } from './Avatar';
 import { Button } from './Button';
+import {
+  DataGrid,
+  DataGridBody,
+  DataGridCell,
+  DataGridColumns,
+  DataGridDividedCell,
+  DataGridDividedHeadCell,
+  DataGridEqualColumns,
+  DataGridHead,
+  DataGridHeadCell,
+  DataGridRow,
+  DataGridTable,
+} from './DataGrid';
 import { Field, Input } from './Input';
 import { PriorityIcon, StatusLozenge, TypeIcon } from './IssueIcons';
 import { Dialog, DialogContent, DialogTrigger } from './Overlay';
@@ -168,5 +181,57 @@ describe('ThemeProvider', () => {
       </ThemeProvider>,
     );
     expect(document.documentElement.dataset.theme).toBe('dark');
+  });
+});
+
+describe('DataGrid', () => {
+  it('exposes table semantics and column headers', () => {
+    render(
+      <DataGrid>
+        <DataGridTable aria-label="Sample">
+          <DataGridColumns template="1fr 1fr">
+            <DataGridHead>
+              <DataGridHeadCell>A</DataGridHeadCell>
+              <DataGridHeadCell>B</DataGridHeadCell>
+            </DataGridHead>
+            <DataGridBody>
+              <DataGridRow>
+                <DataGridCell>1</DataGridCell>
+                <DataGridCell>2</DataGridCell>
+              </DataGridRow>
+            </DataGridBody>
+          </DataGridColumns>
+        </DataGridTable>
+      </DataGrid>,
+    );
+    expect(screen.getByRole('table', { name: 'Sample' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'A' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: '1' })).toBeInTheDocument();
+  });
+
+  it('renders N equal columns with dividers', () => {
+    render(
+      <DataGrid>
+        <DataGridTable aria-label="Equal columns">
+          <DataGridEqualColumns columnCount={4}>
+            <DataGridHead>
+              <DataGridDividedHeadCell>One</DataGridDividedHeadCell>
+              <DataGridDividedHeadCell>Two</DataGridDividedHeadCell>
+              <DataGridDividedHeadCell>Three</DataGridDividedHeadCell>
+              <DataGridDividedHeadCell>Four</DataGridDividedHeadCell>
+            </DataGridHead>
+            <DataGridBody>
+              <DataGridRow>
+                <DataGridDividedCell>a</DataGridDividedCell>
+                <DataGridDividedCell>b</DataGridDividedCell>
+                <DataGridDividedCell>c</DataGridDividedCell>
+                <DataGridDividedCell>d</DataGridDividedCell>
+              </DataGridRow>
+            </DataGridBody>
+          </DataGridEqualColumns>
+        </DataGridTable>
+      </DataGrid>,
+    );
+    expect(screen.getAllByRole('columnheader')).toHaveLength(4);
   });
 });

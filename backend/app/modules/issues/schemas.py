@@ -1,7 +1,7 @@
 """Issue request/response models. Requests forbid unknown fields, so server-owned fields
-(key, reporter, status, version, org, ...) are rejected with 422 (mass-assignment
-protection). Status changes only through the transitions endpoints (M7); ``status_id`` is
-never accepted on create or update."""
+(key, status, version, org, ...) are rejected with 422 (mass-assignment protection).
+Status changes only through the transitions endpoints (M7); ``status_id`` is never
+accepted on create or update. Reporter is set on create; it may be changed on update."""
 
 import uuid
 from datetime import datetime
@@ -37,6 +37,7 @@ class UpdateIssueRequest(_Request):
     type_id: uuid.UUID | None = None
     priority_id: uuid.UUID | None = None
     assignee_id: uuid.UUID | None = None
+    reporter_id: uuid.UUID | None = None
     parent_id: uuid.UUID | None = None
     label_ids: list[uuid.UUID] | None = None
 

@@ -117,6 +117,7 @@ export type IssueChanges = Partial<
   Pick<NewIssue, 'summary' | 'type_id' | 'priority_id' | 'assignee_id' | 'parent_id' | 'label_ids'>
 > & {
   description?: string | null;
+  reporter_id?: string;
 };
 
 /** PATCH with If-Match: a stale version answers 412 (shown as a conflict). */
@@ -156,11 +157,12 @@ export function useChildren(org: string, key: string) {
   });
 }
 
-export function useTransitions(org: string, key: string) {
+export function useTransitions(org: string, key: string, enabled = true) {
   return useQuery({
     queryKey: [...issueKey(org, key), 'transitions'],
     queryFn: () =>
       apiFetch<{ items: Transition[] }>(`${issuePath(org, key)}/transitions`).then((r) => r.items),
+    enabled: enabled && key.trim().length > 0,
   });
 }
 

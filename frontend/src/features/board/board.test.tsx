@@ -1,69 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import type { Board, Issue } from '../../lib/api/types';
+import type { Issue } from '../../lib/api/types';
 import { json, mockApi, problem, renderApp, SIGNED_IN } from '../../test/api';
 
 import { allowedColumnIds, applyMove, planMove } from './boardState';
-
-const TODO = 's-todo';
-const DOING = 's-doing';
-const DONE = 's-done';
-
-function card(key: string, statusId: string, version = 1): Issue {
-  return {
-    id: `id-${key}`,
-    key,
-    project_key: 'WEB',
-    summary: `Summary ${key}`,
-    description: null,
-    type: { id: 't', name: 'Task', kind: 'standard' },
-    status: { id: statusId, name: statusId, category: 'todo' },
-    priority: { id: 'p', name: 'Medium', color: '#888888' },
-    reporter: { id: 'u', display_name: 'Ann' },
-    assignee: null,
-    parent: null,
-    labels: [],
-    sprint: null,
-    version,
-    created_at: '2026-10-28T00:00:00Z',
-    updated_at: '2026-10-28T00:00:00Z',
-  };
-}
-
-function board(): Board {
-  const column = (
-    id: string,
-    name: string,
-    statusId: string,
-    issues: Issue[],
-    wip: number | null,
-  ) => ({
-    id,
-    name,
-    position: 0,
-    wip_limit: wip,
-    status_ids: [statusId],
-    count: issues.length,
-    over_wip_limit: wip !== null && issues.length > wip,
-    issues,
-  });
-  return {
-    project_key: 'WEB',
-    board_type: 'kanban',
-    truncated: false,
-    sprint: null,
-    columns: [
-      column('c1', 'To Do', TODO, [card('WEB-1', TODO), card('WEB-2', TODO)], 1),
-      column('c2', 'Doing', DOING, [card('WEB-3', DOING)], null),
-      column('c3', 'Done', DONE, [], null),
-    ],
-    transitions: [
-      { from_status_id: TODO, to_status_id: DOING },
-      { from_status_id: DOING, to_status_id: DONE },
-    ],
-  };
-}
+import { board, card, DOING, TODO } from './board.test.fixtures';
 
 describe('board state', () => {
   it('computes drop targets from the workflow transitions', () => {
@@ -142,8 +84,9 @@ describe('board page', () => {
     });
     renderApp('/o/acme/p/WEB/board');
     expect(await screen.findByRole('heading', { name: 'WEB board' })).toBeInTheDocument();
-    expect(screen.getByText(/over WIP limit/)).toBeInTheDocument();
-    await userEvent.selectOptions(screen.getByLabelText('Move WEB-1 to'), 'Doing');
+    expect(screen.getByText(/over limit/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'More actions for WEB-1' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Doing' }));
     await waitFor(() => {
       expect(calls.some((c) => c.method === 'POST')).toBe(true);
     });
@@ -152,7 +95,7 @@ describe('board page', () => {
     expect(post?.body).toEqual({ to_status_id: DOING, after_key: 'WEB-3' });
     const doing = screen.getByRole('region', { name: /Doing/ });
     await waitFor(() => {
-      expect(within(doing).getByText('WEB-1')).toBeInTheDocument();
+      expect(within(doing).getByRole('link', { name: /WEB-1/i })).toBeInTheDocument();
     });
   });
 
@@ -165,10 +108,11 @@ describe('board page', () => {
     });
     renderApp('/o/acme/p/WEB/board');
     await screen.findByRole('heading', { name: 'WEB board' });
-    await userEvent.selectOptions(screen.getByLabelText('Move WEB-1 to'), 'Doing');
+    await userEvent.click(screen.getByRole('button', { name: 'More actions for WEB-1' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Doing' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('The board was restored');
     const todo = screen.getByRole('region', { name: /To Do/ });
-    expect(within(todo).getByText('WEB-1')).toBeInTheDocument();
+    expect(within(todo).getByRole('link', { name: /WEB-1/i })).toBeInTheDocument();
   });
 
   it('offers no move controls without the transition permission', async () => {
@@ -179,6 +123,33 @@ describe('board page', () => {
     });
     renderApp('/o/acme/p/WEB/board');
     await screen.findByRole('heading', { name: 'WEB board' });
-    expect(screen.queryByLabelText('Move WEB-1 to')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'More actions for WEB-1' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('opens issue detail when the card title is clicked', async () => {
+    mockApi({
+      'GET /auth/session': () => json(SESSION),
+      'GET /orgs/acme/projects/WEB': () => json(PROJECT),
+      'GET /orgs/acme/projects/WEB/board': () => json(board()),
+      'GET /orgs/acme/issues/WEB-1': () => json(card('WEB-1', TODO, 1)),
+    });
+    renderApp('/o/acme/p/WEB/board');
+    await screen.findByRole('heading', { name: 'WEB board' });
+    await userEvent.click(screen.getByRole('link', { name: /WEB-1/i }));
+    expect(await screen.findByRole('heading', { name: /WEB-1/i })).toBeInTheDocument();
+  });
+
+  it('filters cards client-side from the URL', async () => {
+    mockApi({
+      'GET /auth/session': () => json(SESSION),
+      'GET /orgs/acme/projects/WEB': () => json(PROJECT),
+      'GET /orgs/acme/projects/WEB/board': () => json(board()),
+    });
+    renderApp('/o/acme/p/WEB/board?q=WEB-2');
+    await screen.findByRole('heading', { name: 'WEB board' });
+    expect(screen.queryByRole('link', { name: /WEB-1/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /WEB-2/i })).toBeInTheDocument();
   });
 });
