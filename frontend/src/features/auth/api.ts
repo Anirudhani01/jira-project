@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { apiFetch, setCsrfToken } from '../../lib/api/client';
+import { refreshSessionCsrf } from '../../lib/ux/csrfRecovery';
+
+import { notifyConfirmedLogout } from './establishedSession';
+import { setLogoutIntent } from './logoutIntent';
 import { ApiError } from '../../lib/api/errors';
 import type {
   ChangePasswordRequest,
@@ -49,6 +53,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: (body: LoginRequest) =>
       apiFetch<undefined>('/auth/login', { method: 'POST', json: body }),
+    meta: { uxAuthSurface: 'login' },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: sessionKey });
     },
@@ -59,6 +64,12 @@ export function useLogout() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => apiFetch<undefined>('/auth/logout', { method: 'POST' }),
+    onMutate: () => {
+      setLogoutIntent(true);
+    },
+    onSettled: () => {
+      setLogoutIntent(false);
+    },
     // Only forget the session once the server confirms it was revoked. Clearing state on a
     // failed logout would show "signed out" while the session cookie is still valid.
     onSuccess: () => {
@@ -66,10 +77,10 @@ export function useLogout() {
       // Drop every cached server response that belonged to the signed-in user.
       queryClient.clear();
       queryClient.setQueryData(sessionKey, null);
+      notifyConfirmedLogout();
     },
     onError: async () => {
-      // e.g. a stale CSRF token: refresh the session (and token) so a retry can succeed.
-      await queryClient.invalidateQueries({ queryKey: sessionKey });
+      await refreshSessionCsrf(queryClient);
     },
   });
 }

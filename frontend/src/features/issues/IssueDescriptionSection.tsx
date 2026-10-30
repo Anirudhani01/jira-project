@@ -90,6 +90,8 @@ export function IssueDescriptionSection({
   description,
   canEdit,
   saving,
+  saveDisabled = false,
+  saveDisabledHint = null,
   editing,
   draft,
   onStartEdit,
@@ -100,6 +102,8 @@ export function IssueDescriptionSection({
   description: string | null;
   canEdit: boolean;
   saving: boolean;
+  saveDisabled?: boolean;
+  saveDisabledHint?: string | null;
   editing: boolean;
   draft: string;
   onStartEdit: () => void;
@@ -157,11 +161,22 @@ export function IssueDescriptionSection({
                 Preview
               </Button>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {saveDisabledHint ? (
+                <p className="mr-auto text-sm text-fg-muted" role="status">
+                  {saveDisabledHint}
+                </p>
+              ) : null}
               <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
                 Cancel
               </Button>
-              <Button type="button" variant="primary" size="sm" disabled={saving} onClick={onSave}>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={saving || saveDisabled}
+                onClick={onSave}
+              >
                 {saving ? 'Saving…' : 'Save'}
               </Button>
             </div>

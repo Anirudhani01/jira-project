@@ -22,6 +22,8 @@ import { OrgMembersPage } from '../features/orgs/pages/OrgMembersPage';
 import { OrgSettingsPage } from '../features/orgs/pages/OrgSettingsPage';
 
 import { AppShell } from './AppShell';
+import { OnlineStatusProvider } from './OnlineStatusProvider';
+import { SessionExpiryProvider } from './SessionExpiryProvider';
 import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { RouteErrorBoundary } from './RouteErrorBoundary';
@@ -60,7 +62,13 @@ export const appShellChildRoutes: RouteObject[] = [
 export const routes: RouteObject[] = [
   {
     path: '/',
-    element: <AppShell />,
+    element: (
+      <OnlineStatusProvider>
+        <SessionExpiryProvider>
+          <AppShell />
+        </SessionExpiryProvider>
+      </OnlineStatusProvider>
+    ),
     errorElement: <RouteErrorBoundary />,
     children: appShellChildRoutes,
   },
