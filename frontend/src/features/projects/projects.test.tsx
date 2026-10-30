@@ -72,7 +72,7 @@ describe('org home project list', () => {
       'GET /orgs/acme/projects': () => json({ items: [] }),
     });
     renderApp('/o/acme');
-    expect(await screen.findByRole('link', { name: 'Create project' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Create new project' })).toHaveAttribute(
       'href',
       '/o/acme/projects/new',
     );

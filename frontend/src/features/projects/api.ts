@@ -6,11 +6,13 @@ import type { Project, ProjectMember, ProjectSummary, Workflow } from '../../lib
 const base = (org: string) => `/orgs/${encodeURIComponent(org)}/projects`;
 const projectPath = (org: string, key: string) => `${base(org)}/${encodeURIComponent(key)}`;
 export const projectsKey = (org: string) => ['org', org.toLowerCase(), 'projects'] as const;
-const projectKey = (org: string, key: string) => [...projectsKey(org), key.toUpperCase()] as const;
+export const projectKey = (org: string, key: string) =>
+  [...projectsKey(org), key.toUpperCase()] as const;
 
-export function useProjects(org: string) {
+export function useProjects(org: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: projectsKey(org),
+    enabled: (options?.enabled ?? true) && org.length > 0,
     queryFn: () => apiFetch<{ items: ProjectSummary[] }>(base(org)).then((r) => r.items),
   });
 }

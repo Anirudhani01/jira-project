@@ -1,59 +1,67 @@
-import { useEffect } from 'react';
-import { Link, useParams } from 'react-router';
+import { useEffect, useMemo } from 'react';
+import { useParams } from 'react-router';
 
-import { PageHeader } from '../../../components/ui/PageHeader';
-import { Button } from '../../../components/ui/Button';
 import { ErrorState, LoadingState } from '../../../components/ui/States';
 import { ApiError } from '../../../lib/api/errors';
 import { NotFoundPage } from '../../../app/pages/NotFoundPage';
-import { ProjectList } from '../../projects/ProjectList';
+import { useProjects } from '../../projects/api';
+import { OrgDashboardHeader } from '../dashboard/OrgDashboardHeader';
+import { OrgDashboardSidebar } from '../dashboard/OrgDashboardSidebar';
+import { OrgDashboardTabs } from '../dashboard/OrgDashboardTabs';
+import { OrgGetStartedSection } from '../dashboard/OrgGetStartedSection';
+import { OrgPromoBanner } from '../dashboard/OrgPromoBanner';
+import { ProjectDashboardSection } from '../dashboard/ProjectDashboardSection';
 import { rememberOrg, useOrg } from '../api';
 
-/** Org landing page: the projects the caller can see. */
+/** Organization home dashboard (projects tab). */
 export function OrgHomePage() {
   const { org: slug = '' } = useParams();
   const org = useOrg(slug);
+  const projects = useProjects(slug);
 
   useEffect(() => {
     if (org.data) rememberOrg(org.data.slug);
   }, [org.data]);
 
+  const firstProjectKey = useMemo(() => {
+    const active = (projects.data ?? []).filter((p) => !p.archived);
+    return active[0]?.key ?? null;
+  }, [projects.data]);
+
   if (org.isPending) return <LoadingState label="Loading organization" />;
   if (org.error instanceof ApiError && org.error.status === 404) return <NotFoundPage />;
   if (org.isError) return <ErrorState error={org.error} onRetry={() => void org.refetch()} />;
 
-  const canManage = org.data.permissions.includes('org.manage');
   const canCreate = org.data.permissions.includes('project.create');
+  const canInvite = org.data.permissions.includes('org.members.manage');
+  const showAudit = org.data.permissions.includes('org.audit.view');
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title={org.data.name}
-        description="Projects in this organization"
-        actions={
-          <>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to={`/o/${org.data.slug}/settings/members`}>Members</Link>
-            </Button>
-            {org.data.permissions.includes('org.audit.view') ? (
-              <Button variant="ghost" size="sm" asChild>
-                <Link to={`/o/${org.data.slug}/settings/audit`}>Audit log</Link>
-              </Button>
-            ) : null}
-            {canManage ? (
-              <Button variant="secondary" size="sm" asChild>
-                <Link to={`/o/${org.data.slug}/settings`}>Settings</Link>
-              </Button>
-            ) : null}
-          </>
-        }
+    <div className="org-dashboard mx-auto w-full min-w-0 max-w-[1280px] space-y-6 sm:space-y-8">
+      <OrgDashboardHeader
+        orgName={org.data.name}
+        orgSlug={org.data.slug}
+        canCreateProject={canCreate}
+        canInviteMembers={canInvite}
       />
-      <section aria-labelledby="projects-title" className="space-y-4">
-        <h2 id="projects-title" className="text-lg font-semibold text-fg">
-          Projects
-        </h2>
-        <ProjectList org={org.data.slug} canCreate={canCreate} />
-      </section>
+      <OrgDashboardTabs orgSlug={org.data.slug} showAudit={showAudit} />
+      <div className="grid gap-6 sm:gap-8 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="min-w-0 space-y-8 sm:space-y-10">
+          <ProjectDashboardSection org={org.data.slug} canCreate={canCreate} />
+          <OrgGetStartedSection
+            orgSlug={org.data.slug}
+            canCreateProject={canCreate}
+            canInviteMembers={canInvite}
+            firstProjectKey={firstProjectKey}
+          />
+          <OrgPromoBanner orgSlug={org.data.slug} canCreateProject={canCreate} />
+        </div>
+        <OrgDashboardSidebar
+          orgSlug={org.data.slug}
+          orgName={org.data.name}
+          canViewAudit={showAudit}
+        />
+      </div>
     </div>
   );
 }

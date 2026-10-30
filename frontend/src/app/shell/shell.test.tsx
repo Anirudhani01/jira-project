@@ -74,7 +74,7 @@ function mockProject(project: typeof PROJECT_KANBAN) {
 }
 
 describe('app shell (PR 2)', () => {
-  it('hides the project sidebar on org home', async () => {
+  it('shows org navigation and hides project sidebar on org home', async () => {
     mockApi({
       'GET /auth/session': () => json(SESSION),
       'GET /orgs/acme': () =>
@@ -87,10 +87,44 @@ describe('app shell (PR 2)', () => {
           created_at: '2026-10-27T00:00:00Z',
         }),
       'GET /orgs/acme/projects': () => json({ items: [] }),
+      'GET /orgs/acme/members': () => json({ items: [] }),
     });
     renderApp('/o/acme');
     await screen.findByRole('navigation', { name: 'Primary' });
+    expect(await screen.findByRole('navigation', { name: 'Organization' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+    await screen.findByRole('heading', { level: 1, name: 'Acme' });
+    expect(screen.getByRole('combobox', { name: /search projects, issues, or people/i })).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Search projects' })).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Project' })).toBeNull();
+  });
+
+  it('global search on org settings navigates to org home with query on Enter', async () => {
+    const user = userEvent.setup();
+    mockApi({
+      'GET /auth/session': () => json(SESSION),
+      'GET /orgs/acme': () =>
+        json({
+          id: '1',
+          slug: 'acme',
+          name: 'Acme',
+          role: 'member',
+          permissions: ['org.view'],
+          created_at: '2026-10-27T00:00:00Z',
+        }),
+      'GET /orgs/acme/projects': () => json({ items: [] }),
+      'GET /orgs/acme/members': () => json({ items: [] }),
+    });
+    const { router } = renderApp('/o/acme/settings');
+    await screen.findByRole('navigation', { name: 'Primary' });
+    await screen.findByRole('heading', { name: 'Organization settings' });
+    const search = screen.getByRole('combobox', { name: /search projects, issues, or people/i });
+    await user.type(search, 'website');
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/o/acme');
+      expect(router.state.location.search).toBe('?q=website');
+    });
   });
 
   it('shows project nav with Board and Issues for kanban (no Backlog)', async () => {
@@ -101,6 +135,17 @@ describe('app shell (PR 2)', () => {
     expect(screen.getByRole('link', { name: 'Board' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByRole('link', { name: 'Backlog' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Issues' })).toBeInTheDocument();
+  });
+
+  it('shows board-shell top search on the board route only', async () => {
+    mockProject(PROJECT_KANBAN);
+    const { container } = renderApp('/o/acme/p/WEB/board');
+    await screen.findByRole('navigation', { name: 'Project' });
+    expect(container.querySelector('.board-shell')).toBeTruthy();
+    expect(
+      await screen.findByRole('combobox', { name: /search issues and projects/i }),
+    ).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^Create$/i })).toBeInTheDocument();
   });
 
   it('shows Backlog for scrum projects', async () => {
