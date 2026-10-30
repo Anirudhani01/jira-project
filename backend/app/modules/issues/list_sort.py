@@ -103,29 +103,32 @@ def _status_category_rank() -> ColumnElement[int]:
     )
 
 
+def _ordered_columns(*columns: Any, descending: bool) -> tuple[Any, ...]:
+    if descending:
+        return tuple(column.desc() for column in columns)
+    return tuple(column.asc() for column in columns)
+
+
 def list_order(sort: str) -> tuple[Any, ...]:
     descending = sort.startswith("-")
     field = sort_field(sort)
     if field in ("updated_at", "created_at"):
-        column = getattr(Issue, field)
-        if descending:
-            return (column.desc(), Issue.id.desc())
-        return (column.asc(), Issue.id.asc())
+        return _ordered_columns(getattr(Issue, field), Issue.id, descending=descending)
     if field == "key":
-        pk, seq = (Project.key, Issue.seq)
-        if descending:
-            return (pk.desc(), seq.desc(), Issue.id.desc())
-        return (pk.asc(), seq.asc(), Issue.id.asc())
+        return _ordered_columns(Project.key, Issue.seq, Issue.id, descending=descending)
     if field == "priority":
-        primary = Priority.sort_order.desc() if descending else Priority.sort_order.asc()
-        seq_order = Issue.seq.desc() if descending else Issue.seq.asc()
-        id_order = Issue.id.desc() if descending else Issue.id.asc()
-        return (primary, seq_order, id_order)
-    rank = _status_category_rank()
-    position = WorkflowStatus.position
-    if descending:
-        return (rank.desc(), position.desc(), Issue.id.desc())
-    return (rank.asc(), position.asc(), Issue.id.asc())
+        return _ordered_columns(
+            Priority.sort_order,
+            Issue.seq,
+            Issue.id,
+            descending=descending,
+        )
+    return _ordered_columns(
+        _status_category_rank(),
+        WorkflowStatus.position,
+        Issue.id,
+        descending=descending,
+    )
 
 
 def keyset_condition(sort: str, after: tuple[Any, ...]) -> ColumnElement[bool]:  # noqa: PLR0911
