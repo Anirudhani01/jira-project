@@ -14,9 +14,7 @@ function AppShellBody() {
   const authRoute = useAuthRoute();
 
   return (
-    <div
-      className={cn('flex min-h-screen flex-col text-fg', authRoute ? 'bg-surface' : 'bg-bg')}
-    >
+    <div className={cn('flex min-h-screen flex-col text-fg', authRoute ? 'bg-surface' : 'bg-bg')}>
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[70] focus:rounded focus:bg-surface focus:px-3 focus:py-2 focus:shadow"
