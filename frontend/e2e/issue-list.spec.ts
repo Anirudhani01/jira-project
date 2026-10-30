@@ -24,8 +24,13 @@ for (const theme of ['light', 'dark'] as const) {
     await page.goto(`/o/${slug}/p/${key}/issues`);
     await expect(page.getByRole('heading', { name: `${key} issues` })).toBeVisible();
     await expect(page.getByRole('table', { name: 'Issues' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Issue' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sort by Issue' })).toBeVisible();
     await expect(page.getByText('Checkout rounding bug')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Sort by Issue' }).click();
+    await expect(page).toHaveURL(/sort=-key/);
+    await page.getByRole('button', { name: 'Sort by Issue' }).click();
+    await expect(page).toHaveURL(/sort=key/);
 
     await expectThemed(page, theme);
     await expectNoSeriousViolations(page);

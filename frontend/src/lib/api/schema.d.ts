@@ -2803,9 +2803,11 @@ export interface operations {
                 type?: string | null;
                 priority?: string | null;
                 assignee?: string | null;
+                label?: string | null;
+                sprint?: string | null;
                 updated_since?: string | null;
                 q?: string | null;
-                sort?: "-updated_at" | "updated_at" | "-created_at" | "created_at";
+                sort?: "-updated_at" | "updated_at" | "-created_at" | "created_at" | "-key" | "key" | "-priority" | "priority" | "-status" | "status";
                 cursor?: string | null;
                 limit?: number;
             };

@@ -47,6 +47,7 @@ const CONFIG = {
   'GET /orgs/acme/priorities': () => json({ items: [HIGH, MEDIUM] }),
   'GET /orgs/acme/projects/WEB/members': () => json({ items: [] }),
   'GET /orgs/acme/projects/WEB/labels': () => json({ items: [] }),
+  'GET /orgs/acme/projects/WEB/sprints': () => json({ items: [] }),
 };
 
 afterEach(() => {
@@ -109,10 +110,10 @@ describe('issue list', () => {
     renderApp('/o/acme/p/WEB/issues');
     await screen.findByText('Login button misaligned');
     const table = screen.getByRole('table', { name: 'Issues' });
-    expect(within(table).getAllByRole('columnheader')).toHaveLength(3);
-    expect(within(table).getByRole('columnheader', { name: 'Issue' })).toBeInTheDocument();
+    expect(within(table).getAllByRole('columnheader')).toHaveLength(4);
+    expect(within(table).getByRole('button', { name: 'Sort by Issue' })).toBeInTheDocument();
     expect(within(table).getByRole('columnheader', { name: 'Type' })).toBeInTheDocument();
-    expect(within(table).getByRole('columnheader', { name: 'Priority' })).toBeInTheDocument();
+    expect(within(table).getByRole('button', { name: 'Sort by Priority' })).toBeInTheDocument();
   });
 
   it('shows assignee column after enabling it in the picker', async () => {
@@ -127,7 +128,7 @@ describe('issue list', () => {
     renderApp('/o/acme/p/WEB/issues');
     await screen.findByText('Login button misaligned');
     const table = screen.getByRole('table', { name: 'Issues' });
-    expect(within(table).getAllByRole('columnheader')).toHaveLength(4);
+    expect(within(table).getAllByRole('columnheader')).toHaveLength(5);
     expect(within(table).queryByRole('columnheader', { name: 'Assignee' })).not.toBeInTheDocument();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Choose visible columns' }));
@@ -140,7 +141,26 @@ describe('issue list', () => {
     });
     expect(
       within(screen.getByRole('table', { name: 'Issues' })).getAllByRole('columnheader'),
-    ).toHaveLength(5);
+    ).toHaveLength(6);
+  });
+
+  it('sorts by key via the Issue header and updates the URL', async () => {
+    const calls = mockApi({
+      ...CONFIG,
+      'GET /orgs/acme/issues': () => json({ items: [ISSUE], next_cursor: null }),
+    });
+    renderApp('/o/acme/p/WEB/issues');
+    await screen.findByText('Login button misaligned');
+    await userEvent.click(
+      within(screen.getByRole('table', { name: 'Issues' })).getByRole('button', {
+        name: 'Sort by Issue',
+      }),
+    );
+    await waitFor(() => {
+      expect(
+        calls.some((c) => c.path === '/orgs/acme/issues' && c.search.includes('sort=-key')),
+      ).toBe(true);
+    });
   });
 
   it('hides creation without the permission', async () => {

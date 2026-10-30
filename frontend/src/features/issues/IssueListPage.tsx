@@ -11,19 +11,37 @@ import { ErrorState } from '../../components/ui/States';
 import { ApiError } from '../../lib/api/errors';
 import { useProject, useProjectMembers } from '../projects/api';
 
-import { useIssues, useIssueTypes, usePriorities } from './api';
+import { useIssues, useIssueTypes, useLabels, usePriorities, useProjectSprints } from './api';
 import { CreateIssueDialog } from './CreateIssueDialog';
 import { IssueListColumnPicker } from './IssueListColumnPicker';
 import { useIssueListColumns } from './issueListColumns';
+import { DEFAULT_ISSUE_LIST_SORT, isIssueListSort, type IssueListSort } from './issueListSort';
 import { IssueListTable } from './IssueListTable';
 
-const FILTERS = ['status_category', 'type', 'priority', 'assignee', 'q'] as const;
+const FILTERS = [
+  'status_category',
+  'type',
+  'priority',
+  'assignee',
+  'label',
+  'sprint',
+  'q',
+] as const;
+
+const SORT_PARAM = 'sort';
 
 const selectClass =
   'min-w-[7rem] rounded-md border border-line bg-surface px-3 py-2 text-sm text-fg hover:border-line-strong';
 
 function filtersActive(search: URLSearchParams): boolean {
-  return FILTERS.some((name) => Boolean(search.get(name)));
+  const sort = search.get(SORT_PARAM);
+  const sortActive = Boolean(sort && sort !== DEFAULT_ISSUE_LIST_SORT);
+  return sortActive || FILTERS.some((name) => Boolean(search.get(name)));
+}
+
+function readSort(search: URLSearchParams): IssueListSort {
+  const raw = search.get(SORT_PARAM);
+  return raw && isIssueListSort(raw) ? raw : DEFAULT_ISSUE_LIST_SORT;
 }
 
 function IssueListSkeleton() {
@@ -46,8 +64,11 @@ export function IssueListPage() {
   const members = useProjectMembers(org, key);
   const types = useIssueTypes(org);
   const priorities = usePriorities(org);
+  const labels = useLabels(org, key);
+  const sprints = useProjectSprints(org, key);
+  const sort = readSort(search);
   const filters = Object.fromEntries(FILTERS.map((name) => [name, search.get(name) ?? undefined]));
-  const issues = useIssues(org, { project: key.toUpperCase(), ...filters });
+  const issues = useIssues(org, { project: key.toUpperCase(), ...filters, sort });
   const {
     visible: columns,
     setColumn: setIssueListColumn,
@@ -81,7 +102,15 @@ export function IssueListPage() {
   const clearFilters = () => {
     const next = new URLSearchParams(search);
     for (const name of FILTERS) next.delete(name);
+    next.delete(SORT_PARAM);
     setSearch(next);
+  };
+
+  const setSort = (next: IssueListSort) => {
+    const params = new URLSearchParams(search);
+    if (next === DEFAULT_ISSUE_LIST_SORT) params.delete(SORT_PARAM);
+    else params.set(SORT_PARAM, next);
+    setSearch(params);
   };
 
   const select = (name: string, label: string, options: { value: string; label: string }[]) => (
@@ -182,6 +211,15 @@ export function IssueListPage() {
             { value: 'me', label: 'Me' },
             { value: 'none', label: 'Unassigned' },
           ])}
+          {select(
+            'label',
+            'Label',
+            (labels.data ?? []).map((l) => ({ value: l.id, label: l.name })),
+          )}
+          {select('sprint', 'Sprint', [
+            { value: 'backlog', label: 'Backlog only' },
+            ...(sprints.data ?? []).map((s) => ({ value: s.id, label: s.name })),
+          ])}
           {hasFilters ? (
             <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
               <X className="size-4" aria-hidden="true" />
@@ -189,6 +227,41 @@ export function IssueListPage() {
             </Button>
           ) : null}
         </div>
+
+        {hasFilters ? (
+          <div
+            className="flex flex-wrap gap-2 border-t border-line pt-4"
+            aria-label="Active filters"
+          >
+            {sort !== DEFAULT_ISSUE_LIST_SORT ? (
+              <FilterChip
+                label={`Sort: ${sort}`}
+                onRemove={() => {
+                  setSort(DEFAULT_ISSUE_LIST_SORT);
+                }}
+              />
+            ) : null}
+            {FILTERS.map((name) => {
+              const value = search.get(name);
+              if (!value) return null;
+              const display = filterChipLabel(name, value, {
+                types: types.data ?? [],
+                priorities: priorities.data ?? [],
+                labels: labels.data ?? [],
+                sprints: sprints.data ?? [],
+              });
+              return (
+                <FilterChip
+                  key={name}
+                  label={display}
+                  onRemove={() => {
+                    setFilter(name, '');
+                  }}
+                />
+              );
+            })}
+          </div>
+        ) : null}
       </div>
 
       {issues.isPending ? <IssueListSkeleton /> : null}
@@ -227,17 +300,21 @@ export function IssueListPage() {
             />
           </div>
 
-          <IssueListTable
-            org={org}
-            items={items}
-            columns={columns}
-            types={types.data ?? []}
-            priorities={priorities.data ?? []}
-            members={members.data ?? []}
-            canEdit={canEdit}
-            canAssign={canAssign}
-            canTransition={canTransition}
-          />
+          <div className="max-h-[min(70vh,48rem)] overflow-auto rounded-lg border border-line">
+            <IssueListTable
+              org={org}
+              items={items}
+              columns={columns}
+              types={types.data ?? []}
+              priorities={priorities.data ?? []}
+              members={members.data ?? []}
+              sort={sort}
+              onSort={setSort}
+              canEdit={canEdit}
+              canAssign={canAssign}
+              canTransition={canTransition}
+            />
+          </div>
 
           {issues.hasNextPage ? (
             <Button
@@ -265,4 +342,52 @@ export function IssueListPage() {
       ) : null}
     </section>
   );
+}
+
+function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-2 px-2.5 py-1 text-xs text-fg">
+      {label}
+      <button
+        type="button"
+        className="rounded p-0.5 text-fg-muted hover:bg-surface hover:text-fg"
+        aria-label={`Remove ${label}`}
+        onClick={onRemove}
+      >
+        <X className="size-3" aria-hidden="true" />
+      </button>
+    </span>
+  );
+}
+
+function filterChipLabel(
+  name: string,
+  value: string,
+  ctx: {
+    types: { id: string; name: string }[];
+    priorities: { id: string; name: string }[];
+    labels: { id: string; name: string }[];
+    sprints: { id: string; name: string }[];
+  },
+): string {
+  switch (name) {
+    case 'status_category':
+      return `Status: ${value.replace('_', ' ')}`;
+    case 'type':
+      return `Type: ${ctx.types.find((t) => t.id === value)?.name ?? value}`;
+    case 'priority':
+      return `Priority: ${ctx.priorities.find((p) => p.id === value)?.name ?? value}`;
+    case 'assignee':
+      return value === 'me' ? 'Assignee: Me' : 'Assignee: Unassigned';
+    case 'label':
+      return `Label: ${ctx.labels.find((l) => l.id === value)?.name ?? value}`;
+    case 'sprint':
+      return value === 'backlog'
+        ? 'Sprint: Backlog'
+        : `Sprint: ${ctx.sprints.find((s) => s.id === value)?.name ?? value}`;
+    case 'q':
+      return `Search: ${value}`;
+    default:
+      return value;
+  }
 }

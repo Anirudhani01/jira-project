@@ -20,19 +20,29 @@ Full spec: [`ui-redesign-plan.md`](../ui-redesign-plan.md) §8d PR 8. This doc t
 
 | Phase | Scope | Status |
 |-------|--------|--------|
-| **8a** | Backend: `sort` by `key`, `priority`, `status`; `label` filter on issue list | Pending |
-| **8b** | Sortable headers (URL `sort`); label + sprint filter chips; sticky header; optional Labels/Updated columns; row overflow menu; open issue in **modal** from list | Pending |
-| **8c** | `make e2e-pr8`, journey selector updates, mark PR 8 done in master plan | Pending |
+| **8a** | Backend: `sort` by `key`, `priority`, `status`; `label` / `sprint` filters on issue list | Done (local) |
+| **8b** | Sortable headers (URL `sort`); label + sprint filters + chips; sticky header; optional Labels/Updated columns; row overflow menu; open issue in **modal** from list | Done (local) |
+| **8c** | `make e2e-pr8`, journey selector updates, mark PR 8 done in master plan | Done (local) |
 
-## Not done (still PR 8 scope)
+## Not done (out of PR 8 scope)
 
-- Server **sort** by `key`, `priority`, `status` (today: `updated_at` / `created_at` only)
-- **`label`** (and any other missing) query params on `GET /orgs/{org}/issues`
-- Sticky header, label column, sprint filter chip, row overflow actions menu
 - `/` focus shortcut (PR 9), saved filters (PR 14)
 - Full E2E journey updates (main `journey.spec.ts` still uses legacy link selectors in places)
 
-**Blocked on:** PR **5a** for list → modal open (same as board).
+**Depends on:** PR **5a** for list → modal open (same as board).
+
+## Backend (8a)
+
+- `list_sort.py` — keyset cursors for `key`, `priority`, `status` (+ existing date sorts)
+- `GET /orgs/{org}/issues` — query params `sort`, `label`, `sprint` (`backlog` or sprint id)
+- Tests: `test_list_sort.py`, extended `test_list_filters_combine_and_paginate_stably`
+
+## Frontend (8b)
+
+- `issueListSort.ts`, URL `sort`, sortable Issue / Priority / Status headers
+- Label + sprint filter selects; removable filter chips (incl. non-default sort)
+- Sticky `DataGridHead`, scroll container, optional **Labels** / **Updated** columns
+- `IssueListRowActions` overflow menu; summary links open issue (modal when PR 5a merged)
 
 ## Screenshots (`docs/ui-redesign/after/`)
 

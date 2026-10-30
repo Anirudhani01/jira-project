@@ -9,8 +9,10 @@ import type {
   IssueType,
   Label,
   Priority,
+  Sprint,
   Transition,
 } from '../../lib/api/types';
+import { DEFAULT_ISSUE_LIST_SORT, type IssueListSort } from './issueListSort';
 
 const orgBase = (org: string) => `/orgs/${encodeURIComponent(org)}`;
 const issuePath = (org: string, key: string) => `${orgBase(org)}/issues/${encodeURIComponent(key)}`;
@@ -25,7 +27,10 @@ export interface IssueFilters {
   type?: string;
   priority?: string;
   assignee?: string;
+  label?: string;
+  sprint?: string;
   q?: string;
+  sort?: IssueListSort;
 }
 
 export function useIssues(org: string, filters: IssueFilters) {
@@ -36,6 +41,7 @@ export function useIssues(org: string, filters: IssueFilters) {
       const params = new URLSearchParams(
         Object.entries(filters).filter((entry): entry is [string, string] => Boolean(entry[1])),
       );
+      if (!params.has('sort')) params.set('sort', filters.sort ?? DEFAULT_ISSUE_LIST_SORT);
       if (pageParam) params.set('cursor', pageParam);
       return apiFetch<IssueList>(`${orgBase(org)}/issues?${params.toString()}`);
     },
@@ -184,6 +190,14 @@ export function useApplyTransition(org: string, key: string) {
       await queryClient.invalidateQueries({ queryKey: [...issueKey(org, key), 'activity'] });
       await queryClient.invalidateQueries({ queryKey: [...issuesKey(org), 'list'] });
     },
+  });
+}
+
+export function useProjectSprints(org: string, project: string) {
+  return useQuery({
+    queryKey: ['org', org.toLowerCase(), 'project', project.toUpperCase(), 'sprints'],
+    queryFn: () =>
+      apiFetch<{ items: Sprint[] }>(`${projectPath(org, project)}/sprints`).then((r) => r.items),
   });
 }
 

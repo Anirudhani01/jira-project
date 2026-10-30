@@ -95,6 +95,8 @@ async def list_issues(
     type_id: Annotated[uuid.UUID | None, Query(alias="type")] = None,
     priority_id: Annotated[uuid.UUID | None, Query(alias="priority")] = None,
     assignee: Annotated[str | None, Query(max_length=36)] = None,
+    label: Annotated[uuid.UUID | None, Query()] = None,
+    sprint: Annotated[str | None, Query(max_length=36)] = None,
     updated_since: datetime | None = None,
     q: Annotated[str | None, Query(max_length=200)] = None,
     sort: SortOrder = "-updated_at",
@@ -102,6 +104,19 @@ async def list_issues(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> IssueListResponse:
     """Issues of the projects the caller can view, filters combined with AND."""
+    sprint_id: uuid.UUID | None = None
+    backlog_only = False
+    if sprint is not None:
+        sprint_value = sprint.strip().lower()
+        if sprint_value == "backlog":
+            backlog_only = True
+        elif sprint_value:
+            try:
+                sprint_id = uuid.UUID(sprint_value)
+            except ValueError as error:
+                raise service.invalid_field(
+                    "sprint", "invalid_sprint", "Use backlog or a sprint id."
+                ) from error
     items, next_cursor = await service.list_issues(
         services,
         access,
@@ -112,6 +127,9 @@ async def list_issues(
                 status_category=status_category,
                 type_id=type_id,
                 priority_id=priority_id,
+                label_id=label,
+                sprint_id=sprint_id,
+                backlog_only=backlog_only,
                 updated_since=updated_since,
                 q=q.strip() if q and q.strip() else None,
             ),

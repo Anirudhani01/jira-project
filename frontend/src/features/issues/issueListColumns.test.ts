@@ -30,6 +30,8 @@ describe('issueListColumns', () => {
     expect(readIssueListColumns('demo', 'mobile')).toEqual({
       status: true,
       assignee: true,
+      labels: false,
+      updated: false,
     });
   });
 
