@@ -54,6 +54,18 @@ describe('RequireAuth', () => {
       `?next=${encodeURIComponent('/account?tab=sessions')}`,
     );
   });
+
+  it('includes hash in next when redirecting to login', async () => {
+    mockApi({ 'GET /auth/session': () => problem(401, 'unauthenticated') });
+    const { router } = renderApp('/account#sessions');
+    await screen.findByRole('heading', { name: 'Sign in to your workspace' });
+    expect(router.state.location.search).toBe(`?next=${encodeURIComponent('/account#sessions')}`);
+  });
+
+  it('uses safeNext for redirect targets (same helper as RequireAuth)', () => {
+    expect(safeNext('//evil.test/phish')).toBe('/');
+    expect(safeNext('/account?tab=sessions#pane')).toBe('/account?tab=sessions#pane');
+  });
 });
 
 describe('LoginPage', () => {

@@ -1,4 +1,8 @@
+import { UxOfflineNotice } from '../components/ux/UxOfflineNotice';
+
 import { cn } from '../lib/cn';
+
+import { useAppOnline } from './OnlineStatusProvider';
 
 import { MainOutlet } from './MainOutlet';
 import { useAuthRoute } from '../features/auth/useAuthRoute';
@@ -13,6 +17,7 @@ import { useOrgDashboardHome, useShowOrgSidebar } from './shell/useOrgShell';
 import { useShowProjectSidebar } from './shell/useProjectContext';
 
 function AppShellBody() {
+  const online = useAppOnline();
   const inProject = useShowProjectSidebar();
   const inOrgShell = useShowOrgSidebar();
   const orgDashboardHome = useOrgDashboardHome();
@@ -36,6 +41,11 @@ function AppShellBody() {
         Skip to content
       </a>
       <TopBar orgDashboardHome={orgDashboardHome} boardShell={boardShell} />
+      {!online ? (
+        <div className="px-4 pt-2 sm:px-6 lg:px-8">
+          <UxOfflineNotice offline variant="banner" />
+        </div>
+      ) : null}
       <div
         className={cn('flex min-h-0 flex-1', boardShell && 'min-w-0 max-w-full overflow-x-hidden')}
       >

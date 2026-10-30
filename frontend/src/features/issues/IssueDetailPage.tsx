@@ -22,7 +22,11 @@ import { Input } from '../../components/ui/Input';
 import { ErrorState, LoadingState } from '../../components/ui/States';
 import { ApiError } from '../../lib/api/errors';
 import type { Issue } from '../../lib/api/types';
+import { useAppOnline } from '../../app/OnlineStatusProvider';
 import { describeError } from '../../lib/forms';
+import { discardIssueFieldDraft, loadIssueFieldDrafts } from '../../lib/ux/draftStorage';
+import type { IssueFieldDraftPayload } from '../../lib/ux/draftTypes';
+import { registerIssueDetailDraftSnapshot } from '../../lib/ux/issueDetailDraft';
 import { useSession } from '../auth/api';
 import { IssueActivitySection } from './IssueActivitySection';
 import { IssueChildrenSection } from './IssueChildrenSection';
@@ -63,23 +67,32 @@ function SidebarField({ label, children }: { label: string; children: ReactNode 
   );
 }
 
+const OFFLINE_SAVE_HINT = 'Reconnect to save changes to the server.';
+
 function InlineEditPanel({
   children,
   onSave,
   onCancel,
   saving,
   saveDisabled,
+  saveDisabledHint,
 }: {
   children: ReactNode;
   onSave: () => void;
   onCancel: () => void;
   saving: boolean;
   saveDisabled?: boolean;
+  saveDisabledHint?: string | null;
 }) {
   return (
     <div className="rounded-lg border border-line bg-surface p-4 shadow-sm ring-1 ring-accent/10 sm:p-5">
       <div className="space-y-4">{children}</div>
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-line pt-4">
+        {saveDisabledHint ? (
+          <p className="mr-auto text-sm text-fg-muted" role="status">
+            {saveDisabledHint}
+          </p>
+        ) : null}
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           Cancel
         </Button>
@@ -152,6 +165,7 @@ function IssueView({
   const navigate = useNavigate();
   const location = useLocation();
   const session = useSession();
+  const online = useAppOnline();
   const types = useIssueTypes(org);
   const priorities = usePriorities(org);
   const members = useProjectMembers(org, issue.project_key);
@@ -166,6 +180,43 @@ function IssueView({
   const toast = useToast();
   const conflictNotified = useRef(false);
   const conflict = update.error instanceof ApiError && update.error.status === 412;
+  const [restoreOffer, setRestoreOffer] = useState<IssueFieldDraftPayload | null>(null);
+  const [dismissedRestoreKey, setDismissedRestoreKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    registerIssueDetailDraftSnapshot(() => {
+      if (editing !== 'summary' && editing !== 'description') return null;
+      const serverValue = editing === 'summary' ? issue.summary : (issue.description ?? '');
+      if (draft === serverValue) return null;
+      return {
+        org,
+        issueKey: issue.key,
+        field: editing,
+        value: draft,
+        baseVersion: issue.version,
+      };
+    });
+    return () => {
+      registerIssueDetailDraftSnapshot(null);
+    };
+  }, [draft, editing, issue.description, issue.key, issue.summary, issue.version, org]);
+
+  useEffect(() => {
+    if (editing !== null) return;
+    const stored = loadIssueFieldDrafts().find(
+      (entry) => entry.org === org && entry.issueKey === issue.key,
+    );
+    if (!stored) return;
+    if (issue.version > stored.baseVersion) {
+      discardIssueFieldDraft(org, issue.key, stored.field);
+      return;
+    }
+    const key = `${stored.org}:${stored.issueKey}:${stored.field}`;
+    if (dismissedRestoreKey === key) return;
+    queueMicrotask(() => {
+      setRestoreOffer(stored);
+    });
+  }, [dismissedRestoreKey, editing, issue.key, issue.version, org]);
 
   useEffect(() => {
     if (conflict) {
@@ -188,6 +239,7 @@ function IssueView({
     setDraft(value);
   };
   const save = (field: Field) => {
+    if (!online) return;
     const changes: IssueChanges =
       field === 'description' ? { description: draft || null } : { [field]: draft };
     update.mutate(
@@ -206,7 +258,7 @@ function IssueView({
   const currentLabels = issue.labels;
   const activeLabelIds = labelDraft ?? currentLabels.map((l) => l.id);
   const saveLabels = () => {
-    if (labelDraft === null) return;
+    if (labelDraft === null || !online) return;
     update.mutate(
       { changes: { label_ids: labelDraft }, version: issue.version },
       {
@@ -236,8 +288,60 @@ function IssueView({
   const childDone = children.data?.done ?? 0;
   const childTotal = children.data?.total ?? 0;
 
+  const applyRestore = (offer: IssueFieldDraftPayload) => {
+    start(offer.field, offer.value);
+    discardIssueFieldDraft(org, issue.key, offer.field);
+    setDismissedRestoreKey(`${offer.org}:${offer.issueKey}:${offer.field}`);
+    setRestoreOffer(null);
+  };
+
   return (
     <article aria-labelledby="issue-title" className="w-full space-y-6">
+      {restoreOffer ? (
+        <section
+          role="region"
+          aria-labelledby="issue-draft-restore-title"
+          className="rounded-lg border border-line bg-surface-2 px-4 py-3 text-sm"
+        >
+          <h2 id="issue-draft-restore-title" className="font-semibold text-fg">
+            Unsaved edits from before sign-in
+          </h2>
+          <p className="mt-1 text-fg-muted">
+            Restore your previous {restoreOffer.field} draft, then press Save to update the issue.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                applyRestore(restoreOffer);
+              }}
+            >
+              Restore draft
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                discardIssueFieldDraft(org, issue.key, restoreOffer.field);
+                setDismissedRestoreKey(
+                  `${restoreOffer.org}:${restoreOffer.issueKey}:${restoreOffer.field}`,
+                );
+                setRestoreOffer(null);
+              }}
+            >
+              Discard
+            </Button>
+          </div>
+        </section>
+      ) : null}
+      {!online ? (
+        <p role="status" className="text-sm text-fg-muted">
+          You are offline. You can keep editing locally, but saving requires a connection.
+        </p>
+      ) : null}
       {presentation === 'page' ? (
         <nav aria-label="Issue location" className="text-sm text-fg-muted">
           <Link
@@ -282,7 +386,8 @@ function IssueView({
         {editing === 'summary' ? (
           <InlineEditPanel
             saving={update.isPending}
-            saveDisabled={!draft.trim()}
+            saveDisabled={!draft.trim() || !online}
+            saveDisabledHint={!online ? OFFLINE_SAVE_HINT : null}
             onSave={() => {
               save('summary');
             }}
@@ -304,7 +409,7 @@ function IssueView({
                 }
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  if (draft.trim() && !update.isPending) save('summary');
+                  if (draft.trim() && online && !update.isPending) save('summary');
                 }
               }}
             />
@@ -351,6 +456,8 @@ function IssueView({
               description={issue.description}
               canEdit={canEdit}
               saving={update.isPending}
+              saveDisabled={!online}
+              saveDisabledHint={!online ? OFFLINE_SAVE_HINT : null}
               editing={editing === 'description'}
               draft={draft}
               onStartEdit={() => {
@@ -507,12 +614,17 @@ function IssueView({
                     </label>
                   ))}
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {!online ? (
+                    <p className="w-full text-sm text-fg-muted" role="status">
+                      {OFFLINE_SAVE_HINT}
+                    </p>
+                  ) : null}
                   <Button
                     type="button"
                     variant="primary"
                     size="sm"
-                    disabled={update.isPending}
+                    disabled={update.isPending || !online}
                     onClick={saveLabels}
                   >
                     Save

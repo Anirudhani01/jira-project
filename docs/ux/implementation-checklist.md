@@ -8,7 +8,7 @@ Companion to [global-ux-state-system.md](./global-ux-state-system.md).
 |-----------|--------|--------|
 | M0 | **Complete** | Documentation only |
 | M1 | **Complete** | Shared UX lib/components, DesignPage demo, tests; no feature migrations |
-| M2 | **Not started** | Session/offline shell — awaiting approval |
+| M2 | **Complete** | Session/offline shell + issue-detail draft pilot |
 | M3–M6 | Not started | — |
 
 **Rules:** One milestone per PR where possible. No API/OpenAPI/DB/auth behavior changes unless separately approved. Do not commit or push without explicit approval.
