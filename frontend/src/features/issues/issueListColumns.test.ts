@@ -18,8 +18,12 @@ describe('issueListColumns', () => {
 
   it('counts visible table columns from fixed plus optional toggles', () => {
     expect(issueListTableColumnCount(DEFAULT_ISSUE_LIST_COLUMNS)).toBe(5);
-    expect(issueListTableColumnCount({ status: false, assignee: false })).toBe(3);
-    expect(issueListTableColumnCount({ status: true, assignee: false })).toBe(4);
+    expect(
+      issueListTableColumnCount({ status: false, assignee: false, labels: false, updated: false }),
+    ).toBe(3);
+    expect(
+      issueListTableColumnCount({ status: true, assignee: false, labels: false, updated: false }),
+    ).toBe(4);
   });
 
   it('ignores legacy type/priority keys in storage', () => {
@@ -39,6 +43,8 @@ describe('issueListColumns', () => {
     writeIssueListColumns('demo', 'mobile', {
       status: true,
       assignee: false,
+      labels: false,
+      updated: false,
     });
     expect(readIssueListColumns('demo', 'mobile')).toMatchObject({
       assignee: false,

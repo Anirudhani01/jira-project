@@ -94,7 +94,7 @@ def decode_list_cursor(cursor: str, sort: str) -> tuple[Any, ...]:
         raise invalid_cursor() from error
 
 
-def _status_category_rank(category: str) -> ColumnElement[int]:
+def _status_category_rank() -> ColumnElement[int]:
     return case(
         (WorkflowStatus.category == "todo", 0),
         (WorkflowStatus.category == "in_progress", 1),
@@ -108,38 +108,24 @@ def list_order(sort: str) -> tuple[Any, ...]:
     field = sort_field(sort)
     if field in ("updated_at", "created_at"):
         column = getattr(Issue, field)
-        tie = Issue.id
-    elif field == "key":
-        column = (Project.key, Issue.seq)
-        tie = Issue.id
-    elif field == "priority":
-        column = (Priority.sort_order,)
-        tie = Issue.seq
-    else:
-        rank = _status_category_rank(WorkflowStatus.category)
-        column = (rank, WorkflowStatus.position)
-        tie = Issue.id
-
-    if field in ("updated_at", "created_at"):
-        primary = column.desc() if descending else column.asc()  # type: ignore[union-attr]
-        return (primary, tie.desc() if descending else tie.asc())
-    if field == "priority":
-        (sort_col,) = column
-        primary = sort_col.desc() if descending else sort_col.asc()
-        return (
-            primary,
-            tie.desc() if descending else tie.asc(),
-            Issue.id.desc() if descending else Issue.id.asc(),
-        )
-    if field == "key":
-        pk, seq = column
         if descending:
-            return (pk.desc(), seq.desc(), tie.desc())
-        return (pk.asc(), seq.asc(), tie.asc())
-    rank, position = column
+            return (column.desc(), Issue.id.desc())
+        return (column.asc(), Issue.id.asc())
+    if field == "key":
+        pk, seq = (Project.key, Issue.seq)
+        if descending:
+            return (pk.desc(), seq.desc(), Issue.id.desc())
+        return (pk.asc(), seq.asc(), Issue.id.asc())
+    if field == "priority":
+        primary = Priority.sort_order.desc() if descending else Priority.sort_order.asc()
+        seq_order = Issue.seq.desc() if descending else Issue.seq.asc()
+        id_order = Issue.id.desc() if descending else Issue.id.asc()
+        return (primary, seq_order, id_order)
+    rank = _status_category_rank()
+    position = WorkflowStatus.position
     if descending:
-        return (rank.desc(), position.desc(), tie.desc())
-    return (rank.asc(), position.asc(), tie.asc())
+        return (rank.desc(), position.desc(), Issue.id.desc())
+    return (rank.asc(), position.asc(), Issue.id.asc())
 
 
 def keyset_condition(sort: str, after: tuple[Any, ...]) -> ColumnElement[bool]:  # noqa: PLR0911
@@ -147,14 +133,14 @@ def keyset_condition(sort: str, after: tuple[Any, ...]) -> ColumnElement[bool]: 
     field = sort_field(sort)
 
     if field in ("updated_at", "created_at"):
-        value, last_id = after  # type: ignore[misc]
+        value, last_id = after
         column = getattr(Issue, field)
         if descending:
             return or_(column < value, and_(column == value, Issue.id < last_id))
         return or_(column > value, and_(column == value, Issue.id > last_id))
 
     if field == "key":
-        project_key, seq, last_id = after  # type: ignore[misc]
+        project_key, seq, last_id = after
         if descending:
             return or_(
                 Project.key < project_key,
@@ -168,7 +154,7 @@ def keyset_condition(sort: str, after: tuple[Any, ...]) -> ColumnElement[bool]: 
         )
 
     if field == "priority":
-        sort_order, seq, last_id = after  # type: ignore[misc]
+        sort_order, seq, last_id = after
         if descending:
             return or_(
                 Priority.sort_order < sort_order,
@@ -189,8 +175,8 @@ def keyset_condition(sort: str, after: tuple[Any, ...]) -> ColumnElement[bool]: 
             ),
         )
 
-    rank_value, position, last_id = after  # type: ignore[misc]
-    rank = _status_category_rank(WorkflowStatus.category)
+    rank_value, position, last_id = after
+    rank = _status_category_rank()
     if descending:
         return or_(
             rank < rank_value,
