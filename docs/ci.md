@@ -2,6 +2,10 @@
 
 GitHub Actions runs [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) on pull requests and on pushes to `main`. All steps use the standard free `ubuntu-24.04` runner (no paid services).
 
+## UX state standards (PR authors)
+
+User-facing changes should follow the [Global UX State System](../ux/global-ux-state-system.md). Use the [implementation checklist](../ux/implementation-checklist.md) for per-PR UX items and milestone scope when working on that program.
+
 ## Local vs CI
 
 Locally, **`make ci`** always runs the full gate (including migration round-trip and full gitleaks history).
