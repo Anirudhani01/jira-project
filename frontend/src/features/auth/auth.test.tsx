@@ -48,7 +48,7 @@ describe('RequireAuth', () => {
   it('redirects signed-out users to login with a next path', async () => {
     mockApi({ 'GET /auth/session': () => problem(401, 'unauthenticated') });
     const { router } = renderApp('/account?tab=sessions');
-    await screen.findByRole('heading', { name: 'Sign in' });
+    await screen.findByRole('heading', { name: 'Sign in to your workspace' });
     expect(router.state.location.pathname).toBe('/login');
     expect(router.state.location.search).toBe(
       `?next=${encodeURIComponent('/account?tab=sessions')}`,

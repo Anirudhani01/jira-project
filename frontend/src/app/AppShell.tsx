@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router';
 
+import { cn } from '../lib/cn';
 import { Breadcrumbs } from './shell/Breadcrumbs';
 import { MobileProjectDrawer, ProjectSidebar } from './shell/ProjectSidebar';
 import { ShellProvider } from './shell/ShellContext';
@@ -13,7 +14,7 @@ function AppShellBody() {
   const authRoute = useAuthRoute();
 
   return (
-    <div className="flex min-h-screen flex-col bg-bg text-fg">
+    <div className={cn('flex min-h-screen flex-col text-fg', authRoute ? 'bg-surface' : 'bg-bg')}>
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[70] focus:rounded focus:bg-surface focus:px-3 focus:py-2 focus:shadow"
@@ -31,7 +32,7 @@ function AppShellBody() {
               inProject
                 ? 'flex-1 px-4 py-6 sm:px-6 lg:px-8'
                 : authRoute
-                  ? 'flex-1 px-4 py-6 lg:px-6'
+                  ? 'flex-1 p-0'
                   : 'mx-auto w-full max-w-6xl flex-1 px-4 py-8'
             }
           >

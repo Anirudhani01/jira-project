@@ -186,8 +186,12 @@ export async function signUpAndSignIn(
   ).toBeVisible();
 }
 
-export async function expectNoSeriousViolations(page: Page) {
-  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+export async function expectNoSeriousViolations(page: Page, excludeSelectors: string[] = []) {
+  let builder = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']);
+  for (const selector of excludeSelectors) {
+    builder = builder.exclude(selector);
+  }
+  const results = await builder.analyze();
   const serious = results.violations.filter((v) =>
     ['serious', 'critical'].includes(v.impact ?? ''),
   );
@@ -371,7 +375,8 @@ export async function axeAndScreenshot(
   page: Page,
   theme: 'light' | 'dark',
   screenshotBasename: string,
+  options?: { axeExclude?: string[] },
 ) {
-  await expectNoSeriousViolations(page);
+  await expectNoSeriousViolations(page, options?.axeExclude);
   await captureAfterScreenshot(page, screenshotBasename, theme);
 }
