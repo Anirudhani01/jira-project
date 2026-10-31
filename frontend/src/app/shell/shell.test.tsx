@@ -125,7 +125,9 @@ describe('app shell (PR 2)', () => {
     );
     expect(screen.queryByRole('navigation', { name: 'Organization' })).toBeNull();
     expect(container.querySelector('.admin-shell')).toBeTruthy();
-    expect(await screen.findByRole('heading', { name: 'Organization settings' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Organization settings' }),
+    ).toBeInTheDocument();
   });
 
   it('global search on org settings navigates to org home with query on Enter', async () => {

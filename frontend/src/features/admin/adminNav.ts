@@ -36,9 +36,7 @@ export function adminNavGroups(orgSlug: string): AdminNavGroup[] {
     {
       id: 'overview',
       label: 'Overview',
-      items: [
-        { id: 'overview', label: 'Overview', to: base, icon: LayoutDashboard },
-      ],
+      items: [{ id: 'overview', label: 'Overview', to: base, icon: LayoutDashboard }],
     },
     {
       id: 'organization',

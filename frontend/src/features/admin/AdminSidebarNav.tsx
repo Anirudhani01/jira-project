@@ -78,11 +78,7 @@ export function AdminSidebarNav({
             </p>
             <div className="flex flex-col gap-0.5">
               {group.items.map((item) => (
-                <NavItemLink
-                  key={item.id}
-                  item={item}
-                  {...(onNavigate ? { onNavigate } : {})}
-                />
+                <NavItemLink key={item.id} item={item} {...(onNavigate ? { onNavigate } : {})} />
               ))}
             </div>
           </div>
