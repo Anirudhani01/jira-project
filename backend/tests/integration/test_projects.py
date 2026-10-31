@@ -254,6 +254,7 @@ async def test_project_visibility_and_role_restrictions(tenant: Tenant) -> None:
             "project.members.manage",
             "project.view",
             "sprint.manage",
+            "version.manage",
         ]
         await send(
             tenant.http, "POST", f"{base}/members", {"user_id": str(viewer_id), "role": "viewer"}

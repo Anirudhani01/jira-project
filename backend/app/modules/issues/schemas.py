@@ -40,6 +40,7 @@ class CreateIssueRequest(_Request):
     parent_id: uuid.UUID | None = None
     label_ids: list[uuid.UUID] | None = None
     story_points: StoryPoints | None = None
+    fix_version_id: uuid.UUID | None = None
 
 
 class UpdateIssueRequest(_Request):
@@ -54,6 +55,7 @@ class UpdateIssueRequest(_Request):
     parent_id: uuid.UUID | None = None
     label_ids: list[uuid.UUID] | None = None
     story_points: StoryPoints | None = None  # send null to clear
+    fix_version_id: uuid.UUID | None = None  # send null to clear
 
 
 class TypeRef(BaseModel):
@@ -72,6 +74,12 @@ class SprintRef(BaseModel):
     id: uuid.UUID
     name: str
     state: str
+
+
+class VersionRef(BaseModel):
+    id: uuid.UUID
+    name: str
+    status: str
 
 
 class PriorityRef(BaseModel):
@@ -110,6 +118,7 @@ class IssueResponse(BaseModel):
     assignee: UserRef | None
     parent: IssueRefShort | None
     sprint: SprintRef | None
+    fix_version: VersionRef | None
     story_points: int | None
     labels: list[LabelRef]
     version: int

@@ -64,6 +64,8 @@ ALLOWED_TABLES = frozenset(
         "sprints",
         # M11
         "notifications",
+        # versions / releases
+        "versions",
     }
 )
 
