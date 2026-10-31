@@ -43,7 +43,7 @@ function itemClass(isActive: boolean) {
   return cn(
     'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm no-underline outline-none',
     'hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent',
-    isActive ? 'bg-accent-soft font-medium text-accent' : 'text-fg-muted',
+    isActive ? 'bg-accent-soft font-medium text-fg' : 'text-fg-muted',
   );
 }
 
