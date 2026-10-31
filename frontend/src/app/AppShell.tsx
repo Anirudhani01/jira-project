@@ -31,9 +31,7 @@ function AppShellBody() {
       className={cn(
         'flex min-h-screen flex-col text-fg',
         authRoute && 'bg-surface',
-        !authRoute &&
-          orgDashboardHome &&
-          'org-dashboard-shell w-full min-w-0 overflow-x-hidden',
+        !authRoute && orgDashboardHome && 'org-dashboard-shell w-full min-w-0 overflow-x-hidden',
         !authRoute && inAdminShell && 'admin-shell',
         !authRoute && boardShell && 'board-shell w-full min-w-0 overflow-x-hidden',
         !authRoute && !orgDashboardHome && !inAdminShell && !boardShell && 'bg-bg',
