@@ -47,7 +47,10 @@ def _conflict(code: str, message: str) -> AppError:
     return AppError(409, code, message)
 
 
-def _response(project_key: str, sprint: Sprint, counts: dict[uuid.UUID, int]) -> SprintResponse:
+def _response(
+    project_key: str, sprint: Sprint, stats: dict[uuid.UUID, repository.SprintStats]
+) -> SprintResponse:
+    own = stats.get(sprint.id, repository.SprintStats())
     return SprintResponse(
         id=sprint.id,
         project_key=project_key,
@@ -57,7 +60,9 @@ def _response(project_key: str, sprint: Sprint, counts: dict[uuid.UUID, int]) ->
         start_at=sprint.start_at,
         end_at=sprint.end_at,
         completed_at=sprint.completed_at,
-        issue_count=counts.get(sprint.id, 0),
+        issue_count=own.issue_count,
+        points_total=own.points_total,
+        points_done=own.points_done,
     )
 
 
@@ -65,7 +70,7 @@ async def _one(session: AsyncSession, project: Project, sprint_id: uuid.UUID) ->
     sprint = await repository.find_sprint(session, project.id, sprint_id)
     if sprint is None:
         raise not_found()
-    counts = await repository.issue_counts(session, project.id)
+    counts = await repository.sprint_stats(session, project.id)
     return _response(project.key, sprint, counts)
 
 
@@ -81,7 +86,7 @@ async def list_sprints(services: IdentityServices, access: ProjectAccess) -> Spr
         _,
     ):
         sprints = await repository.list_sprints(session, project.id)
-        counts = await repository.issue_counts(session, project.id)
+        counts = await repository.sprint_stats(session, project.id)
         return SprintListResponse(items=[_response(project.key, s, counts) for s in sprints])
 
 
@@ -241,7 +246,7 @@ async def get_backlog(services: IdentityServices, access: ProjectAccess) -> Back
         _,
     ):
         sprints = await repository.list_sprints(session, project.id, include_closed=False)
-        counts = await repository.issue_counts(session, project.id)
+        counts = await repository.sprint_stats(session, project.id)
         rows = await issues.list_backlog_views(session, project.id, limit=BACKLOG_CAP + 1)
         truncated = len(rows) > BACKLOG_CAP
         cards = await issue_responses(session, rows[:BACKLOG_CAP])

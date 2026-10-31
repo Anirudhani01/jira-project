@@ -62,6 +62,9 @@ class Issue(Base):
         ),
         CheckConstraint("parent_id <> id", name="parent_not_self"),
         CheckConstraint("version > 0", name="version_positive"),
+        CheckConstraint(
+            "story_points IS NULL OR story_points BETWEEN 0 AND 100", name="story_points_range"
+        ),
         _fk(
             "fk_issues_org_id_sprints",
             ["org_id", "project_id", "sprint_id"],
@@ -154,6 +157,7 @@ class Issue(Base):
         ),
         deferred=True,
     )
+    story_points: Mapped[int | None] = mapped_column(SmallInteger)
     version: Mapped[int] = mapped_column(Integer, server_default=text("1"))
     done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(

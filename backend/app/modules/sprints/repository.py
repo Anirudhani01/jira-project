@@ -1,6 +1,7 @@
 """Sprint data access (M10). Runs under RLS inside an org transaction."""
 
 import uuid
+from dataclasses import dataclass
 from typing import Any
 
 from sqlalchemy import case, delete, func, insert, select, update
@@ -72,10 +73,28 @@ async def list_sprints(
     )
 
 
-async def issue_counts(session: AsyncSession, project_id: uuid.UUID) -> dict[uuid.UUID, int]:
+@dataclass(frozen=True, slots=True)
+class SprintStats:
+    issue_count: int = 0
+    points_total: int = 0
+    points_done: int = 0
+
+
+async def sprint_stats(
+    session: AsyncSession, project_id: uuid.UUID
+) -> dict[uuid.UUID, SprintStats]:
+    """Live issue count and story-point totals per sprint of a project; ``points_done``
+    counts issues whose status category is ``done``."""
     context = require_org_context(session)
+    done_points = func.sum(case((WorkflowStatus.category == "done", Issue.story_points), else_=0))
     rows = await session.execute(
-        select(Issue.sprint_id, func.count())
+        select(
+            Issue.sprint_id,
+            func.count(),
+            func.coalesce(func.sum(Issue.story_points), 0),
+            func.coalesce(done_points, 0),
+        )
+        .join(WorkflowStatus, WorkflowStatus.id == Issue.status_id)
         .where(
             Issue.org_id == context.org_id,
             Issue.project_id == project_id,
@@ -84,7 +103,11 @@ async def issue_counts(session: AsyncSession, project_id: uuid.UUID) -> dict[uui
         )
         .group_by(Issue.sprint_id)
     )
-    return {sprint_id: count for sprint_id, count in rows if sprint_id is not None}
+    return {
+        sprint_id: SprintStats(int(count), int(total), int(done))
+        for sprint_id, count, total, done in rows
+        if sprint_id is not None
+    }
 
 
 async def create_sprint(

@@ -101,6 +101,7 @@ export interface NewIssue {
   assignee_id?: string | null;
   parent_id?: string | null;
   label_ids?: string[];
+  story_points?: number | null;
 }
 
 /** Create with an Idempotency-Key, so a retried submission never creates a duplicate. */
@@ -120,7 +121,16 @@ export function useCreateIssue(org: string, project: string) {
 }
 
 export type IssueChanges = Partial<
-  Pick<NewIssue, 'summary' | 'type_id' | 'priority_id' | 'assignee_id' | 'parent_id' | 'label_ids'>
+  Pick<
+    NewIssue,
+    | 'summary'
+    | 'type_id'
+    | 'priority_id'
+    | 'assignee_id'
+    | 'parent_id'
+    | 'label_ids'
+    | 'story_points'
+  >
 > & {
   description?: string | null;
   reporter_id?: string;

@@ -200,6 +200,20 @@ export function IssueCard({
       ) : (
         <PriorityIcon name={card.priority.name} />
       )}
+      {card.story_points !== null ? (
+        <span
+          title="Story points"
+          aria-label={`${String(card.story_points)} story points`}
+          className={cn(
+            'ml-auto rounded-full px-1.5 text-[10px] font-semibold',
+            boardChrome
+              ? 'bg-[var(--board-accent-soft)] text-[var(--board-muted)]'
+              : 'bg-surface-2 text-fg-muted',
+          )}
+        >
+          {card.story_points}
+        </span>
+      ) : null}
       {card.labels.slice(0, 3).map((label) => (
         <LabelChip key={label.id} name={label.name} color={label.color} boardChrome={boardChrome} />
       ))}
