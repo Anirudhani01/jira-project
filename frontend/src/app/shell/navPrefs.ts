@@ -1,10 +1,17 @@
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router';
 
 import { useSession } from '../../features/auth/api';
+import { usePersisted } from '../../lib/persistedState';
 
 /** Per-user, per-organization navigation preferences, kept in this browser only
  * (docs/ui-redesign/jira-reference-research.md §2.1: starred, recent, customised sidebar). */
+export function useNavKey(org: string, name: string): string | null {
+  const session = useSession();
+  const userId = session.data?.user.id;
+  return userId ? `jira.nav.${userId}.${org.toLowerCase()}.${name}` : null;
+}
+
 export interface StarredProject {
   key: string;
   name: string;
@@ -21,66 +28,6 @@ export type SidebarItem = (typeof SIDEBAR_ITEMS)[number];
 
 const MAX_RECENT = 8;
 const MAX_STARRED = 20;
-
-function write(key: string, value: unknown): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* storage unavailable: the preference lasts for this session only */
-  }
-}
-
-function useNavKey(org: string, name: string): string | null {
-  const session = useSession();
-  const userId = session.data?.user.id;
-  return userId ? `jira.nav.${userId}.${org.toLowerCase()}.${name}` : null;
-}
-
-const CHANGE_EVENT = 'jira-nav-change';
-
-function subscribe(onChange: () => void): () => void {
-  window.addEventListener(CHANGE_EVENT, onChange);
-  window.addEventListener('storage', onChange);
-  return () => {
-    window.removeEventListener(CHANGE_EVENT, onChange);
-    window.removeEventListener('storage', onChange);
-  };
-}
-
-function readRaw(storageKey: string | null): string | null {
-  if (!storageKey) return null;
-  try {
-    return localStorage.getItem(storageKey);
-  } catch {
-    return null;
-  }
-}
-
-/** State backed by localStorage, shared by every component and kept in sync across tabs. */
-function usePersisted<T>(storageKey: string | null, fallback: T): [T, (next: T) => void] {
-  const raw = useSyncExternalStore(
-    subscribe,
-    () => readRaw(storageKey),
-    () => null,
-  );
-  const value = useMemo<T>(() => {
-    if (raw === null) return fallback;
-    try {
-      return JSON.parse(raw) as T;
-    } catch {
-      return fallback;
-    }
-  }, [raw, fallback]);
-  const set = useCallback(
-    (next: T) => {
-      if (!storageKey) return;
-      write(storageKey, next);
-      window.dispatchEvent(new Event(CHANGE_EVENT));
-    },
-    [storageKey],
-  );
-  return [value, set];
-}
 
 const NO_STARRED: StarredProject[] = [];
 const NO_RECENT: RecentItem[] = [];

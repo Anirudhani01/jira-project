@@ -21,7 +21,7 @@ export function useBacklog(org: string, project: string, enabled = true) {
 }
 
 /** Every sprint mutation refreshes the backlog and the (scrum) board. */
-function useRefresh(org: string, project: string) {
+export function useRefresh(org: string, project: string) {
   const queryClient = useQueryClient();
   return async () => {
     await queryClient.invalidateQueries({ queryKey: backlogKey(org, project) });
@@ -92,6 +92,57 @@ export function useMoveToSprint(org: string, project: string) {
         json: { sprint_id: sprintId },
         headers: { 'If-Match': `"v${String(version)}"` },
       }),
+    onSettled: refresh,
+  });
+}
+
+export function useUpdateSprint(org: string, project: string) {
+  const refresh = useRefresh(org, project);
+  return useMutation({
+    mutationFn: ({ id, name, goal }: { id: string; name: string; goal: string | null }) =>
+      apiFetch<Sprint>(sprintPath(org, id), { method: 'PATCH', json: { name, goal } }),
+    onSettled: refresh,
+  });
+}
+
+export interface BulkMoveResult {
+  moved: string[];
+  failed: { key: string; message: string }[];
+}
+
+/** Moves several issues into a sprint (or back to the backlog) one at a time, so one failure
+ * never blocks the rest, and reports per-issue results (a dedicated bulk endpoint is PR 15). */
+export function useBulkMoveToSprint(org: string, project: string) {
+  const refresh = useRefresh(org, project);
+  return useMutation({
+    mutationFn: async ({
+      issues,
+      sprintId,
+    }: {
+      issues: { key: string; version: number }[];
+      sprintId: string | null;
+    }): Promise<BulkMoveResult> => {
+      const result: BulkMoveResult = { moved: [], failed: [] };
+      for (const issue of issues) {
+        try {
+          await apiFetch<Issue>(
+            `/orgs/${encodeURIComponent(org)}/issues/${encodeURIComponent(issue.key)}/move`,
+            {
+              method: 'POST',
+              json: { sprint_id: sprintId },
+              headers: { 'If-Match': `"v${String(issue.version)}"` },
+            },
+          );
+          result.moved.push(issue.key);
+        } catch (error) {
+          result.failed.push({
+            key: issue.key,
+            message: error instanceof Error ? error.message : 'Could not move',
+          });
+        }
+      }
+      return result;
+    },
     onSettled: refresh,
   });
 }
