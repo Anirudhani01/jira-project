@@ -37,7 +37,7 @@ test('create issue dialog — comboboxes, create another, axe', async ({ page, r
   expect(serious.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 
   await dialog.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.getByText(`${key}-1 created`)).toBeVisible();
+  await expect(page.getByText(`${key}-1 created`).first()).toBeVisible();
   await expect(dialog.getByLabel('Summary')).toHaveValue('');
   // Shared fields are kept for the next one.
   await expect(dialog.getByRole('combobox', { name: /^Priority/ })).toContainText('High');
