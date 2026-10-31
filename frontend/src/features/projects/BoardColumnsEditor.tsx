@@ -1,5 +1,22 @@
-import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
-import { useId, useMemo, useState } from 'react';
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from 'lucide-react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
 
 import { useAppOnline } from '../../app/OnlineStatusProvider';
 import { Badge } from '../../components/ui/Badge';
@@ -36,6 +53,50 @@ function fromBoard(board: Board): ColumnDraft[] {
   }));
 }
 
+/** One draggable column row; `children` receives the drag handle to place where it fits. */
+function SortableRow({
+  uid,
+  label,
+  disabled,
+  children,
+}: {
+  uid: string;
+  label: string;
+  disabled: boolean;
+  children: (handle: ReactNode) => ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: uid, disabled });
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`space-y-2 rounded-lg border border-line bg-surface p-3 ${isDragging ? 'z-10 shadow-lg' : ''}`}
+    >
+      {children(
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          disabled={disabled}
+          aria-label={`Drag ${label} to reorder`}
+          className="flex h-8 w-6 cursor-grab touch-none items-center justify-center rounded text-fg-muted hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="size-4" aria-hidden="true" />
+        </button>,
+      )}
+    </li>
+  );
+}
+
 const sameDrafts = (a: ColumnDraft[], b: ColumnDraft[]) => JSON.stringify(a) === JSON.stringify(b);
 
 /** Edits column names, order, WIP limits and which statuses each column holds. */
@@ -59,6 +120,18 @@ export function BoardColumnsEditor({
   const online = useAppOnline();
   const toast = useToast();
   const formId = useId();
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    setDraft((rows) => {
+      const from = rows.findIndex((r) => r.uid === active.id);
+      const to = rows.findIndex((r) => r.uid === over.id);
+      return from < 0 || to < 0 ? rows : arrayMove(rows, from, to);
+    });
+  };
 
   const statuses = workflow.statuses;
   const statusName = new Map(statuses.map((s) => [s.id, s.name]));
@@ -109,119 +182,143 @@ export function BoardColumnsEditor({
         </p>
       ) : null}
 
-      <ol className="space-y-3">
-        {draft.map((column, index) => (
-          <li key={column.uid} className="space-y-2 rounded-lg border border-line p-3">
-            <div className="flex flex-wrap items-end gap-2">
-              <div className="min-w-40 flex-1">
-                <label className="text-xs font-medium text-fg-muted" htmlFor={`${column.uid}-name`}>
-                  Column {index + 1} name
-                </label>
-                <Input
-                  id={`${column.uid}-name`}
-                  value={column.name}
-                  maxLength={100}
-                  disabled={disabled}
-                  aria-invalid={Boolean(errors.names[column.uid])}
-                  aria-describedby={errors.names[column.uid] ? `${column.uid}-name-err` : undefined}
-                  onChange={(e) => {
-                    update(column.uid, { name: e.target.value });
-                  }}
-                />
-                {errors.names[column.uid] ? (
-                  <p id={`${column.uid}-name-err`} className="mt-1 text-xs text-danger">
-                    {errors.names[column.uid]}
-                  </p>
-                ) : null}
-              </div>
-              <div className="w-28">
-                <label className="text-xs font-medium text-fg-muted" htmlFor={`${column.uid}-wip`}>
-                  WIP limit
-                </label>
-                <Input
-                  id={`${column.uid}-wip`}
-                  inputMode="numeric"
-                  placeholder="None"
-                  value={column.wip}
-                  disabled={disabled}
-                  aria-invalid={Boolean(errors.wip[column.uid])}
-                  aria-describedby={errors.wip[column.uid] ? `${column.uid}-wip-err` : undefined}
-                  onChange={(e) => {
-                    update(column.uid, { wip: e.target.value });
-                  }}
-                />
-              </div>
-              <div className="flex gap-1">
-                <IconButton
-                  label={`Move ${column.name || `column ${String(index + 1)}`} up`}
-                  size="sm"
-                  disabled={disabled || index === 0}
-                  onClick={() => {
-                    setDraft((rows) => moveColumn(rows, index, -1));
-                  }}
-                >
-                  <ArrowUp className="size-4" aria-hidden="true" />
-                </IconButton>
-                <IconButton
-                  label={`Move ${column.name || `column ${String(index + 1)}`} down`}
-                  size="sm"
-                  disabled={disabled || index === draft.length - 1}
-                  onClick={() => {
-                    setDraft((rows) => moveColumn(rows, index, 1));
-                  }}
-                >
-                  <ArrowDown className="size-4" aria-hidden="true" />
-                </IconButton>
-                <IconButton
-                  label={`Remove ${column.name || `column ${String(index + 1)}`}`}
-                  size="sm"
-                  disabled={disabled || column.statusIds.length > 0}
-                  title={
-                    column.statusIds.length > 0
-                      ? 'Move its statuses to another column first'
-                      : 'Remove column'
-                  }
-                  onClick={() => {
-                    setDraft((rows) => rows.filter((r) => r.uid !== column.uid));
-                  }}
-                >
-                  <Trash2 className="size-4" aria-hidden="true" />
-                </IconButton>
-              </div>
-            </div>
-            {errors.wip[column.uid] ? (
-              <p id={`${column.uid}-wip-err`} className="text-xs text-danger">
-                {errors.wip[column.uid]}
-              </p>
-            ) : null}
-            <ul className="flex flex-wrap gap-2" aria-label={`Statuses in ${column.name}`}>
-              {column.statusIds.length === 0 ? (
-                <li className="text-xs text-fg-subtle">No statuses</li>
-              ) : null}
-              {column.statusIds.map((statusId) => (
-                <li key={statusId} className="flex items-center gap-1">
-                  <Badge tone="neutral">{statusName.get(statusId) ?? statusId}</Badge>
-                  <select
-                    aria-label={`Column for ${statusName.get(statusId) ?? statusId}`}
-                    className="h-7 rounded-md border border-line-strong bg-surface px-1 text-xs text-fg"
-                    value={column.uid}
-                    disabled={disabled}
-                    onChange={(e) => {
-                      setDraft((rows) => assignStatus(rows, statusId, e.target.value));
-                    }}
-                  >
-                    {draft.map((c, i) => (
-                      <option key={c.uid} value={c.uid}>
-                        {c.name || `Column ${String(i + 1)}`}
-                      </option>
-                    ))}
-                  </select>
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
-      </ol>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <SortableContext items={draft.map((c) => c.uid)} strategy={verticalListSortingStrategy}>
+          <ol className="space-y-3">
+            {draft.map((column, index) => (
+              <SortableRow
+                key={column.uid}
+                uid={column.uid}
+                label={column.name || `column ${String(index + 1)}`}
+                disabled={disabled}
+              >
+                {(handle) => (
+                  <>
+                    <div className="flex flex-wrap items-end gap-2">
+                      {handle}
+                      <div className="min-w-40 flex-1">
+                        <label
+                          className="text-xs font-medium text-fg-muted"
+                          htmlFor={`${column.uid}-name`}
+                        >
+                          Column {index + 1} name
+                        </label>
+                        <Input
+                          id={`${column.uid}-name`}
+                          value={column.name}
+                          maxLength={100}
+                          disabled={disabled}
+                          aria-invalid={Boolean(errors.names[column.uid])}
+                          aria-describedby={
+                            errors.names[column.uid] ? `${column.uid}-name-err` : undefined
+                          }
+                          onChange={(e) => {
+                            update(column.uid, { name: e.target.value });
+                          }}
+                        />
+                        {errors.names[column.uid] ? (
+                          <p id={`${column.uid}-name-err`} className="mt-1 text-xs text-danger">
+                            {errors.names[column.uid]}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="w-28">
+                        <label
+                          className="text-xs font-medium text-fg-muted"
+                          htmlFor={`${column.uid}-wip`}
+                        >
+                          WIP limit
+                        </label>
+                        <Input
+                          id={`${column.uid}-wip`}
+                          inputMode="numeric"
+                          placeholder="None"
+                          value={column.wip}
+                          disabled={disabled}
+                          aria-invalid={Boolean(errors.wip[column.uid])}
+                          aria-describedby={
+                            errors.wip[column.uid] ? `${column.uid}-wip-err` : undefined
+                          }
+                          onChange={(e) => {
+                            update(column.uid, { wip: e.target.value });
+                          }}
+                        />
+                      </div>
+                      <div className="flex gap-1">
+                        <IconButton
+                          label={`Move ${column.name || `column ${String(index + 1)}`} up`}
+                          size="sm"
+                          disabled={disabled || index === 0}
+                          onClick={() => {
+                            setDraft((rows) => moveColumn(rows, index, -1));
+                          }}
+                        >
+                          <ArrowUp className="size-4" aria-hidden="true" />
+                        </IconButton>
+                        <IconButton
+                          label={`Move ${column.name || `column ${String(index + 1)}`} down`}
+                          size="sm"
+                          disabled={disabled || index === draft.length - 1}
+                          onClick={() => {
+                            setDraft((rows) => moveColumn(rows, index, 1));
+                          }}
+                        >
+                          <ArrowDown className="size-4" aria-hidden="true" />
+                        </IconButton>
+                        <IconButton
+                          label={`Remove ${column.name || `column ${String(index + 1)}`}`}
+                          size="sm"
+                          disabled={disabled || column.statusIds.length > 0}
+                          title={
+                            column.statusIds.length > 0
+                              ? 'Move its statuses to another column first'
+                              : 'Remove column'
+                          }
+                          onClick={() => {
+                            setDraft((rows) => rows.filter((r) => r.uid !== column.uid));
+                          }}
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
+                        </IconButton>
+                      </div>
+                    </div>
+                    {errors.wip[column.uid] ? (
+                      <p id={`${column.uid}-wip-err`} className="text-xs text-danger">
+                        {errors.wip[column.uid]}
+                      </p>
+                    ) : null}
+                    <ul className="flex flex-wrap gap-2" aria-label={`Statuses in ${column.name}`}>
+                      {column.statusIds.length === 0 ? (
+                        <li className="text-xs text-fg-subtle">No statuses</li>
+                      ) : null}
+                      {column.statusIds.map((statusId) => (
+                        <li key={statusId} className="flex items-center gap-1">
+                          <Badge tone="neutral">{statusName.get(statusId) ?? statusId}</Badge>
+                          <select
+                            aria-label={`Column for ${statusName.get(statusId) ?? statusId}`}
+                            className="h-7 rounded-md border border-line-strong bg-surface px-1 text-xs text-fg"
+                            value={column.uid}
+                            disabled={disabled}
+                            onChange={(e) => {
+                              setDraft((rows) => assignStatus(rows, statusId, e.target.value));
+                            }}
+                          >
+                            {draft.map((c, i) => (
+                              <option key={c.uid} value={c.uid}>
+                                {c.name || `Column ${String(i + 1)}`}
+                              </option>
+                            ))}
+                          </select>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </SortableRow>
+            ))}
+          </ol>
+        </SortableContext>
+      </DndContext>
 
       {unmapped.length > 0 ? (
         <div className="space-y-2 rounded-lg border border-warning/50 p-3">

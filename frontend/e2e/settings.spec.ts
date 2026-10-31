@@ -25,6 +25,21 @@ test('project settings: rename a board column and set a WIP limit, see it on the
   await expect(name).toBeVisible();
   await noSeriousViolations(page);
 
+  // Drag the first column below the second, then back with the keyboard-free move button.
+  const first = await name.inputValue();
+  const handle = page.getByRole('button', { name: new RegExp(`Drag ${first} to reorder`) });
+  const target = page.getByRole('button', { name: /Drag In Progress to reorder/ });
+  const from = (await handle.boundingBox())!;
+  const to = (await target.boundingBox())!;
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2 + 10, { steps: 12 });
+  await page.mouse.up();
+  await expect(page.getByLabel('Column 2 name')).toHaveValue(first);
+  await page.mouse.move(0, 0);
+  await page.getByRole('button', { name: `Move ${first} up` }).click();
+  await expect(name).toHaveValue(first);
+
   await name.fill('Ideas');
   await page.getByLabel('WIP limit').first().fill('4');
   await page.getByRole('button', { name: 'Save columns' }).click();
