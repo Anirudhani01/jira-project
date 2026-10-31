@@ -1,8 +1,10 @@
 import { Link, useParams, useSearchParams } from 'react-router';
 
 import { NotFoundPage } from '../../app/pages/NotFoundPage';
+import { UxPermissionDenied } from '../../components/ux/UxPermissionDenied';
 import { ErrorState, LoadingState } from '../../components/ui/States';
 import { ApiError } from '../../lib/api/errors';
+import { isRbacForbidden, toUxPermissionDeniedProps } from '../../lib/ux/permissionDenied';
 import { useOrg } from '../orgs/api';
 
 import { useAuditEvents } from './api';
@@ -15,18 +17,23 @@ export function AuditPage() {
   const [search, setSearch] = useSearchParams();
   const organization = useOrg(org);
   const filters = Object.fromEntries(FILTERS.map((name) => [name, search.get(name) ?? undefined]));
-  const events = useAuditEvents(org, filters);
+  const canViewAudit =
+    organization.isSuccess && organization.data.permissions.includes('org.audit.view');
+  const events = useAuditEvents(org, filters, canViewAudit);
 
   if (organization.isPending) return <LoadingState label="Loading audit log" />;
   if (organization.error instanceof ApiError && organization.error.status === 404) {
     return <NotFoundPage />;
   }
   if (organization.isError) return <ErrorState error={organization.error} />;
-  if (!organization.data.permissions.includes('org.audit.view')) {
+  if (!canViewAudit) {
     return (
-      <p role="alert" className="text-slate-700">
-        Only organization owners and admins can view the audit log.
-      </p>
+      <section aria-labelledby="audit-title" className="space-y-4">
+        <h1 id="audit-title" className="text-2xl font-semibold">
+          Audit log
+        </h1>
+        <UxPermissionDenied {...toUxPermissionDeniedProps('org-audit', { orgSlug: org })} />
+      </section>
     );
   }
 
@@ -85,7 +92,15 @@ export function AuditPage() {
         </label>
       </div>
       {events.isPending ? <LoadingState label="Loading events" /> : null}
-      {events.isError ? <ErrorState error={events.error} /> : null}
+      {events.isError ? (
+        isRbacForbidden(events.error) ? (
+          <UxPermissionDenied
+            {...toUxPermissionDeniedProps('org-audit', { orgSlug: org }, events.error)}
+          />
+        ) : (
+          <ErrorState error={events.error} />
+        )
+      ) : null}
       {events.isSuccess && items.length === 0 ? (
         <p className="text-slate-600">No events match these filters.</p>
       ) : null}

@@ -5,10 +5,12 @@ import { z } from 'zod';
 
 import { FormError, SubmitButton, TextField } from '../../../components/ui/Form';
 import { ErrorState, LoadingState } from '../../../components/ui/States';
+import { UxPermissionDenied } from '../../../components/ux/UxPermissionDenied';
 import { NotFoundPage } from '../../../app/pages/NotFoundPage';
 import { ApiError } from '../../../lib/api/errors';
 import type { Org } from '../../../lib/api/types';
 import { applyServerErrors, describeError } from '../../../lib/forms';
+import { toUxPermissionDeniedProps } from '../../../lib/ux/permissionDenied';
 import { useOrg, useRenameOrg } from '../api';
 
 const schema = z.object({
@@ -65,7 +67,7 @@ export function OrgSettingsPage() {
       {org.data.permissions.includes('org.manage') ? (
         <RenameForm org={org.data} />
       ) : (
-        <p role="alert">You don&apos;t have permission to change this organization.</p>
+        <UxPermissionDenied {...toUxPermissionDeniedProps('org-settings', { orgSlug: slug })} />
       )}
     </section>
   );

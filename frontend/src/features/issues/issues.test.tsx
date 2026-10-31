@@ -217,6 +217,47 @@ describe('issue detail', () => {
     renderApp('/o/acme/issues/WEB-9');
     expect(await screen.findByRole('heading', { name: /not found/i })).toBeInTheDocument();
   });
+
+  it('shows permission copy on forbidden issue update', async () => {
+    mockApi({
+      ...CONFIG,
+      'GET /orgs/acme/issues/WEB-1': () => json(ISSUE),
+      'GET /orgs/acme/issues/WEB-1/activity': () => json({ items: [], next_cursor: null }),
+      'GET /orgs/acme/issues/WEB-1/transitions': () => json({ items: [] }),
+      'GET /orgs/acme/issues/WEB-1/children': () => json({ items: [], done: 0, total: 0 }),
+      'GET /orgs/acme/issues/WEB-1/comments': () => json({ items: [], next_cursor: null }),
+      'PATCH /orgs/acme/issues/WEB-1': () =>
+        problem(403, 'forbidden', { detail: 'must not appear in UI' }),
+    });
+    renderApp('/o/acme/issues/WEB-1');
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit summary' }));
+    await userEvent.clear(screen.getByLabelText('Summary'));
+    await userEvent.type(screen.getByLabelText('Summary'), 'Blocked edit');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText(/project admin/i)).toBeInTheDocument();
+    expect(screen.queryByText('must not appear in UI')).not.toBeInTheDocument();
+  });
+
+  it('shows permission copy on forbidden issue delete', async () => {
+    mockApi({
+      ...CONFIG,
+      'GET /orgs/acme/projects/WEB': () =>
+        json({ ...PROJECT, permissions: [...PROJECT.permissions, 'issue.delete'] }),
+      'GET /orgs/acme/issues/WEB-1': () => json(ISSUE),
+      'GET /orgs/acme/issues/WEB-1/activity': () => json({ items: [], next_cursor: null }),
+      'GET /orgs/acme/issues/WEB-1/transitions': () => json({ items: [] }),
+      'GET /orgs/acme/issues/WEB-1/children': () => json({ items: [], done: 0, total: 0 }),
+      'GET /orgs/acme/issues/WEB-1/comments': () => json({ items: [], next_cursor: null }),
+      'DELETE /orgs/acme/issues/WEB-1': () =>
+        problem(403, 'forbidden', { detail: 'must not appear in UI' }),
+    });
+    renderApp('/o/acme/issues/WEB-1');
+    await userEvent.click(await screen.findByRole('button', { name: 'Issue actions' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Delete issue' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+    expect(await screen.findByText(/project admin/i)).toBeInTheDocument();
+    expect(screen.queryByText('must not appear in UI')).not.toBeInTheDocument();
+  });
 });
 
 describe('issue detail: M7 (transitions, assignee, labels)', () => {

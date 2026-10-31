@@ -33,6 +33,7 @@ import {
   UxSearchEmpty,
   UxSlowHint,
 } from '../components/ux';
+import { toUxPermissionDeniedProps } from '../lib/ux/permissionDenied';
 import { ErrorState, LoadingState, ProjectGridSkeleton } from '../components/ui/States';
 import { useToast } from '../components/ui/Toast';
 import { ApiError, networkError } from '../lib/api/errors';
@@ -228,12 +229,7 @@ export function DesignPage() {
           </div>
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-fg-muted">7. Permission denied</h3>
-            <UxPermissionDenied
-              capability="organization audit log"
-              reason="Only organization admins can view audit events."
-              backAction={{ label: 'Back to org home', href: '/orgs/demo' }}
-              contactAdmin={{ label: 'View members', href: '/orgs/demo/members' }}
-            />
+            <UxPermissionDenied {...toUxPermissionDeniedProps('org-audit', { orgSlug: 'demo' })} />
           </div>
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-fg-muted">8. Session expired</h3>

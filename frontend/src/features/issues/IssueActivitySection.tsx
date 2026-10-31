@@ -4,9 +4,9 @@ import { Button } from '../../components/ui/Button';
 import { FormError } from '../../components/ui/Form';
 import { ErrorState, LoadingState } from '../../components/ui/States';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Overlay';
-import { ApiError } from '../../lib/api/errors';
 import { formatRelativeTime } from '../../lib/relativeTime';
 import { describeError } from '../../lib/forms';
+import { permissionDeniedInlineMessage } from '../../lib/ux/permissionDenied';
 import type { Comment, IssueActivity } from '../../lib/api/types';
 import { useIssueActivity } from './api';
 
@@ -14,6 +14,11 @@ import { useComments, useCreateComment, useDeleteComment, useUpdateComment } fro
 import { mergeTimeline, type TimelineEntry } from '../comments/timeline';
 
 import { describeIssueActivity } from './activityFormat';
+
+function commentMutationError(error: unknown): string | null {
+  if (!error) return null;
+  return permissionDeniedInlineMessage(error, 'issue-mutation') ?? describeError(error);
+}
 
 function ActivityRow({ activity }: { activity: IssueActivity }) {
   const actor = activity.actor?.display_name ?? 'System';
@@ -78,7 +83,7 @@ function CommentRow({
               onEditDraftChange(e.target.value);
             }}
           />
-          <FormError>{updateError ? describeError(updateError) : null}</FormError>
+          <FormError>{commentMutationError(updateError)}</FormError>
           <div className="flex gap-2">
             <Button
               type="button"
@@ -210,7 +215,7 @@ function CommentComposer({
           onDraftChange(e.target.value);
         }}
       />
-      <FormError>{createError instanceof ApiError ? describeError(createError) : null}</FormError>
+      <FormError>{commentMutationError(createError)}</FormError>
       <Button type="submit" variant="primary" size="sm" disabled={createPending || !draft.trim()}>
         Comment
       </Button>

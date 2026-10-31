@@ -104,6 +104,21 @@ function deferredResponse() {
 }
 
 describe('comments', () => {
+  it('shows permission copy when creating a comment is forbidden', async () => {
+    mockApi({
+      ...CONFIG,
+      'GET /orgs/acme/issues/WEB-1/comments': () => json({ items: [], next_cursor: null }),
+      'POST /orgs/acme/issues/WEB-1/comments': () =>
+        problem(403, 'forbidden', { detail: 'must not appear in UI' }),
+    });
+    renderApp('/o/acme/issues/WEB-1');
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText('Add a comment'), 'Hi');
+    await user.click(screen.getByRole('button', { name: 'Comment' }));
+    expect(await screen.findByText(/project admin/i)).toBeInTheDocument();
+    expect(screen.queryByText('must not appear in UI')).not.toBeInTheDocument();
+  });
+
   it('lists comments merged with activity and posts a new one with an Idempotency-Key', async () => {
     const calls = mockApi({
       ...CONFIG,

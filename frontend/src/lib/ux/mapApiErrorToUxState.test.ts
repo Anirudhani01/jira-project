@@ -59,11 +59,42 @@ describe('mapApiErrorToUxState', () => {
     expect(mapped.retryable).toBe(true);
   });
 
-  it('403 other is permission_denied', () => {
+  it('403 invitation codes stay generic, not RBAC permission copy', () => {
+    const mapped = mapApiErrorToUxState(
+      api({
+        status: 403,
+        code: 'invitation_email_mismatch',
+        title: 'Forbidden',
+        detail: 'Wrong email for this invitation.',
+      }),
+    );
+    expect(mapped.kind).toBe('generic');
+    expect(mapped.description).toContain('Wrong email');
+    expect(mapped.recoveryHint).toBeUndefined();
+    expect(mapped.description).not.toMatch(/organization owner/i);
+  });
+
+  it('409 uses generic presentation unchanged', () => {
+    const mapped = mapApiErrorToUxState(
+      api({
+        status: 409,
+        code: 'last_owner',
+        title: 'Conflict',
+        detail: 'An organization must keep at least one owner.',
+      }),
+    );
+    expect(mapped.kind).toBe('generic');
+    expect(mapped.description).toContain('at least one owner');
+    expect(mapped.retryable).toBe(false);
+  });
+
+  it('403 other is permission_denied without backend detail', () => {
     const mapped = mapApiErrorToUxState(
       api({ status: 403, code: 'forbidden', title: 'Forbidden', detail: 'Not allowed' }),
     );
     expect(mapped.kind).toBe('permission_denied');
+    expect(mapped.description).not.toContain('Not allowed');
+    expect(mapped.recoveryHint).toContain('organization owner');
   });
 
   it('404 maps to not_found', () => {

@@ -147,7 +147,9 @@ describe('OrgSettingsPage', () => {
       'GET /orgs/acme': () => json({ ...ORG, role: 'member', permissions: ['org.view'] }),
     });
     renderApp('/o/acme/settings');
-    expect(await screen.findByRole('alert')).toHaveTextContent(/don.t have permission/);
+    expect(await screen.findByRole('region', { name: /don't have access/i })).toHaveTextContent(
+      /don.t have permission to change/,
+    );
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
   });
 });

@@ -35,6 +35,14 @@ const WORKFLOW = {
   columns: [{ name: 'To Do', position: 0, status_ids: [S1] }],
 };
 
+function deferredResponse() {
+  let resolve!: (value: Response) => void;
+  const promise = new Promise<Response>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -80,6 +88,33 @@ describe('org home project list', () => {
 });
 
 describe('CreateProjectPage', () => {
+  it('shows loading before permission denial on the create step', async () => {
+    const orgDeferred = deferredResponse();
+    mockApi({
+      'GET /auth/session': () => json(SESSION),
+      'GET /orgs/acme': () => orgDeferred.promise,
+    });
+    renderApp('/o/acme/projects/new?board_type=kanban&step=create');
+    expect(
+      await screen.findByRole('status', { name: /Loading organization/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /don't have access/i })).not.toBeInTheDocument();
+    orgDeferred.resolve(json(ORG));
+    expect(await screen.findByRole('region', { name: /don't have access/i })).toBeInTheDocument();
+  });
+
+  it('denies the create step without project.create after org loads', async () => {
+    mockApi({
+      'GET /auth/session': () => json(SESSION),
+      'GET /orgs/acme': () => json(ORG),
+    });
+    renderApp('/o/acme/projects/new?board_type=kanban&step=create');
+    expect(await screen.findByRole('region', { name: /don't have access/i })).toHaveTextContent(
+      /create projects/,
+    );
+    expect(screen.queryByLabelText('Name')).toBeNull();
+  });
+
   it('shows template overview before the create form', async () => {
     mockApi({ 'GET /auth/session': () => json(SESSION) });
     renderApp('/o/acme/projects/new?board_type=kanban');
@@ -96,6 +131,7 @@ describe('CreateProjectPage', () => {
   it('creates a project with an uppercased key and opens it', async () => {
     const calls = mockApi({
       'GET /auth/session': () => json(SESSION),
+      'GET /orgs/acme': () => json({ ...ORG, permissions: ['org.view', 'project.create'] }),
       'POST /orgs/acme/projects': () =>
         json(
           { key: 'WEB', name: 'Website', board_type: 'kanban', archived: false, my_role: 'admin' },
@@ -123,6 +159,7 @@ describe('CreateProjectPage', () => {
   it('shows a taken key on the field', async () => {
     mockApi({
       'GET /auth/session': () => json(SESSION),
+      'GET /orgs/acme': () => json({ ...ORG, permissions: ['org.view', 'project.create'] }),
       'POST /orgs/acme/projects': () =>
         problem(409, 'project_key_taken', {
           errors: [{ field: 'body.key', message: 'is already used' }],

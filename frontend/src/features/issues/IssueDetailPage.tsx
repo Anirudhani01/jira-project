@@ -24,6 +24,7 @@ import { ApiError } from '../../lib/api/errors';
 import type { Issue } from '../../lib/api/types';
 import { useAppOnline } from '../../app/OnlineStatusProvider';
 import { describeError } from '../../lib/forms';
+import { permissionDeniedInlineMessage } from '../../lib/ux/permissionDenied';
 import { discardIssueFieldDraft, loadIssueFieldDrafts } from '../../lib/ux/draftStorage';
 import type { IssueFieldDraftPayload } from '../../lib/ux/draftTypes';
 import { registerIssueDetailDraftSnapshot } from '../../lib/ux/issueDetailDraft';
@@ -375,9 +376,19 @@ function IssueView({
           </Button>
         </div>
       ) : (
-        <FormError>{update.error ? describeError(update.error) : null}</FormError>
+        <FormError>
+          {update.error
+            ? (permissionDeniedInlineMessage(update.error, 'issue-mutation') ??
+              describeError(update.error))
+            : null}
+        </FormError>
       )}
-      <FormError>{remove.error ? describeError(remove.error) : null}</FormError>
+      <FormError>
+        {remove.error
+          ? (permissionDeniedInlineMessage(remove.error, 'issue-mutation') ??
+            describeError(remove.error))
+          : null}
+      </FormError>
 
       <header className="space-y-2">
         <p className="font-mono text-xs font-medium uppercase tracking-wide text-fg-subtle">
