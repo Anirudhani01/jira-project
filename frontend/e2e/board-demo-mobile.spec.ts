@@ -26,8 +26,9 @@ test.describe('demo MOBILE scrum board (M5 regression)', () => {
       await expect(page.getByRole('region', { name: new RegExp(`^${name}$`, 'i') })).toBeVisible();
     }
     await expect(page.getByRole('searchbox', { name: 'Filter board' })).toBeVisible();
-    await page.getByRole('searchbox', { name: 'Filter board' }).fill('MOBILE-10');
-    await expect(page.getByRole('link', { name: 'MOBILE-10' })).toBeVisible();
+    // Demo seed creates six MOBILE issues (MOBILE-1 … MOBILE-6); filter regression uses the last key.
+    await page.getByRole('searchbox', { name: 'Filter board' }).fill('MOBILE-6');
+    await expect(page.getByRole('link', { name: 'MOBILE-6' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'MOBILE-7' })).toHaveCount(0);
   });
 

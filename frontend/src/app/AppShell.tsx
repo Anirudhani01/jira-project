@@ -31,7 +31,9 @@ function AppShellBody() {
       className={cn(
         'flex min-h-screen flex-col text-fg',
         authRoute && 'bg-surface',
-        !authRoute && orgDashboardHome && 'org-dashboard-shell',
+        !authRoute &&
+          orgDashboardHome &&
+          'org-dashboard-shell w-full min-w-0 overflow-x-hidden',
         !authRoute && inAdminShell && 'admin-shell',
         !authRoute && boardShell && 'board-shell w-full min-w-0 overflow-x-hidden',
         !authRoute && !orgDashboardHome && !inAdminShell && !boardShell && 'bg-bg',
@@ -50,7 +52,10 @@ function AppShellBody() {
         </div>
       ) : null}
       <div
-        className={cn('flex min-h-0 flex-1', boardShell && 'min-w-0 max-w-full overflow-x-hidden')}
+        className={cn(
+          'flex min-h-0 flex-1',
+          (boardShell || orgDashboardHome) && 'min-w-0 max-w-full overflow-x-hidden',
+        )}
       >
         <OrgSidebar />
         <ProjectSidebar />

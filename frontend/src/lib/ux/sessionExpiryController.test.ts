@@ -23,6 +23,7 @@ afterEach(() => {
 function setupEnv(overrides: Partial<Parameters<typeof configureSessionExpiryController>[0]> = {}) {
   const navigateToLogin = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
   const clearSessionState = vi.fn();
+  const prepareLoginAfterExpiry = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
   configureSessionExpiryController({
     getHadEstablishedSession: () => true,
     getLogoutIntent: () => false,
@@ -31,10 +32,11 @@ function setupEnv(overrides: Partial<Parameters<typeof configureSessionExpiryCon
     onPhaseChange: () => undefined,
     onDialogChange: () => undefined,
     clearSessionState,
+    prepareLoginAfterExpiry,
     navigateToLogin,
     ...overrides,
   });
-  return { navigateToLogin, clearSessionState };
+  return { navigateToLogin, clearSessionState, prepareLoginAfterExpiry };
 }
 
 describe('sessionExpiryController', () => {
@@ -63,13 +65,14 @@ describe('sessionExpiryController', () => {
       value: 'Edited',
       baseVersion: 3,
     }));
-    const { navigateToLogin, clearSessionState } = setupEnv();
+    const { navigateToLogin, prepareLoginAfterExpiry } = setupEnv();
     onSessionUnauthenticatedError('/o/acme/issues/P-1');
     await Promise.resolve();
     expect(sessionStorage.length).toBe(0);
     confirmSessionExpiryContinue();
     expect(sessionStorage.getItem('ux:issue-field-drafts:v1')).toContain('Edited');
-    expect(clearSessionState).toHaveBeenCalled();
+    await Promise.resolve();
+    expect(prepareLoginAfterExpiry).toHaveBeenCalled();
     expect(navigateToLogin).toHaveBeenCalled();
     expect(getSessionExpiryPhase()).toBe('navigating');
   });
@@ -95,10 +98,11 @@ describe('sessionExpiryController', () => {
     expect(lastCall?.persistError).toBeTruthy();
     persist.mockRestore();
     retrySessionExpiryPersist();
+    await Promise.resolve();
     expect(navigateToLogin).toHaveBeenCalled();
   });
 
-  it('continue without recovery skips persist', () => {
+  it('continue without recovery skips persist', async () => {
     registerIssueDetailDraftSnapshot(() => ({
       org: 'acme',
       issueKey: 'P-1',
@@ -109,6 +113,7 @@ describe('sessionExpiryController', () => {
     const { navigateToLogin } = setupEnv();
     onSessionUnauthenticatedError('/x');
     confirmSessionExpiryWithoutRecovery();
+    await Promise.resolve();
     expect(sessionStorage.length).toBe(0);
     expect(navigateToLogin).toHaveBeenCalled();
   });
@@ -161,6 +166,7 @@ describe('sessionExpiryController', () => {
     onSessionUnauthenticatedError('/x');
     await Promise.resolve();
     confirmSessionExpiryContinue();
+    await Promise.resolve();
     confirmSessionExpiryContinue();
     expect(navigateToLogin).toHaveBeenCalledTimes(1);
   });
@@ -179,6 +185,7 @@ describe('sessionExpiryController', () => {
       expect(getSessionExpiryPhase()).toBe('awaiting_user');
     });
     confirmSessionExpiryContinue();
+    await Promise.resolve();
     expect(navigateToLogin).toHaveBeenCalledTimes(2);
   });
 
@@ -194,12 +201,9 @@ describe('sessionExpiryController', () => {
     onSessionUnauthenticatedError('/o/acme/issues/P-1');
     await Promise.resolve();
     confirmSessionExpiryContinue();
-    await new Promise<void>((resolve) => {
-      queueMicrotask(() => {
-        resolve();
-      });
+    await vi.waitFor(() => {
+      expect(getSessionExpiryPhase()).toBe('awaiting_user');
     });
-    expect(getSessionExpiryPhase()).toBe('awaiting_user');
     const last = onDialogChange.mock.calls.at(-1)?.[0];
     expect(last?.navigationError).toMatch(/sign-in page did not open/i);
   });

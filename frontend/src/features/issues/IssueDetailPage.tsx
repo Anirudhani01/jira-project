@@ -530,6 +530,7 @@ function IssueView({
                 issue={issue}
                 priorities={priorities.data ?? []}
                 canEdit={canEdit}
+                containedMenu={presentation === 'modal'}
               />
             </SidebarField>
             <SidebarField label="Assignee">

@@ -67,7 +67,13 @@ export function BoardQuickFilters({
           'board-filter-toolbar gap-2 border-[var(--board-border)] bg-[var(--board-surface)] p-3 sm:gap-3 sm:p-4',
       )}
     >
-      <div className={cn('relative min-w-[12rem] flex-1', boardChrome && 'min-w-[14rem]')}>
+      <div
+        className={cn(
+          'relative min-w-[12rem] flex-1',
+          boardChrome && 'min-w-[14rem]',
+          filters.q && 'pr-14',
+        )}
+      >
         <Search
           className={cn(
             'pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-fg-subtle',
@@ -85,6 +91,22 @@ export function BoardQuickFilters({
             patch({ ...filters, q: e.target.value });
           }}
         />
+        {filters.q ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className={cn(
+              'absolute right-1 top-1/2 -translate-y-1/2',
+              boardChrome && 'h-7 px-2 text-[var(--board-muted)]',
+            )}
+            onClick={() => {
+              patch({ ...filters, q: '' });
+            }}
+          >
+            Clear
+          </Button>
+        ) : null}
       </div>
 
       {assigneePeople.length > 0 ? (
