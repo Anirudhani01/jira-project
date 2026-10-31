@@ -52,6 +52,8 @@ from app.modules.issues.schemas import (
     ApplyTransitionRequest,
     ChildrenResponse,
     CreateIssueRequest,
+    EpicListResponse,
+    EpicResponse,
     IssueRefShort,
     IssueResponse,
     LabelRef,
@@ -64,6 +66,7 @@ from app.modules.issues.schemas import (
     TypeRef,
     UpdateIssueRequest,
     UserRef,
+    VersionRef,
 )
 from app.modules.notifications import service as notifications
 from app.modules.orgs import repository as orgs
@@ -72,6 +75,7 @@ from app.modules.projects.models import Project
 from app.modules.projects.service import project_archived
 from app.modules.security_events.service import ClientInfo
 from app.modules.sprints import repository as sprints
+from app.modules.versions import repository as versions
 
 FORMER_MEMBER = "Former member"
 LOCK_NOT_AVAILABLE = "55P03"
@@ -132,6 +136,11 @@ def _response(
         parent=parent_ref,
         sprint=SprintRef(id=issue.sprint_id, name=row.sprint_name, state=row.sprint_state)
         if issue.sprint_id is not None and row.sprint_name is not None
+        else None,
+        fix_version=VersionRef(
+            id=issue.fix_version_id, name=row.fix_version_name, status=row.fix_version_status
+        )
+        if issue.fix_version_id is not None and row.fix_version_name is not None
         else None,
         story_points=issue.story_points,
         labels=[
@@ -255,6 +264,26 @@ async def _validate_labels(
 
 
 # --------------------------------------------------------------------------- create
+async def _validate_fix_version(
+    session: AsyncSession, project: Project, version_id: uuid.UUID
+) -> Any:
+    """A fix version must be an existing, non-archived version of the same project."""
+    version = await versions.find_version(session, project.id, version_id)
+    if version is None:
+        raise invalid_field(
+            "fix_version_id", "invalid_fix_version", "Unknown version for this project."
+        )
+    if version.status == "archived":
+        raise invalid_field(
+            "fix_version_id", "version_archived", "Archived versions cannot be assigned."
+        )
+    return version
+
+
+def _version_ref(version: Any | None) -> dict[str, str] | None:
+    return {"id": str(version.id), "name": version.name} if version else None
+
+
 @dataclass(frozen=True, slots=True)
 class Created:
     issue: IssueResponse
@@ -308,6 +337,8 @@ async def create_issue(
                 if Permission.ISSUE_ASSIGN not in current.permissions:
                     raise forbidden()
                 await _validate_assignee(session, project, body.assignee_id)
+            if body.fix_version_id is not None:
+                await _validate_fix_version(session, project, body.fix_version_id)
             if body.label_ids:
                 await _validate_labels(session, project.id, body.label_ids)
             status_id = await repository.initial_status(session, project.workflow_id)
@@ -328,6 +359,7 @@ async def create_issue(
                     parent_id=body.parent_id,
                     assignee_id=body.assignee_id,
                     story_points=body.story_points,
+                    fix_version_id=body.fix_version_id,
                 ),
             )
             if body.label_ids:
@@ -500,6 +532,51 @@ async def _reporter_change(
     return [("reporter_id", reporter_id, "reporter", old_reporter, new_reporter)]
 
 
+async def _fix_version_change(
+    session: AsyncSession, project: Project, issue: Any, body: UpdateIssueRequest
+) -> tuple[str, Any, str, Any, Any]:
+    new = (
+        await _validate_fix_version(session, project, body.fix_version_id)
+        if body.fix_version_id is not None
+        else None
+    )
+    old = (
+        await versions.find_version(session, project.id, issue.fix_version_id)
+        if issue.fix_version_id is not None
+        else None
+    )
+    return (
+        "fix_version_id",
+        body.fix_version_id,
+        "fix_version",
+        _version_ref(old),
+        _version_ref(new),
+    )
+
+
+async def _estimate_and_release_changes(
+    session: AsyncSession,
+    project: Project,
+    issue: Any,
+    body: UpdateIssueRequest,
+    fields: set[str],
+) -> list[tuple[str, Any, str, Any, Any]]:
+    changes: list[tuple[str, Any, str, Any, Any]] = []
+    if "story_points" in fields and body.story_points != issue.story_points:
+        changes.append(
+            (
+                "story_points",
+                body.story_points,
+                "story_points",
+                issue.story_points,
+                body.story_points,
+            )
+        )
+    if "fix_version_id" in fields and body.fix_version_id != issue.fix_version_id:
+        changes.append(await _fix_version_change(session, project, issue, body))
+    return changes
+
+
 async def _changes(
     session: AsyncSession,
     project: Project,
@@ -545,16 +622,7 @@ async def _changes(
         old_assignee = {"id": str(issue.assignee_id)} if issue.assignee_id else None
         new_assignee = {"id": str(body.assignee_id)} if body.assignee_id else None
         changes.append(("assignee_id", body.assignee_id, "assignee", old_assignee, new_assignee))
-    if "story_points" in fields and body.story_points != issue.story_points:
-        changes.append(
-            (
-                "story_points",
-                body.story_points,
-                "story_points",
-                issue.story_points,
-                body.story_points,
-            )
-        )
+    changes += await _estimate_and_release_changes(session, project, issue, body, fields)
     changes += await _reporter_change(session, project, issue, body, fields)
     return changes
 
@@ -709,6 +777,32 @@ async def list_children(services: IdentityServices, ref: IssueRef) -> ChildrenRe
         items = await issue_responses(session, rows)
         done = sum(1 for item in items if item.status.category == "done")
         return ChildrenResponse(items=items, done=done, total=len(items))
+
+
+async def list_epics(
+    services: IdentityServices, access: ProjectAccess, *, include_done: bool
+) -> EpicListResponse:
+    async with project_transaction(services, access, Permission.PROJECT_VIEW) as (
+        session,
+        project,
+        _,
+    ):
+        rows = await repository.list_epics(session, project.id, include_done=include_done)
+        return EpicListResponse(
+            items=[
+                EpicResponse(
+                    id=row.Issue.id,
+                    key=f"{row.project_key}-{row.Issue.seq}",
+                    summary=row.Issue.summary,
+                    status=StatusRef(
+                        id=row.Issue.status_id, name=row.status_name, category=row.status_category
+                    ),
+                    done=int(row.done),
+                    total=int(row.total),
+                )
+                for row in rows
+            ]
+        )
 
 
 # --------------------------------------------------------------------- transitions

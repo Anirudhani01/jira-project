@@ -102,6 +102,7 @@ export interface NewIssue {
   parent_id?: string | null;
   label_ids?: string[];
   story_points?: number | null;
+  fix_version_id?: string | null;
 }
 
 /** Create with an Idempotency-Key, so a retried submission never creates a duplicate. */
@@ -130,6 +131,7 @@ export type IssueChanges = Partial<
     | 'parent_id'
     | 'label_ids'
     | 'story_points'
+    | 'fix_version_id'
   >
 > & {
   description?: string | null;

@@ -403,6 +403,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orgs/{org_slug}/issues/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Change
+         * @description Applies one action to up to 100 issues; each item is checked and applied on its own
+         *     and reported in ``results`` (some may fail while others succeed).
+         */
+        post: operations["bulk_change_api_v1_orgs__org_slug__issues_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orgs/{org_slug}/issues/{issue_key}": {
         parameters: {
             query?: never;
@@ -763,6 +784,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/epics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Epics
+         * @description Epics with child progress; epics in a done status are hidden unless asked for.
+         */
+        get: operations["list_epics_api_v1_orgs__org_slug__projects__project_key__epics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orgs/{org_slug}/projects/{project_key}/issues": {
         parameters: {
             query?: never;
@@ -890,6 +931,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Versions */
+        get: operations["list_versions_api_v1_orgs__org_slug__projects__project_key__versions_get"];
+        put?: never;
+        /** Create Version */
+        post: operations["create_version_api_v1_orgs__org_slug__projects__project_key__versions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/versions/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Reorder Versions */
+        put: operations["reorder_versions_api_v1_orgs__org_slug__projects__project_key__versions_order_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orgs/{org_slug}/projects/{project_key}/workflow": {
         parameters: {
             query?: never;
@@ -956,6 +1032,95 @@ export interface paths {
         put?: never;
         /** Start Sprint */
         post: operations["start_sprint_api_v1_orgs__org_slug__sprints__sprint_id__start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/versions/{version_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Version
+         * @description Deletes the version; its issues move to ``move_to`` or lose their fix version.
+         */
+        delete: operations["delete_version_api_v1_orgs__org_slug__versions__version_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Version */
+        patch: operations["update_version_api_v1_orgs__org_slug__versions__version_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/versions/{version_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Version */
+        post: operations["archive_version_api_v1_orgs__org_slug__versions__version_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/versions/{version_id}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Release Version */
+        post: operations["release_version_api_v1_orgs__org_slug__versions__version_id__release_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/versions/{version_id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unarchive Version */
+        post: operations["unarchive_version_api_v1_orgs__org_slug__versions__version_id__unarchive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/versions/{version_id}/unrelease": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unrelease Version */
+        post: operations["unrelease_version_api_v1_orgs__org_slug__versions__version_id__unrelease_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1161,6 +1326,50 @@ export interface components {
              */
             to_status_id: string;
         };
+        /**
+         * BulkIssueRequest
+         * @description One action applied to up to ``BULK_MAX`` issues. The field matching the action must be
+         *     sent (``null`` means backlog / unassign / detach / clear); no other value field may be.
+         */
+        BulkIssueRequest: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "move_sprint" | "assign" | "set_priority" | "set_parent" | "set_fix_version" | "delete";
+            /** Assignee Id */
+            assignee_id?: string | null;
+            /** Fix Version Id */
+            fix_version_id?: string | null;
+            /** Keys */
+            keys: string[];
+            /** Parent Id */
+            parent_id?: string | null;
+            /** Priority Id */
+            priority_id?: string | null;
+            /** Sprint Id */
+            sprint_id?: string | null;
+        };
+        /** BulkIssueResponse */
+        BulkIssueResponse: {
+            /** Failed */
+            failed: number;
+            /** Results */
+            results: components["schemas"]["BulkItemResult"][];
+            /** Succeeded */
+            succeeded: number;
+        };
+        /** BulkItemResult */
+        BulkItemResult: {
+            /** Code */
+            code?: string | null;
+            /** Key */
+            key: string;
+            /** Message */
+            message?: string | null;
+            /** Ok */
+            ok: boolean;
+        };
         /** ChangePasswordRequest */
         ChangePasswordRequest: {
             /** Current Password */
@@ -1266,6 +1475,8 @@ export interface components {
             assignee_id?: string | null;
             /** Description */
             description?: string | null;
+            /** Fix Version Id */
+            fix_version_id?: string | null;
             /** Label Ids */
             label_ids?: string[] | null;
             /** Parent Id */
@@ -1320,6 +1531,39 @@ export interface components {
             goal?: string | null;
             /** Name */
             name: string;
+        };
+        /** CreateVersionRequest */
+        CreateVersionRequest: {
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name: string;
+            /** Release Date */
+            release_date?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+        };
+        /** EpicListResponse */
+        EpicListResponse: {
+            /** Items */
+            items: components["schemas"]["EpicResponse"][];
+        };
+        /** EpicResponse */
+        EpicResponse: {
+            /** Done */
+            done: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            status: components["schemas"]["StatusRef"];
+            /** Summary */
+            summary: string;
+            /** Total */
+            total: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1384,6 +1628,7 @@ export interface components {
             created_at: string;
             /** Description */
             description: string | null;
+            fix_version: components["schemas"]["VersionRef"] | null;
             /**
              * Id
              * Format: uuid
@@ -1736,6 +1981,30 @@ export interface components {
              */
             status: "ready" | "degraded" | "unavailable";
         };
+        /** ReleaseVersionRequest */
+        ReleaseVersionRequest: {
+            /** Move To */
+            move_to?: string | null;
+            /** Release Date */
+            release_date?: string | null;
+            /**
+             * Unresolved
+             * @default ignore
+             * @enum {string}
+             */
+            unresolved: "ignore" | "move";
+        };
+        /** ReleaseVersionResponse */
+        ReleaseVersionResponse: {
+            /** Moved Issues */
+            moved_issues: number;
+            version: components["schemas"]["VersionResponse"];
+        };
+        /** ReorderVersionsRequest */
+        ReorderVersionsRequest: {
+            /** Ids */
+            ids: string[];
+        };
         /** ReplaceColumnsRequest */
         ReplaceColumnsRequest: {
             /** Columns */
@@ -1963,6 +2232,8 @@ export interface components {
             assignee_id?: string | null;
             /** Description */
             description?: string | null;
+            /** Fix Version Id */
+            fix_version_id?: string | null;
             /** Label Ids */
             label_ids?: string[] | null;
             /** Parent Id */
@@ -2021,6 +2292,17 @@ export interface components {
             /** Name */
             name?: string | null;
         };
+        /** UpdateVersionRequest */
+        UpdateVersionRequest: {
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Release Date */
+            release_date?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+        };
         /** UserRef */
         UserRef: {
             /** Display Name */
@@ -2062,6 +2344,57 @@ export interface components {
         VerifyEmailRequest: {
             /** Token */
             token: string;
+        };
+        /** VersionListResponse */
+        VersionListResponse: {
+            /** Items */
+            items: components["schemas"]["VersionResponse"][];
+        };
+        /** VersionRef */
+        VersionRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+        };
+        /** VersionResponse */
+        VersionResponse: {
+            /** Description */
+            description: string | null;
+            /** Done Count */
+            done_count: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** In Progress Count */
+            in_progress_count: number;
+            /** Issue Count */
+            issue_count: number;
+            /** Name */
+            name: string;
+            /** Overdue */
+            overdue: boolean;
+            /** Position */
+            position: number;
+            /** Project Key */
+            project_key: string;
+            /** Release Date */
+            release_date: string | null;
+            /** Released At */
+            released_at: string | null;
+            /** Start Date */
+            start_date: string | null;
+            /** Status */
+            status: string;
+            /** Todo Count */
+            todo_count: number;
         };
         /** WorkflowResponse */
         WorkflowResponse: {
@@ -2836,6 +3169,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IssueListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_change_api_v1_orgs__org_slug__issues_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkIssueRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkIssueResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3716,6 +4084,40 @@ export interface operations {
             };
         };
     };
+    list_epics_api_v1_orgs__org_slug__projects__project_key__epics_get: {
+        parameters: {
+            query?: {
+                include_done?: boolean;
+            };
+            header?: never;
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EpicListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_issue_api_v1_orgs__org_slug__projects__project_key__issues_post: {
         parameters: {
             query?: never;
@@ -4083,6 +4485,112 @@ export interface operations {
             };
         };
     };
+    list_versions_api_v1_orgs__org_slug__projects__project_key__versions_get: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_version_api_v1_orgs__org_slug__projects__project_key__versions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reorder_versions_api_v1_orgs__org_slug__projects__project_key__versions_order_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderVersionsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_workflow_api_v1_orgs__org_slug__projects__project_key__workflow_get: {
         parameters: {
             query?: never;
@@ -4240,6 +4748,206 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SprintResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_version_api_v1_orgs__org_slug__versions__version_id__delete: {
+        parameters: {
+            query?: {
+                move_to?: string | null;
+            };
+            header?: never;
+            path: {
+                version_id: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_version_api_v1_orgs__org_slug__versions__version_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_version_api_v1_orgs__org_slug__versions__version_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    release_version_api_v1_orgs__org_slug__versions__version_id__release_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReleaseVersionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unarchive_version_api_v1_orgs__org_slug__versions__version_id__unarchive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unrelease_version_api_v1_orgs__org_slug__versions__version_id__unrelease_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionResponse"];
                 };
             };
             /** @description Validation Error */

@@ -66,6 +66,13 @@ class Issue(Base):
             "story_points IS NULL OR story_points BETWEEN 0 AND 100", name="story_points_range"
         ),
         _fk(
+            "fk_issues_org_id_versions",
+            ["org_id", "project_id", "fix_version_id"],
+            "versions",
+            ["org_id", "project_id", "id"],
+            ondelete="SET NULL (fix_version_id)",
+        ),
+        _fk(
             "fk_issues_org_id_sprints",
             ["org_id", "project_id", "sprint_id"],
             "sprints",
@@ -124,6 +131,12 @@ class Issue(Base):
             postgresql_where=_NOT_DELETED,
         ),
         Index("ix_issues_parent_id", "parent_id"),
+        Index(
+            "ix_issues_project_id_fix_version_id",
+            "project_id",
+            "fix_version_id",
+            postgresql_where=_NOT_DELETED,
+        ),
         Index("ix_issues_search", "search", postgresql_using="gin"),
         Index("ix_issues_project_id_updated_at", "project_id", text("updated_at DESC")),
         Index("ix_issues_org_id_updated_at", "org_id", text("updated_at DESC"), "id"),
@@ -157,6 +170,7 @@ class Issue(Base):
         ),
         deferred=True,
     )
+    fix_version_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     story_points: Mapped[int | None] = mapped_column(SmallInteger)
     version: Mapped[int] = mapped_column(Integer, server_default=text("1"))
     done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

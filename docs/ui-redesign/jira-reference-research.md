@@ -146,3 +146,65 @@ The original questions, for the record:
 | **12 QA** | Add "compare against reference screenshots" checklist per screen. |
 
 Everything else in the plan (PRs 6, 8, 10, 11, 13-18) stands unchanged.
+
+## 6. Epics panel, versions and bulk change (researched 2026-11-01)
+
+Sources: [Manage versions](https://support.atlassian.com/jira-cloud-administration/docs/manage-versions/),
+[Release a version](https://support.atlassian.com/jira-software-cloud/docs/release-a-version-in-your-classic-project/),
+[Edit work items from the backlog](https://support.atlassian.com/jira-software-cloud/docs/edit-multiple-issues-at-once-from-the-backlog/),
+[Edit multiple work items](https://support.atlassian.com/jira-software-cloud/docs/edit-multiple-issues-at-the-same-time/),
+[Customize your view of the board and backlog](https://support.atlassian.com/jira-software-cloud/docs/customize-your-view-of-the-board-and-backlog/),
+plus community threads on the epic panel. The Atlassian tutorial pages for epics and versions did not
+load fully; anything not in these pages is marked *(general knowledge)* and should be checked against a
+real instance when screenshots are available.
+
+### 6.1 Epics panel
+- A left **Epics panel** in the backlog (toggle in view settings; shortcut **E**) lists the project's epics.
+  Epics whose status is in the *Done* category are not listed. *(documented in community answers)*
+- Selecting an epic **filters the backlog to that epic's issues**; an "Issues without epic" entry shows the rest.
+  *(general knowledge)*
+- **Create epic** is in the panel; issues are added by **dragging them onto an epic** or with the issue's
+  more-actions menu (**Add parent / Change parent**). An issue belongs to **one** epic at a time. Selecting
+  several issues (Ctrl/Cmd-click) and dragging moves them together.
+- Each epic shows a progress indicator (done / total children). *(general knowledge)*
+
+**Our design:** `GET /projects/{key}/epics` returns epics with `done`/`total` child counts; the panel filters
+the backlog (`?epic=KEY|none`), drag onto an epic sets the parent (standard issues only; sub-tasks keep their
+story as parent), "Create epic" opens the create dialog on the Epic type, Done epics are hidden unless
+"Show done epics" is on.
+
+### 6.2 Versions (releases)
+- Versions exist in company-managed projects; managing them needs the **Manage versions** permission
+  (project admin). Fields: **name**, optional **description**, **start date**, **release date**. Names can be
+  numbers or code names.
+- Statuses: **Unreleased** (open; a planned release date in the past is shown in red), **Released**,
+  **Archived** (hidden from reports and from pickers; **Unarchive** reverses it). **Release** asks what to do
+  with unresolved work items and for a release date; **Unrelease** reverts.
+- **Delete** asks what to do with linked work items: move them to another version or clear the version.
+  **Merge** moves one version's work items into another. Versions can be **reordered** by dragging.
+- Work is assigned through the **Fix versions** field, or by **dragging issues onto a version in the backlog
+  Versions panel** (shortcut **V**). *Affects versions* is a separate field that does not add work to a release.
+- Backlog: selecting a version in the panel filters to its issues; "Issues without version" shows the rest.
+  *(general knowledge)*
+
+**Our design:** one **fix version** per issue (the reference allows several; one keeps ranking and filters
+simple and is stated in the UI), a `versions` table (name unique per project, description, start/release
+dates, status, position), `version.manage` for project admins, endpoints to create/edit/reorder/delete (with
+move-to), release (date + unresolved handling), unrelease, archive, unarchive; progress per version by status
+category; activity entries for the fix-version field; the Versions panel mirrors the Epics panel.
+
+### 6.3 Bulk change
+- Select several work items (**Ctrl/Cmd-click** in the backlog) and choose an action from the context or
+  more-actions menu: change **assignee, priority, labels, estimate**, change **parent**, **flag**, **move**
+  (to top/bottom of the backlog, to a sprint), **archive**, **delete** (with confirmation).
+- Limits: **1,000** work items per bulk edit; for assignee/priority/estimate/labels from the backlog menu
+  **50** at a time. Some actions are hidden when the selection is too large. A bulk transition only works on
+  items with the same workflow. Permissions are checked per action and per item.
+
+**Our design:** `POST /orgs/{org}/issues/bulk` with `{keys[≤100], action, ...}`; each item runs through the
+existing, fully validated service path in its own transaction (so permissions, workflow rules, hierarchy
+rules, activity and notifications behave exactly as for a single edit) and the response lists a per-item
+result (`ok`, or an error code and message). One audit event per call. Actions: move to sprint/backlog,
+assign, set priority, set parent (epic), set fix version, delete. The backlog bulk bar uses it instead of one
+request per issue. Why 100 and not 1,000: each item is its own transaction, and a 1,000-item request would
+hold a worker for many seconds; the cap is a constant that can be raised after load testing.

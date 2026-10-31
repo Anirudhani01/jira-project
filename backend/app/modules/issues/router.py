@@ -14,14 +14,17 @@ from app.authz.permissions import Permission
 from app.authz.projects import ProjectAccess, require_project
 from app.core.errors import AppError
 from app.modules.identity.deps import CsrfProtected, Services, client_info
-from app.modules.issues import service
+from app.modules.issues import bulk, service
 from app.modules.issues.repository import IssueFilter
 from app.modules.issues.schemas import (
     ActivityListResponse,
     ApplyTransitionRequest,
+    BulkIssueRequest,
+    BulkIssueResponse,
     ChildrenResponse,
     CreateIssueRequest,
     CreateLabelRequest,
+    EpicListResponse,
     IssueListResponse,
     IssueResponse,
     LabelListResponse,
@@ -142,6 +145,15 @@ async def list_issues(
     return IssueListResponse(items=items, next_cursor=next_cursor)
 
 
+@router.post("/issues/bulk", response_model=BulkIssueResponse, dependencies=[CsrfProtected])
+async def bulk_change(
+    body: BulkIssueRequest, access: ViewOrg, services: Services, request: Request
+) -> BulkIssueResponse:
+    """Applies one action to up to 100 issues; each item is checked and applied on its own
+    and reported in ``results`` (some may fail while others succeed)."""
+    return await bulk.bulk_change(services, access, body, client_info(request))
+
+
 @router.get("/issues/{issue_key}", response_model=IssueResponse)
 async def get_issue(ref: ViewIssue, response: Response, services: Services) -> IssueResponse:
     issue = await service.get_issue(services, ref)
@@ -251,6 +263,14 @@ async def move_issue(
     issue = await service.move_issue(services, ref, body, expected)
     response.headers["ETag"] = _etag(issue)
     return issue
+
+
+@router.get("/projects/{project_key}/epics", response_model=EpicListResponse)
+async def list_epics(
+    access: ViewProjectLabels, services: Services, include_done: bool = False
+) -> EpicListResponse:
+    """Epics with child progress; epics in a done status are hidden unless asked for."""
+    return await service.list_epics(services, access, include_done=include_done)
 
 
 @router.get("/projects/{project_key}/labels", response_model=LabelListResponse)

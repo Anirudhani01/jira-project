@@ -7,7 +7,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { SlidersHorizontal } from 'lucide-react';
-import { useMemo, useRef, useState, type SyntheticEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 
 import { NotFoundPage } from '../../app/pages/NotFoundPage';
@@ -22,32 +22,51 @@ import { ErrorState } from '../../components/ui/States';
 import { useToast } from '../../components/ui/Toast';
 import { UxEmptyState, UxSearchEmpty } from '../../components/ux';
 import { ApiError } from '../../lib/api/errors';
-import type { Issue, Sprint } from '../../lib/api/types';
+import type { Issue, Sprint, Version } from '../../lib/api/types';
+import { shouldIgnoreShortcut } from '../../lib/keyboard';
 import { usePersisted } from '../../lib/persistedState';
 import { createFeedbackInvocationId, showSuccessToast } from '../../lib/ux/mutationFeedback';
 import { mutationErrorMessage } from '../../lib/ux/permissionDenied';
+import { CreateIssueDialog } from '../issues/CreateIssueDialog';
 import { useProject } from '../projects/api';
 
-import { useBacklog, useBulkMoveToSprint, useCreateSprint, useMoveToSprint } from './api';
+import { useBacklog, useCreateSprint, useMoveToSprint } from './api';
 import { BacklogPanel, type SprintAction } from './BacklogPanel';
 import type { MoveTarget } from './BacklogRow';
 import {
   DEFAULT_FIELDS,
   FIELD_LABELS,
+  NONE,
+  filterByPlan,
   filterIssues,
   nextSelection,
   openCount,
   type BacklogFields,
   type Density,
 } from './backlogState';
+import { BulkBar } from './BulkBar';
+import { EpicsPanel } from './EpicsPanel';
+import {
+  useBulkChange,
+  useEpics,
+  useSetIssueField,
+  useVersionAction,
+  useVersions,
+  type BulkAction,
+} from './planApi';
 import {
   CompleteSprintDialog,
   DeleteSprintDialog,
   EditSprintDialog,
   StartSprintDialog,
 } from './SprintDialogs';
+import { DeleteVersionDialog, ReleaseVersionDialog, VersionFormDialog } from './VersionDialogs';
+import { VersionsPanel, type VersionAction } from './VersionsPanel';
 
 const BACKLOG_ID = 'backlog';
+type PanelKind = 'epics' | 'versions' | null;
+type VersionDialogState =
+  { kind: 'create' } | { kind: 'edit' | 'release' | 'delete'; version: Version };
 
 function BacklogSkeleton() {
   return (
@@ -121,8 +140,9 @@ function ViewSettings({
 }
 
 /** Scrum backlog: active and planned sprints, then the unplanned backlog, as collapsible
- * panels. Quick filter, per-user view settings (density, fields), inline create, drag between
- * panels (or the row menu), multi-select with bulk move, and sprint start/complete/edit/delete. */
+ * panels. Quick filter, per-user view settings, a left Epics / Versions panel (keys E / V) that
+ * filters the backlog and accepts dropped issues, inline create, drag between panels (or the
+ * row menu), multi-select with a bulk bar, and sprint and version management. */
 export function BacklogPage() {
   const { org = '', key = '' } = useParams();
   const [search, setSearch] = useSearchParams();
@@ -132,43 +152,70 @@ export function BacklogPage() {
   const toast = useToast();
   const createSprint = useCreateSprint(org, key);
   const moveOne = useMoveToSprint(org, key);
-  const bulk = useBulkMoveToSprint(org, key);
+  const bulkChange = useBulkChange(org, key);
+  const setField = useSetIssueField(org, key);
+  const versionAction = useVersionAction(org, key);
   const [sprintName, setSprintName] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
   const anchor = useRef<string | null>(null);
   const [dialog, setDialog] = useState<{ action: SprintAction; sprint: Sprint } | null>(null);
-  const [bulkTarget, setBulkTarget] = useState(BACKLOG_ID);
+  const [versionDialog, setVersionDialog] = useState<VersionDialogState | null>(null);
+  const [creatingEpic, setCreatingEpic] = useState(false);
+  const [includeDone, setIncludeDone] = useState(false);
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const [panel, setPanel] = usePersisted<PanelKind>(useNavKey(org, 'backlog.panel'), null);
   const [density, setDensity] = usePersisted<Density>(useNavKey(org, 'backlog.density'), 'default');
-  const [fields, setFields] = usePersisted<BacklogFields>(
+  const [storedFields, setFields] = usePersisted<BacklogFields>(
     useNavKey(org, 'backlog.fields'),
     DEFAULT_FIELDS,
   );
+  const fields: BacklogFields = { ...DEFAULT_FIELDS, ...storedFields };
+  const epics = useEpics(org, key, false, panel === 'epics');
+  const versions = useVersions(org, key, false, panel === 'versions');
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor),
   );
   const query = search.get('q') ?? '';
+  const epicFilter = search.get('epic') ?? '';
+  const versionFilter = search.get('version') ?? '';
+
+  // E and V open the Epics and Versions panels (pressing again closes), like the reference.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (shouldIgnoreShortcut(event)) return;
+      const pressed = event.key.toLowerCase();
+      if (pressed === 'e') setPanel(panel === 'epics' ? null : 'epics');
+      else if (pressed === 'v') setPanel(panel === 'versions' ? null : 'versions');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [panel, setPanel]);
 
   const data = backlog.data;
   const panels = useMemo(() => {
     if (!data) return [];
+    const shown = (issues: Issue[]) =>
+      filterByPlan(filterIssues(issues, query), { epic: epicFilter, version: versionFilter });
     return [
       ...data.sprints.map(({ sprint, issues }) => ({
         id: sprint.id,
         title: sprint.name,
         sprint,
         all: issues,
-        shown: filterIssues(issues, query),
+        shown: shown(issues),
       })),
       {
         id: BACKLOG_ID,
         title: 'Backlog',
         sprint: null,
         all: data.backlog,
-        shown: filterIssues(data.backlog, query),
+        shown: shown(data.backlog),
       },
     ];
-  }, [data, query]);
+  }, [data, query, epicFilter, versionFilter]);
 
   if (project.isPending || backlog.isPending) return <BacklogSkeleton />;
   if (project.error instanceof ApiError && project.error.status === 404) return <NotFoundPage />;
@@ -188,23 +235,29 @@ export function BacklogPage() {
     );
   }
 
-  const canPlan = project.data.permissions.includes('sprint.manage') && !project.data.archived;
+  const permissions = project.data.permissions;
+  const writable = !project.data.archived;
+  const canPlan = permissions.includes('sprint.manage') && writable;
+  const canManageVersions = permissions.includes('version.manage') && writable;
+  const canCreate = permissions.includes('issue.create') && writable;
   const loaded = backlog.data;
-  const allIssues = panels.flatMap((panel) => panel.all);
-  const order = panels.flatMap((panel) => panel.shown.map((issue) => issue.key));
+  const allIssues = panels.flatMap((p) => p.all);
+  const order = panels.flatMap((p) => p.shown.map((issue) => issue.key));
   const targets: MoveTarget[] = [
     { id: BACKLOG_ID, label: 'Backlog' },
     ...loaded.sprints.map(({ sprint }) => ({ id: sprint.id, label: sprint.name })),
   ];
   const futures = loaded.sprints.map((s) => s.sprint).filter((s) => s.state === 'future');
   const totalIssues = allIssues.length;
-  const shownTotal = panels.reduce((sum, panel) => sum + panel.shown.length, 0);
+  const shownTotal = panels.reduce((sum, p) => sum + p.shown.length, 0);
   const selectedSet = new Set(selected);
+  const filtering = Boolean(query || epicFilter || versionFilter);
+  const otherVersions = versions.data ?? [];
 
-  const setQuery = (value: string) => {
+  const setParam = (name: string, value: string) => {
     const next = new URLSearchParams(search);
-    if (value) next.set('q', value);
-    else next.delete('q');
+    if (value) next.set(name, value);
+    else next.delete(name);
     setSearch(next, { replace: true });
   };
 
@@ -220,23 +273,26 @@ export function BacklogPage() {
     moveOne.mutate({ key: issue.key, version: issue.version, sprintId });
   };
 
-  const moveMany = (issues: Issue[], sprintId: string | null) => {
-    const targetLabel =
-      targets.find((t) => t.id === (sprintId ?? BACKLOG_ID))?.label ?? 'the backlog';
-    bulk.mutate(
-      { issues: issues.map((i) => ({ key: i.key, version: i.version })), sprintId },
+  const changeMany = (issues: Issue[], change: BulkAction, label: string) => {
+    bulkChange.mutate(
+      { keys: issues.map((i) => i.key), change },
       {
         onSuccess: (result) => {
-          setSelected((current) => current.filter((k) => !result.moved.includes(k)));
-          if (result.failed.length === 0) {
+          const changed = result.results.filter((r) => r.ok).map((r) => r.key);
+          setSelected((current) => current.filter((k) => !changed.includes(k)));
+          if (result.failed === 0) {
             showSuccessToast(toast, {
               feedbackInvocationId: createFeedbackInvocationId(),
-              title: `${String(result.moved.length)} ${result.moved.length === 1 ? 'issue' : 'issues'} moved to ${targetLabel}`,
+              title: `${String(changed.length)} ${changed.length === 1 ? 'issue' : 'issues'} ${label}`,
             });
           } else {
             toast({
-              title: `${String(result.moved.length)} moved, ${String(result.failed.length)} could not be moved`,
-              description: result.failed.map((f) => f.key).join(', '),
+              title: `${String(changed.length)} updated, ${String(result.failed)} could not be changed`,
+              description: result.results
+                .filter((r) => !r.ok)
+                .slice(0, 3)
+                .map((r) => `${r.key}: ${r.message ?? r.code ?? 'failed'}`)
+                .join(' · '),
               variant: 'error',
             });
           }
@@ -245,18 +301,86 @@ export function BacklogPage() {
     );
   };
 
+  const dropOnEpic = (issues: Issue[], target: string) => {
+    if (target === 'all') return;
+    const parentId =
+      target === NONE ? null : (epics.data?.find((e) => e.key === target)?.id ?? null);
+    if (target !== NONE && parentId === null) return;
+    const movable = issues.filter((i) => i.type.kind !== 'subtask' && i.type.kind !== 'epic');
+    if (movable.length !== issues.length) {
+      toast({
+        title: 'Epics hold stories, tasks and bugs',
+        description: 'Sub-tasks stay under their story and epics cannot be nested.',
+        variant: 'error',
+      });
+    }
+    const [only] = movable;
+    if (movable.length === 1 && only) {
+      setField.mutate({
+        issueKey: only.key,
+        version: only.version,
+        changes: { parent_id: parentId },
+      });
+    } else if (movable.length > 1) {
+      changeMany(movable, { action: 'set_parent', parent_id: parentId }, 'moved to the epic');
+    }
+  };
+
+  const dropOnVersion = (issues: Issue[], target: string) => {
+    if (target === 'all') return;
+    const versionId = target === NONE ? null : target;
+    const [only] = issues;
+    if (issues.length === 1 && only) {
+      setField.mutate({
+        issueKey: only.key,
+        version: only.version,
+        changes: { fix_version_id: versionId },
+      });
+    } else {
+      changeMany(issues, { action: 'set_fix_version', fix_version_id: versionId }, 'updated');
+    }
+  };
+
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     const issue = allIssues.find((i) => i.key === String(active.id));
-    if (!issue || !over) return;
-    const sprintId = String(over.id) === BACKLOG_ID ? null : String(over.id);
-    if (selectedSet.has(issue.key) && selected.length > 1) {
-      moveMany(
-        allIssues.filter((i) => selectedSet.has(i.key)),
-        sprintId,
-      );
+    if (!issue || !over || !online) return;
+    const overId = String(over.id);
+    const dragged =
+      selectedSet.has(issue.key) && selected.length > 1
+        ? allIssues.filter((i) => selectedSet.has(i.key))
+        : [issue];
+    if (overId.startsWith('epic:')) {
+      dropOnEpic(dragged, overId.slice('epic:'.length));
+      return;
+    }
+    if (overId.startsWith('version:')) {
+      dropOnVersion(dragged, overId.slice('version:'.length));
+      return;
+    }
+    const sprintId = overId === BACKLOG_ID ? null : overId;
+    if (dragged.length > 1) {
+      changeMany(dragged, { action: 'move_sprint', sprint_id: sprintId }, 'moved');
       return;
     }
     moveIssue(issue, sprintId);
+  };
+
+  const onVersionAction = (action: VersionAction, version: Version) => {
+    if (action === 'edit' || action === 'release' || action === 'delete') {
+      setVersionDialog({ kind: action, version });
+      return;
+    }
+    versionAction.mutate(
+      { id: version.id, action },
+      {
+        onSuccess: () => {
+          showSuccessToast(toast, {
+            feedbackInvocationId: createFeedbackInvocationId(),
+            title: `${version.name} ${action === 'unrelease' ? 'is unreleased again' : action === 'archive' ? 'archived' : 'unarchived'}`,
+          });
+        },
+      },
+    );
   };
 
   const submitSprint = (event: SyntheticEvent) => {
@@ -273,6 +397,9 @@ export function BacklogPage() {
   };
 
   const sprintIssues = (id: string) => loaded.sprints.find((s) => s.sprint.id === id)?.issues ?? [];
+  const closeVersionDialog = () => {
+    setVersionDialog(null);
+  };
 
   return (
     <section aria-labelledby="backlog-title" className="space-y-4 pb-20">
@@ -297,10 +424,34 @@ export function BacklogPage() {
             placeholder="Filter by key, summary, assignee, label"
             value={query}
             onChange={(event) => {
-              setQuery(event.target.value);
+              setParam('q', event.target.value);
             }}
           />
         </label>
+        <Button
+          variant={panel === 'epics' ? 'primary' : 'secondary'}
+          size="sm"
+          aria-pressed={panel === 'epics'}
+          aria-keyshortcuts="E"
+          title="Epics (E)"
+          onClick={() => {
+            setPanel(panel === 'epics' ? null : 'epics');
+          }}
+        >
+          Epics
+        </Button>
+        <Button
+          variant={panel === 'versions' ? 'primary' : 'secondary'}
+          size="sm"
+          aria-pressed={panel === 'versions'}
+          aria-keyshortcuts="V"
+          title="Versions (V)"
+          onClick={() => {
+            setPanel(panel === 'versions' ? null : 'versions');
+          }}
+        >
+          Versions
+        </Button>
         <ViewSettings
           density={density}
           setDensity={setDensity}
@@ -337,99 +488,162 @@ export function BacklogPage() {
           ? mutationErrorMessage(createSprint.error, 'generic-project')
           : moveOne.error
             ? mutationErrorMessage(moveOne.error, 'issue-mutation')
-            : null}
+            : setField.error
+              ? mutationErrorMessage(setField.error, 'issue-mutation')
+              : null}
       </FormError>
 
-      {query && shownTotal === 0 && totalIssues > 0 ? (
-        <UxSearchEmpty
-          query={query}
-          scope="issues"
-          onClearQuery={() => {
-            setQuery('');
+      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+        <div className={panel ? 'grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]' : ''}>
+          {panel ? (
+            <aside
+              aria-label={panel === 'epics' ? 'Epics panel' : 'Versions panel'}
+              className="space-y-2 rounded-lg border border-line bg-surface p-3 lg:self-start"
+            >
+              {panel === 'epics' ? (
+                <EpicsPanel
+                  org={org}
+                  project={key}
+                  selected={epicFilter}
+                  onSelect={(value) => {
+                    setParam('epic', value);
+                  }}
+                  includeDone={includeDone}
+                  onIncludeDone={setIncludeDone}
+                  canCreate={canCreate && online}
+                  onCreateEpic={() => {
+                    setCreatingEpic(true);
+                  }}
+                />
+              ) : (
+                <VersionsPanel
+                  org={org}
+                  project={key}
+                  selected={versionFilter}
+                  onSelect={(value) => {
+                    setParam('version', value);
+                  }}
+                  includeArchived={includeArchived}
+                  onIncludeArchived={setIncludeArchived}
+                  canManage={canManageVersions}
+                  online={online}
+                  onCreate={() => {
+                    setVersionDialog({ kind: 'create' });
+                  }}
+                  onAction={onVersionAction}
+                />
+              )}
+            </aside>
+          ) : null}
+          <div className="min-w-0 space-y-4">
+            {filtering && shownTotal === 0 && totalIssues > 0 ? (
+              <UxSearchEmpty
+                query={query}
+                scope="issues"
+                filtersActive={Boolean(epicFilter || versionFilter)}
+                onClearQuery={() => {
+                  setParam('q', '');
+                }}
+                onClearFilters={() => {
+                  const next = new URLSearchParams(search);
+                  next.delete('epic');
+                  next.delete('version');
+                  setSearch(next, { replace: true });
+                }}
+              />
+            ) : (
+              panels.map((p) => (
+                <BacklogPanel
+                  key={p.id}
+                  panelId={p.id}
+                  title={p.title}
+                  sprint={p.sprint}
+                  issues={p.shown}
+                  totalInPanel={p.all.length}
+                  org={org}
+                  project={key}
+                  canPlan={canPlan}
+                  online={online}
+                  selected={selectedSet}
+                  onSelect={onSelect}
+                  targets={targets}
+                  onMove={moveIssue}
+                  onSprintAction={(action, sprint) => {
+                    setDialog({ action, sprint });
+                  }}
+                  fields={fields}
+                  density={density}
+                  filtering={filtering}
+                />
+              ))
+            )}
+            {loaded.truncated ? (
+              <p className="text-sm text-fg-muted">Showing the first 500 issues.</p>
+            ) : null}
+          </div>
+        </div>
+      </DndContext>
+
+      {selected.length > 0 && (canPlan || permissions.includes('issue.edit')) ? (
+        <BulkBar
+          org={org}
+          project={key}
+          keys={selected}
+          targets={targets}
+          permissions={permissions}
+          online={online}
+          onClear={() => {
+            setSelected([]);
+            anchor.current = null;
+          }}
+          onDone={(changed) => {
+            setSelected((current) => current.filter((k) => !changed.includes(k)));
           }}
         />
-      ) : (
-        <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-          <div className="space-y-4">
-            {panels.map((panel) => (
-              <BacklogPanel
-                key={panel.id}
-                panelId={panel.id}
-                title={panel.title}
-                sprint={panel.sprint}
-                issues={panel.shown}
-                totalInPanel={panel.all.length}
-                org={org}
-                project={key}
-                canPlan={canPlan}
-                online={online}
-                selected={selectedSet}
-                onSelect={onSelect}
-                targets={targets}
-                onMove={moveIssue}
-                onSprintAction={(action, sprint) => {
-                  setDialog({ action, sprint });
-                }}
-                fields={fields}
-                density={density}
-                filtering={Boolean(query)}
-              />
-            ))}
-          </div>
-        </DndContext>
-      )}
-      {loaded.truncated ? (
-        <p className="text-sm text-fg-muted">Showing the first 500 issues.</p>
       ) : null}
 
-      {selected.length > 0 && canPlan ? (
-        <div
-          role="region"
-          aria-label="Bulk actions"
-          className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-line bg-surface px-4 py-2 shadow-lg"
-        >
-          <span className="text-sm font-medium">{selected.length} selected</span>
-          <label className="flex items-center gap-2 text-sm">
-            Move to
-            <select
-              className="h-8 rounded-md border border-line-strong bg-surface px-2"
-              value={bulkTarget}
-              onChange={(event) => {
-                setBulkTarget(event.target.value);
-              }}
-            >
-              {targets.map((target) => (
-                <option key={target.id} value={target.id}>
-                  {target.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <Button
-            variant="primary"
-            size="sm"
-            disabled={!online || bulk.isPending}
-            aria-busy={bulk.isPending}
-            onClick={() => {
-              moveMany(
-                allIssues.filter((i) => selectedSet.has(i.key)),
-                bulkTarget === BACKLOG_ID ? null : bulkTarget,
-              );
-            }}
-          >
-            Move
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setSelected([]);
-              anchor.current = null;
-            }}
-          >
-            Clear selection
-          </Button>
-        </div>
+      {creatingEpic ? (
+        <CreateIssueDialog
+          org={org}
+          project={key}
+          defaultKind="epic"
+          onClose={() => {
+            setCreatingEpic(false);
+          }}
+        />
+      ) : null}
+
+      {versionDialog?.kind === 'create' ? (
+        <VersionFormDialog org={org} project={key} online={online} onClose={closeVersionDialog} />
+      ) : null}
+      {versionDialog?.kind === 'edit' ? (
+        <VersionFormDialog
+          org={org}
+          project={key}
+          online={online}
+          version={versionDialog.version}
+          onClose={closeVersionDialog}
+        />
+      ) : null}
+      {versionDialog?.kind === 'release' ? (
+        <ReleaseVersionDialog
+          org={org}
+          project={key}
+          online={online}
+          version={versionDialog.version}
+          others={otherVersions}
+          onClose={closeVersionDialog}
+        />
+      ) : null}
+      {versionDialog?.kind === 'delete' ? (
+        <DeleteVersionDialog
+          org={org}
+          project={key}
+          online={online}
+          version={versionDialog.version}
+          others={otherVersions}
+          onClose={closeVersionDialog}
+        />
       ) : null}
 
       {dialog?.action === 'start' ? (

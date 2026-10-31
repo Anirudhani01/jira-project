@@ -49,6 +49,10 @@ vi.mock('./api', () => ({
   useIssueSearch: () => ({ data: searchState.hits, isFetching: false }),
 }));
 
+vi.mock('../backlog/planApi', () => ({
+  useVersions: () => ({ data: [] }),
+}));
+
 vi.mock('../projects/api', () => ({
   useProjectMembers: () => ({ data: [] }),
 }));

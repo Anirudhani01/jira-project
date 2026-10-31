@@ -112,6 +112,14 @@ export function BacklogRow({
           {issue.parent.key}
         </span>
       ) : null}
+      {fields.version && issue.fix_version ? (
+        <span
+          title={`Fix version: ${issue.fix_version.name}`}
+          className="hidden shrink-0 rounded-sm bg-surface-2 px-1.5 text-[11px] text-fg-muted lg:inline"
+        >
+          {issue.fix_version.name}
+        </span>
+      ) : null}
       {fields.labels
         ? issue.labels.slice(0, 2).map((label) => (
             <span

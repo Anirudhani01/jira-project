@@ -34,6 +34,7 @@ from app.modules.notifications.router import router as notifications_router
 from app.modules.orgs.router import router as orgs_router
 from app.modules.projects.router import router as projects_router
 from app.modules.sprints.router import router as sprints_router
+from app.modules.versions.router import router as versions_router
 
 API_DOCS_PATH = "/api/docs"
 OPENAPI_PATH = "/api/openapi.json"
@@ -115,6 +116,7 @@ def create_app(
     app.include_router(issues_router)
     app.include_router(boards_router)
     app.include_router(sprints_router)
+    app.include_router(versions_router)
     app.include_router(notifications_router)
     app.include_router(comments_router)
 

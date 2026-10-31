@@ -90,6 +90,18 @@ M11_PATHS = {
     "/api/v1/orgs/{org_slug}/notifications/{notification_id}/read",
 }
 
+EPICS_VERSIONS_PATHS = {
+    "/api/v1/orgs/{org_slug}/issues/bulk",
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/epics",
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/versions",
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/versions/order",
+    "/api/v1/orgs/{org_slug}/versions/{version_id}",
+    "/api/v1/orgs/{org_slug}/versions/{version_id}/release",
+    "/api/v1/orgs/{org_slug}/versions/{version_id}/unrelease",
+    "/api/v1/orgs/{org_slug}/versions/{version_id}/archive",
+    "/api/v1/orgs/{org_slug}/versions/{version_id}/unarchive",
+}
+
 
 def test_openapi_has_only_authorized_routes() -> None:
     """Scope guard: routes beyond M11 must not appear before their milestone."""
@@ -106,4 +118,5 @@ def test_openapi_has_only_authorized_routes() -> None:
         | M9_PATHS
         | M10_PATHS
         | M11_PATHS
+        | EPICS_VERSIONS_PATHS
     )
