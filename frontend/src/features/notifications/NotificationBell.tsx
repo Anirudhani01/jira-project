@@ -1,9 +1,16 @@
+import { ArrowRightLeft, Bell, MessageSquare, UserPlus, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 
+import { Button } from '../../components/ui/Button';
+import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/Overlay';
+import { ErrorState } from '../../components/ui/States';
+import { cn } from '../../lib/cn';
 import type { Notification } from '../../lib/api/types';
+import { formatRelativeTime } from '../../lib/relativeTime';
 
 import { useMarkRead, useNotifications, useUnreadCount } from './api';
+import { groupNotifications, notificationHref } from './notificationGroups';
 
 function describe(n: Notification): string {
   const who = n.actor.display_name;
@@ -20,80 +27,107 @@ function describe(n: Notification): string {
   }
 }
 
-/** Bell with an unread badge and a panel of the signed-in member's notifications. */
+const ICONS: Record<string, LucideIcon> = {
+  issue_assigned: UserPlus,
+  issue_commented: MessageSquare,
+  issue_status_changed: ArrowRightLeft,
+};
+
+/** Bell with an unread badge and a popover of the signed-in member's notifications. */
 export function NotificationBell({ org }: { org: string }) {
   const [open, setOpen] = useState(false);
   const unread = useUnreadCount(org);
   const list = useNotifications(org, open);
   const { one, all } = useMarkRead(org);
   const count = unread.data ?? 0;
+  const groups = groupNotifications(list.data?.items ?? []);
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls="notification-panel"
-        onClick={() => {
-          setOpen((value) => !value);
-        }}
-        className="rounded px-2 py-1 hover:bg-slate-100"
-      >
-        Notifications
-        {count > 0 ? (
-          <span className="ml-1 rounded-full bg-red-600 px-1.5 text-xs text-white">
-            <span className="sr-only">{count} unread</span>
-            <span aria-hidden="true">{count > 99 ? '99+' : count}</span>
-          </span>
-        ) : null}
-      </button>
-      {open ? (
-        <div
-          id="notification-panel"
-          role="region"
-          aria-label="Notifications"
-          className="absolute right-0 z-10 mt-1 w-80 rounded border border-slate-200 bg-white p-2 shadow-lg"
-        >
-          <div className="mb-2 flex justify-between text-xs">
-            <span className="font-semibold">Notifications</span>
-            <button
-              type="button"
-              disabled={count === 0}
-              onClick={() => {
-                all.mutate();
-              }}
-              className="text-blue-700 underline disabled:text-slate-400 disabled:no-underline"
-            >
-              Mark all read
-            </button>
-          </div>
-          {list.isPending ? <p className="text-sm">Loading…</p> : null}
-          {list.isError ? (
-            <p className="text-sm text-red-700">Could not load notifications.</p>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="relative gap-1 px-2">
+          <Bell className="size-4" aria-hidden="true" />
+          <span className="sr-only">Notifications</span>
+          {count > 0 ? (
+            <span className="rounded-full bg-danger px-1.5 text-xs font-medium text-white">
+              <span className="sr-only">{count} unread</span>
+              <span aria-hidden="true">{count > 99 ? '99+' : count}</span>
+            </span>
           ) : null}
-          {list.data && list.data.items.length === 0 ? (
-            <p className="text-sm text-slate-600">You are all caught up.</p>
-          ) : null}
-          <ul className="max-h-96 space-y-1 overflow-y-auto">
-            {list.data?.items.map((n) => (
-              <li key={n.id}>
-                <Link
-                  to={`/o/${org}/issues/${n.issue_key}`}
-                  onClick={() => {
-                    if (!n.read) one.mutate(n.id);
-                    setOpen(false);
-                  }}
-                  className={`block rounded px-2 py-1 text-sm hover:bg-slate-100 ${n.read ? 'text-slate-600' : 'font-medium'}`}
-                >
-                  {n.read ? null : <span className="sr-only">Unread: </span>}
-                  {describe(n)}
-                </Link>
-              </li>
-            ))}
-          </ul>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent aria-label="Notifications" className="w-96 max-w-[calc(100vw-1rem)] p-0">
+        <div className="flex items-center justify-between border-b border-line px-3 py-2">
+          <h2 className="text-sm font-semibold text-fg">Notifications</h2>
+          <button
+            type="button"
+            disabled={count === 0 || all.isPending}
+            onClick={() => {
+              all.mutate();
+            }}
+            className="text-xs font-medium text-accent hover:underline disabled:text-fg-subtle disabled:no-underline"
+          >
+            Mark all read
+          </button>
         </div>
-      ) : null}
-    </div>
+        <div className="max-h-96 overflow-y-auto p-2">
+          {list.isPending ? <p className="px-2 py-3 text-sm text-fg-muted">Loading…</p> : null}
+          {list.isError ? (
+            <ErrorState
+              error={list.error}
+              onRetry={() => {
+                void list.refetch();
+              }}
+            />
+          ) : null}
+          {list.data && groups.length === 0 ? (
+            <p className="px-2 py-6 text-center text-sm text-fg-muted">You are all caught up.</p>
+          ) : null}
+          {groups.map((group) => (
+            <section key={group.label} aria-label={group.label} className="mb-2 last:mb-0">
+              <h3 className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-fg-muted">
+                {group.label}
+              </h3>
+              <ul className="space-y-0.5">
+                {group.items.map((n) => {
+                  const Icon = ICONS[n.type] ?? Bell;
+                  return (
+                    <li key={n.id}>
+                      <Link
+                        to={notificationHref(org, n)}
+                        onClick={() => {
+                          if (!n.read) one.mutate(n.id);
+                          setOpen(false);
+                        }}
+                        className={cn(
+                          'flex items-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-surface-2',
+                          n.read ? 'text-fg-muted' : 'font-medium text-fg',
+                        )}
+                      >
+                        <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                        <span className="min-w-0 flex-1">
+                          {n.read ? null : <span className="sr-only">Unread: </span>}
+                          {describe(n)}
+                          <span className="block text-xs font-normal text-fg-subtle">
+                            {formatRelativeTime(n.created_at)}
+                          </span>
+                        </span>
+                        {n.read ? null : (
+                          <span
+                            aria-hidden="true"
+                            className="mt-1.5 size-2 shrink-0 rounded-full bg-accent"
+                          />
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 

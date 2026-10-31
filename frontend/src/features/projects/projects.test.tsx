@@ -185,7 +185,7 @@ describe('ProjectPage', () => {
           items: [{ user_id: 'u1', display_name: 'Ann', email: 'a@x.test', role: 'viewer' }],
         }),
     });
-    renderApp('/o/acme/p/WEB');
+    renderApp('/o/acme/p/WEB?tab=workflow');
     expect(
       await screen.findByRole('heading', { level: 1, name: 'WEB — Website' }),
     ).toBeInTheDocument();
@@ -193,7 +193,6 @@ describe('ProjectPage', () => {
     expect(screen.getByRole('columnheader', { name: 'Column' })).toBeInTheDocument();
     expect(screen.getAllByText('To Do').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByRole('button', { name: 'Archive project' })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Remove Ann/ })).toBeNull();
   });
 
   it('renders not-found for inaccessible projects', async () => {
@@ -220,7 +219,7 @@ describe('ProjectPage', () => {
       'GET /orgs/acme/projects/WEB/members': () => json({ items: [] }),
       'POST /orgs/acme/projects/WEB/archive': () => new Response(null, { status: 204 }),
     });
-    renderApp('/o/acme/p/WEB');
+    renderApp('/o/acme/p/WEB?tab=danger');
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Archive project' }));
     await waitFor(() => {
       expect(calls.some((c) => c.path === '/orgs/acme/projects/WEB/archive')).toBe(true);
@@ -228,5 +227,104 @@ describe('ProjectPage', () => {
     expect(calls.find((c) => c.path.endsWith('/archive'))?.headers.get('x-csrf-token')).toBe(
       'csrf-abc',
     );
+  });
+});
+
+describe('ProjectPage board columns tab', () => {
+  const S2 = '44444444-4444-4444-4444-444444444442';
+  const C1 = '55555555-5555-5555-5555-555555555551';
+  const C2 = '55555555-5555-5555-5555-555555555552';
+  const TWO = {
+    ...WORKFLOW,
+    statuses: [
+      { id: S1, name: 'To Do', category: 'todo', position: 0 },
+      { id: S2, name: 'Done', category: 'done', position: 1 },
+    ],
+  };
+  const BOARD = {
+    project_key: 'WEB',
+    board_type: 'kanban',
+    truncated: false,
+    sprint: null,
+    transitions: [],
+    columns: [
+      {
+        id: C1,
+        name: 'To Do',
+        position: 0,
+        wip_limit: null,
+        status_ids: [S1],
+        count: 0,
+        over_wip_limit: false,
+        issues: [],
+      },
+      {
+        id: C2,
+        name: 'Done',
+        position: 1,
+        wip_limit: 3,
+        status_ids: [S2],
+        count: 0,
+        over_wip_limit: false,
+        issues: [],
+      },
+    ],
+  };
+  const MANAGER = { ...PROJECT, my_role: 'admin', permissions: ['project.view', 'board.manage'] };
+
+  function api(extra: Record<string, () => Response> = {}) {
+    return mockApi({
+      'GET /auth/session': () => json(SESSION),
+      'GET /orgs/acme/projects/WEB': () => json(MANAGER),
+      'GET /orgs/acme/projects/WEB/workflow': () => json(TWO),
+      'GET /orgs/acme/projects/WEB/members': () => json({ items: [] }),
+      'GET /orgs/acme/projects/WEB/board': () => json(BOARD),
+      ...extra,
+    });
+  }
+
+  it('saves a renamed column and a new WIP limit', async () => {
+    const calls = api({ 'PUT /orgs/acme/projects/WEB/board/columns': () => json(BOARD) });
+    renderApp('/o/acme/p/WEB?tab=columns');
+    const user = userEvent.setup();
+    const name = await screen.findByLabelText('Column 1 name');
+    await user.clear(name);
+    await user.type(name, 'Backlog');
+    await user.type(screen.getAllByLabelText('WIP limit')[0] as HTMLElement, '5');
+    await user.click(screen.getByRole('button', { name: 'Save columns' }));
+    await waitFor(() => {
+      expect(calls.some((c) => c.method === 'PUT')).toBe(true);
+    });
+    expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({
+      columns: [
+        { id: C1, name: 'Backlog', wip_limit: 5, status_ids: [S1] },
+        { id: C2, name: 'Done', wip_limit: 3, status_ids: [S2] },
+      ],
+    });
+  });
+
+  it('blocks saving a new column that has no name', async () => {
+    const calls = api();
+    renderApp('/o/acme/p/WEB?tab=columns');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Add column' }));
+    await user.click(screen.getByRole('button', { name: 'Save columns' }));
+    expect(await screen.findByText('Enter a column name.')).toBeInTheDocument();
+    expect(calls.some((c) => c.method === 'PUT')).toBe(false);
+  });
+
+  it('reorders columns with the move buttons', async () => {
+    api();
+    renderApp('/o/acme/p/WEB?tab=columns');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Move Done up' }));
+    expect(screen.getByLabelText('Column 1 name')).toHaveValue('Done');
+  });
+
+  it('is read-only for people without board.manage', async () => {
+    api({ 'GET /orgs/acme/projects/WEB': () => json(PROJECT) });
+    renderApp('/o/acme/p/WEB?tab=columns');
+    expect(await screen.findByLabelText('Column 1 name')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save columns' })).toBeDisabled();
   });
 });

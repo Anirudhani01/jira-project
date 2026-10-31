@@ -31,3 +31,6 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
     }
   };
 }
+
+// jsdom does not implement scrollIntoView.
+Element.prototype.scrollIntoView = () => undefined;

@@ -8,6 +8,7 @@ import { formatRelativeTime } from '../../lib/relativeTime';
 import { describeError } from '../../lib/forms';
 import { permissionDeniedInlineMessage } from '../../lib/ux/permissionDenied';
 import type { Comment, IssueActivity } from '../../lib/api/types';
+import { useLocation } from 'react-router';
 import { useIssueActivity } from './api';
 
 import { useComments, useCreateComment, useDeleteComment, useUpdateComment } from '../comments/api';
@@ -62,8 +63,17 @@ function CommentRow({
   onDelete: (id: string) => void;
 }) {
   const isEditing = editingId === comment.id;
+  const anchor = `comment-${comment.id}`;
+  const { hash } = useLocation();
+  const target = hash === `#${anchor}`;
   return (
-    <li className="rounded-lg border border-line bg-surface-raised p-3 text-sm">
+    <li
+      id={anchor}
+      ref={(node) => {
+        if (target && node) node.scrollIntoView({ block: 'center' });
+      }}
+      className={`rounded-lg border bg-surface-raised p-3 text-sm ${target ? 'border-accent ring-1 ring-accent' : 'border-line'}`}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-medium text-fg">{comment.author.display_name}</span>
         <time className="text-xs text-fg-muted" dateTime={comment.created_at}>

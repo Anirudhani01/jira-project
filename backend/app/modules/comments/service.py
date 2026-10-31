@@ -151,7 +151,7 @@ async def create_comment(
             issue_id=issue.id,
             kind="issue_commented",
             candidates=[issue.reporter_id, issue.assignee_id],
-            payload={"summary": issue.summary},
+            payload={"summary": issue.summary, "comment_id": str(comment_id)},
         )
         response = await _comment_response(session, comment_id)
         if idempotency_key is not None:

@@ -71,4 +71,32 @@ describe('notification bell', () => {
       expect(calls.some((c) => c.path.endsWith('/read-all') && c.method === 'POST')).toBe(true);
     });
   });
+
+  it('groups by day and deep links a comment notification to the comment', async () => {
+    const today = new Date().toISOString();
+    api({
+      'GET /orgs/acme/notifications': () =>
+        json({
+          items: [
+            {
+              ...ITEMS[0],
+              id: 'n3',
+              type: 'issue_commented',
+              payload: { comment_id: 'c7' },
+              created_at: today,
+            },
+            ITEMS[1],
+          ],
+          next_cursor: null,
+        }),
+    });
+    renderApp('/o/acme');
+    await userEvent.click(await screen.findByRole('button', { name: /Notifications/ }));
+    expect(await screen.findByRole('region', { name: 'Today' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Earlier' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Bob commented on WEB-1/ })).toHaveAttribute(
+      'href',
+      '/o/acme/issues/WEB-1#comment-c7',
+    );
+  });
 });

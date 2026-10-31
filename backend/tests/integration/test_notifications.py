@@ -100,6 +100,14 @@ async def test_comment_notifications_carry_no_comment_text(ctx: Ctx) -> None:
     assert "secret" not in str(item)
 
 
+async def test_comment_notification_payload_links_to_the_comment(ctx: Ctx) -> None:
+    a, *_ = await team(ctx)
+    issue = await created_by(a, ctx)
+    posted = await new_comment(ctx.http, ctx.slug, issue["key"])
+    [item] = await inbox(a, ctx)
+    assert item["payload"]["comment_id"] == posted.json()["id"]
+
+
 # --------------------------------------------------------------------- status changes
 async def test_transition_and_board_move_notify_reporter_and_assignee(ctx: Ctx) -> None:
     a, _, b, b_id = await team(ctx)

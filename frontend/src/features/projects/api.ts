@@ -81,3 +81,17 @@ export function useRemoveProjectMember(org: string, key: string) {
     apiFetch<undefined>(`${projectPath(org, key)}/members/${userId}`, { method: 'DELETE' }),
   );
 }
+
+export interface ColumnsRequest {
+  columns: { id?: string; name: string; wip_limit: number | null; status_ids: string[] }[];
+}
+
+/** Replaces the board's columns; the board and the workflow view both change. */
+export function useReplaceBoardColumns(org: string, key: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ColumnsRequest) =>
+      apiFetch<unknown>(`${projectPath(org, key)}/board/columns`, { method: 'PUT', json: body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['org', org.toLowerCase()] }),
+  });
+}
