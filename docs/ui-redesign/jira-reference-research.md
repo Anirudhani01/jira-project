@@ -114,7 +114,14 @@ Sources: [Spacing](https://atlassian.design/foundations/spacing),
 | Spacing/type | 8 px grid, 14/20 body | Tailwind defaults + our tokens | Align scale (tokens). |
 | Density | Compact option | None | Add. |
 
-## 4. Decisions needed (they change the plan)
+## 4. Decisions (answered 2026-10-31)
+
+1. **Navigation: move to the current model** (global sidebar + project tabs) — implemented as PR 2b.
+2. **Visual identity: keep our violet accent**; no brand colours, logo or font copied.
+3. **No reference screenshots available**: we build from the public documentation and the
+   design-system proportions above; pixel-level matching waits until screenshots exist.
+
+The original questions, for the record:
 
 - **A. Navigation model.** Current Jira uses *global sidebar + project tabs*; we built the older
   *project sidebar* (PR 2, merged). Options: **(1) keep it**, **(2) move to the current model**
