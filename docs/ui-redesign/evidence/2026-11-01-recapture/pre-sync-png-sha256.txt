@@ -1,0 +1,16 @@
+bff92a408e02e587effe4dcb6e68b56b3050226544c299b94e9b7a9b665820fa  docs/ui-redesign/after/03-create-project-dark.png
+df60a3688ad7243a2b97a9e815262cc1724e8a147fd0e9fde0c51dfef6154c1b  docs/ui-redesign/after/03-create-project-light.png
+51de431308cd8de5ea588b98b8fde6cd2479c7be1cfb85ee43d431d6c3f5e7a0  docs/ui-redesign/after/03-org-home-dark.png
+38314a5907e9b7283aca69fc5e97c8ab1f415c53b62f417919d2db779430ce68  docs/ui-redesign/after/03-org-home-light.png
+0eca8d45febdadacdb1bec9e7d2c936c39796723a64967e37c6c94d5010227e5  docs/ui-redesign/after/03-template-overview-kanban-dark.png
+5429f757fe496d679c04a62f96d0960601f99d59ad56b226a6a3f7de26ab8a73  docs/ui-redesign/after/03-template-overview-kanban-light.png
+dfe4bf2d487bbb5d0dd765afb2714a160561378c0a5dc91c5bd1d43fa3afe4fe  docs/ui-redesign/after/05-issues-list-dark.png
+8ae4f52eff3244615c04c79d1d4e04a9e12f491d7ce3ae7f6ae87d2440348876  docs/ui-redesign/after/05-issues-list-light.png
+f82fa40b27485cde67d146ee064d326aeabad519115db8d3df46e5c3b7f36131  docs/ui-redesign/after/06-board-dark.png
+c72e7839940485a1847a4abda2bfc83d5af2ee30882c10a6bd97b83d1f06500d  docs/ui-redesign/after/06-board-light.png
+edafd3980e1699e07a84017bb8057408595efc90241703015a16bf8ff51ad444  docs/ui-redesign/after/07-issue-detail-dark.png
+dd1d240116343ffad865cb271fce278a225ed078013d990256acccf40eb0228e  docs/ui-redesign/after/07-issue-detail-light.png
+6b2eac9e7c3462f479a298087945c7fdf700724b116c25629104db3e952119c5  docs/ui-redesign/after/09-account-dark.png
+c814ac43a822d243d5cedb43ab4cc61905a0e709bc9b899b61073da18c047a71  docs/ui-redesign/after/09-account-light.png
+202bb7dd7fb49f946d0e326dd29d426b879e72aff828cfb299f289b5883bd8b3  docs/ui-redesign/after/10-project-settings-dark.png
+dacc965dd2211de553d84c8ecfdd46751a0efaa64d02b2c5302b42a8ab26b9ef  docs/ui-redesign/after/10-project-settings-light.png
