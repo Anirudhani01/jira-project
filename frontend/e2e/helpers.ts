@@ -137,7 +137,7 @@ export async function createProject(
 ) {
   await page.goto(`/o/${orgSlug}/projects/new?board_type=${boardType}&step=create`);
   await page.getByLabel('Name').fill(name);
-  await page.getByLabel('Key').fill(projectKey);
+  await page.getByLabel('Key', { exact: true }).fill(projectKey);
   await page.getByRole('button', { name: 'Create project' }).click();
   await expect(page).toHaveURL(new RegExp(`/p/${projectKey}`));
 }

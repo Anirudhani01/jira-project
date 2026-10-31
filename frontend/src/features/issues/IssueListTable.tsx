@@ -160,7 +160,7 @@ function IssueListTableRow({
   const detailLink = issueDetailLinkProps(org, issue.key, location);
 
   return (
-    <DataGridRow>
+    <DataGridRow issueKey={issue.key}>
       <DataGridDividedCell>
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Link

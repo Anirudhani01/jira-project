@@ -207,6 +207,7 @@ function CommentComposer({
       </label>
       <textarea
         id="new-comment"
+        data-shortcut-target="comment"
         className="w-full rounded-md border border-line-strong bg-surface px-2.5 py-1.5 text-sm"
         rows={3}
         maxLength={32000}

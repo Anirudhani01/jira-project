@@ -127,7 +127,7 @@ test('UX-S2: safeNext round-trip after session expiry', async ({ page, request }
   await expect(page).toHaveURL(new RegExp(`/o/${id.slug}`));
   await page.goto(`/o/${id.slug}/projects/new?board_type=kanban&step=create`);
   await page.getByLabel('Name').fill('SafeNext project');
-  await page.getByLabel('Key').fill(id.key);
+  await page.getByLabel('Key', { exact: true }).fill(id.key);
   await page.getByRole('button', { name: 'Create project' }).click();
   await expect(page).toHaveURL(new RegExp(`/p/${id.key}`));
 
@@ -203,7 +203,7 @@ test('UX-P2: project viewer has no create issue on board', async ({ page, reques
   await page.getByRole('button', { name: 'Create organization' }).click();
   await page.goto(`/o/${owner.slug}/projects/new?board_type=kanban&step=create`);
   await page.getByLabel('Name').fill('Viewer project');
-  await page.getByLabel('Key').fill(owner.key);
+  await page.getByLabel('Key', { exact: true }).fill(owner.key);
   await page.getByRole('button', { name: 'Create project' }).click();
   await inviteToOrg(page, owner.slug, viewer.email);
   await signOut(page, 'Owner User');

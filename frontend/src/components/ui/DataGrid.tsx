@@ -143,12 +143,22 @@ export function DataGridBody({ children }: { children: ReactNode }) {
   return <div role="rowgroup">{children}</div>;
 }
 
-export function DataGridRow({ className, children }: { children: ReactNode; className?: string }) {
+export function DataGridRow({
+  className,
+  children,
+  issueKey,
+}: {
+  children: ReactNode;
+  className?: string;
+  /** Marks the row as an issue row for the J / K / O shortcuts. */
+  issueKey?: string;
+}) {
   const columns = useDataGridColumns();
   const style: CSSProperties = { gridTemplateColumns: columns };
   return (
     <div
       role="row"
+      {...(issueKey ? { 'data-issue-row': true, 'data-issue-key': issueKey } : {})}
       className={cn(
         'grid border-t border-line transition-colors hover:bg-surface-hover',
         className,

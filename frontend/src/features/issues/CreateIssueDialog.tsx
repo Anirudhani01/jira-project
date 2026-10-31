@@ -173,7 +173,9 @@ export function CreateIssueDialog({
       {
         onSuccess: (issue) => {
           if (!another) {
-            // Opening the new issue is the confirmation: no extra toast for this path.
+            // Opening the new issue is the confirmation: no extra toast for this path. The
+            // dialog may be owned by the shell (top bar, shortcuts), so it closes itself.
+            onClose();
             void navigate(`/o/${org}/issues/${issue.key}`);
             return;
           }

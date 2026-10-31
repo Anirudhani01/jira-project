@@ -9,6 +9,7 @@ import { useAuthRoute } from '../features/auth/useAuthRoute';
 
 import { GlobalSidebar, MobileGlobalDrawer } from './shell/GlobalSidebar';
 import { ProjectTabs } from './shell/ProjectTabs';
+import { ShortcutsProvider } from './shortcuts/ShortcutsProvider';
 import { ShellProvider } from './shell/ShellContext';
 import { TopBar } from './shell/TopBar';
 import { useBoardShell } from './shell/useBoardShell';
@@ -87,7 +88,9 @@ function AppShellBody() {
 export function AppShell() {
   return (
     <ShellProvider>
-      <AppShellBody />
+      <ShortcutsProvider>
+        <AppShellBody />
+      </ShortcutsProvider>
     </ShellProvider>
   );
 }

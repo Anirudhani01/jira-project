@@ -236,7 +236,7 @@ export function IssueCard({
 
   if (boardChrome) {
     return (
-      <li ref={setRefs} className={cardShellClass}>
+      <li ref={setRefs} data-issue-row data-issue-key={card.key} className={cardShellClass}>
         <div className="flex gap-1">
           {canMove && !overlay ? (
             <DragHandle
@@ -295,7 +295,7 @@ export function IssueCard({
   }
 
   return (
-    <li ref={setRefs} className={cardShellClass}>
+    <li ref={setRefs} data-issue-row data-issue-key={card.key} className={cardShellClass}>
       <div className="flex gap-1.5">
         {canMove && !overlay ? (
           <DragHandle
