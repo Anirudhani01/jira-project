@@ -97,9 +97,12 @@ jobs:
             exit 1
           }
 
-          make backend-dev >> .tmp/backend-dev.log 2>&1 &
+          # ux-states creates many fresh accounts from one runner IP; SIGNUP_PER_IP is 5/hour with
+          # RATE_LIMIT_ENABLED=true in .env.example. CLI assignment overrides include+export for Make
+          # and is exported to uvicorn/worker (same as local `make backend-dev RATE_LIMIT_ENABLED=false`).
+          make RATE_LIMIT_ENABLED=false backend-dev >> .tmp/backend-dev.log 2>&1 &
           echo $! >> "$PID_FILE"
-          make worker-dev >> .tmp/worker-dev.log 2>&1 &
+          make RATE_LIMIT_ENABLED=false worker-dev >> .tmp/worker-dev.log 2>&1 &
           echo $! >> "$PID_FILE"
           make frontend-dev >> .tmp/frontend-dev.log 2>&1 &
           echo $! >> "$PID_FILE"
