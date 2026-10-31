@@ -1,6 +1,11 @@
 import type { ProjectSummary } from '../../../lib/api/types';
 
-import { applyProjectDashboardFilters } from './projectDashboardFilters';
+import {
+  applyProjectDashboardFilters,
+  DEFAULT_PROJECT_DASHBOARD_FILTERS,
+  projectDashboardFiltersActive,
+  projectDashboardNonQueryFiltersActive,
+} from './projectDashboardFilters';
 
 const SAMPLE: ProjectSummary[] = [
   {
@@ -18,6 +23,24 @@ const SAMPLE: ProjectSummary[] = [
     my_role: 'member',
   },
 ];
+
+describe('projectDashboardFiltersActive', () => {
+  it('treats query and non-default filters as active', () => {
+    expect(projectDashboardFiltersActive(DEFAULT_PROJECT_DASHBOARD_FILTERS)).toBe(false);
+    expect(projectDashboardFiltersActive({ ...DEFAULT_PROJECT_DASHBOARD_FILTERS, q: 'mob' })).toBe(
+      true,
+    );
+    expect(
+      projectDashboardNonQueryFiltersActive({ ...DEFAULT_PROJECT_DASHBOARD_FILTERS, q: 'mob' }),
+    ).toBe(false);
+    expect(
+      projectDashboardNonQueryFiltersActive({
+        ...DEFAULT_PROJECT_DASHBOARD_FILTERS,
+        status: 'archived',
+      }),
+    ).toBe(true);
+  });
+});
 
 describe('applyProjectDashboardFilters', () => {
   it('filters by search query and board type', () => {

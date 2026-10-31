@@ -1,9 +1,11 @@
 import type { Issue } from '../../lib/api/types';
 
 import {
+  clearBoardSearchQuery,
   collectBoardFilterMeta,
   matchesBoardFilters,
   parseBoardFilters,
+  resetBoardFiltersPreservingQuery,
   writeBoardFilters,
 } from './boardFilters';
 import { board } from './board.test.fixtures';
@@ -55,6 +57,22 @@ describe('boardFilters', () => {
         ME,
       ),
     ).toBe(false);
+  });
+
+  it('resetBoardFiltersPreservingQuery clears quick filters but keeps q', () => {
+    const search = new URLSearchParams('q=login&mine=1&type=bug&foo=bar');
+    const next = resetBoardFiltersPreservingQuery(search);
+    expect(next.get('q')).toBe('login');
+    expect(next.get('mine')).toBeNull();
+    expect(next.get('type')).toBeNull();
+    expect(next.get('foo')).toBe('bar');
+  });
+
+  it('clearBoardSearchQuery removes only q', () => {
+    const search = new URLSearchParams('q=login&mine=1');
+    const next = clearBoardSearchQuery(search);
+    expect(next.get('q')).toBeNull();
+    expect(next.get('mine')).toBe('1');
   });
 
   it('collects assignees, types, and labels from all columns', () => {

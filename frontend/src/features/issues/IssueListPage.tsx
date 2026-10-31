@@ -4,7 +4,9 @@ import { useParams, useSearchParams } from 'react-router';
 
 import { NotFoundPage } from '../../app/pages/NotFoundPage';
 import { Button } from '../../components/ui/Button';
+import { UxSearchEmpty } from '../../components/ux/UxSearchEmpty';
 import { EmptyState, Skeleton } from '../../components/ui/Card';
+import { suggestProjectQuery } from '../../lib/ux/searchSuggest';
 import { Input } from '../../components/ui/Input';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { ErrorState } from '../../components/ui/States';
@@ -15,34 +17,24 @@ import { useIssues, useIssueTypes, useLabels, usePriorities, useProjectSprints }
 import { CreateIssueDialog } from './CreateIssueDialog';
 import { IssueListColumnPicker } from './IssueListColumnPicker';
 import { useIssueListColumns } from './issueListColumns';
-import { DEFAULT_ISSUE_LIST_SORT, isIssueListSort, type IssueListSort } from './issueListSort';
+import {
+  clearIssueListFiltersPreservingQuery,
+  clearIssueListQuery,
+  ISSUE_LIST_FILTER_KEYS,
+  ISSUE_LIST_QUERY_KEY,
+  issueListFiltersActive,
+  issueListNonQueryFiltersActive,
+  readIssueListSort,
+} from './issueListSearchParams';
+import { DEFAULT_ISSUE_LIST_SORT, type IssueListSort } from './issueListSort';
 import { IssueListTable } from './IssueListTable';
 
-const FILTERS = [
-  'status_category',
-  'type',
-  'priority',
-  'assignee',
-  'label',
-  'sprint',
-  'q',
-] as const;
+const FILTERS = [...ISSUE_LIST_FILTER_KEYS, ISSUE_LIST_QUERY_KEY] as const;
 
 const SORT_PARAM = 'sort';
 
 const selectClass =
   'min-w-[7rem] rounded-md border border-line bg-surface px-3 py-2 text-sm text-fg hover:border-line-strong';
-
-function filtersActive(search: URLSearchParams): boolean {
-  const sort = search.get(SORT_PARAM);
-  const sortActive = Boolean(sort && sort !== DEFAULT_ISSUE_LIST_SORT);
-  return sortActive || FILTERS.some((name) => Boolean(search.get(name)));
-}
-
-function readSort(search: URLSearchParams): IssueListSort {
-  const raw = search.get(SORT_PARAM);
-  return raw && isIssueListSort(raw) ? raw : DEFAULT_ISSUE_LIST_SORT;
-}
 
 function IssueListSkeleton() {
   return (
@@ -66,7 +58,7 @@ export function IssueListPage() {
   const priorities = usePriorities(org);
   const labels = useLabels(org, key);
   const sprints = useProjectSprints(org, key);
-  const sort = readSort(search);
+  const sort = readIssueListSort(search);
   const filters = Object.fromEntries(FILTERS.map((name) => [name, search.get(name) ?? undefined]));
   const issues = useIssues(org, { project: key.toUpperCase(), ...filters, sort });
   const {
@@ -100,10 +92,11 @@ export function IssueListPage() {
   };
 
   const clearFilters = () => {
-    const next = new URLSearchParams(search);
-    for (const name of FILTERS) next.delete(name);
-    next.delete(SORT_PARAM);
-    setSearch(next);
+    setSearch(clearIssueListFiltersPreservingQuery(search));
+  };
+
+  const clearSearch = () => {
+    setSearch(clearIssueListQuery(search));
   };
 
   const setSort = (next: IssueListSort) => {
@@ -134,7 +127,12 @@ export function IssueListPage() {
   );
 
   const items = issues.data?.pages.flatMap((page) => page.items) ?? [];
-  const hasFilters = filtersActive(search);
+  const hasFilters = issueListFiltersActive(search);
+  const hasNonQueryFilters = issueListNonQueryFiltersActive(search);
+  const searchQuery = search.get(ISSUE_LIST_QUERY_KEY) ?? '';
+  const suggestion = searchQuery.trim()
+    ? suggestProjectQuery(searchQuery, [{ key: project.data.key, name: project.data.name }])
+    : null;
 
   return (
     <section aria-labelledby="issues-title" className="w-full space-y-6">
@@ -220,10 +218,10 @@ export function IssueListPage() {
             { value: 'backlog', label: 'Backlog only' },
             ...(sprints.data ?? []).map((s) => ({ value: s.id, label: s.name })),
           ])}
-          {hasFilters ? (
+          {hasNonQueryFilters ? (
             <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
               <X className="size-4" aria-hidden="true" />
-              Clear
+              Clear filters
             </Button>
           ) : null}
         </div>
@@ -267,10 +265,30 @@ export function IssueListPage() {
       {issues.isPending ? <IssueListSkeleton /> : null}
       {issues.isError ? <ErrorState error={issues.error} /> : null}
 
-      {issues.isSuccess && items.length === 0 ? (
+      {issues.isSuccess && items.length === 0 && hasFilters ? (
+        <UxSearchEmpty
+          query={searchQuery}
+          scope="issues"
+          filtersActive={hasNonQueryFilters}
+          onClearFilters={clearFilters}
+          {...(searchQuery.trim() ? { onClearQuery: clearSearch } : {})}
+          {...(suggestion
+            ? {
+                suggestion: {
+                  label: suggestion.label,
+                  onApply: () => {
+                    setFilter(ISSUE_LIST_QUERY_KEY, suggestion.applyValue);
+                  },
+                },
+              }
+            : {})}
+        />
+      ) : null}
+
+      {issues.isSuccess && items.length === 0 && !hasFilters ? (
         <EmptyState
-          title="No issues match these filters"
-          description="Try clearing filters or create a new issue."
+          title="No issues yet"
+          description="Create an issue to get started."
           {...(canCreate
             ? {
                 action: {
@@ -280,9 +298,7 @@ export function IssueListPage() {
                   },
                 },
               }
-            : hasFilters
-              ? { action: { label: 'Clear filters', onClick: clearFilters } }
-              : {})}
+            : {})}
         />
       ) : null}
 

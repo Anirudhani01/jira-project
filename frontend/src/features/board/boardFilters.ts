@@ -47,6 +47,28 @@ export function boardFiltersActive(filters: BoardFilters): boolean {
   );
 }
 
+export function boardNonQueryFiltersActive(filters: BoardFilters): boolean {
+  return Boolean(filters.mine || filters.assignees.length || filters.typeId || filters.labelId);
+}
+
+/** Clears quick filters but keeps the board search query (`q`). */
+export function resetBoardFiltersPreservingQuery(search: URLSearchParams): URLSearchParams {
+  const filters = parseBoardFilters(search);
+  return writeBoardFilters(search, {
+    ...filters,
+    mine: false,
+    assignees: [],
+    typeId: '',
+    labelId: '',
+  });
+}
+
+export function clearBoardSearchQuery(search: URLSearchParams): URLSearchParams {
+  const next = new URLSearchParams(search);
+  next.delete('q');
+  return next;
+}
+
 /** Client-side quick filters on the ≤500 cards already loaded on the board. */
 export function matchesBoardFilters(
   issue: Issue,

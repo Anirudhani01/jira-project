@@ -405,9 +405,11 @@ Milestone acceptance criteria, feature coverage matrix, and testing matrix: **[i
 
 **Acceptance criteria:**
 
-- [ ] Query never silently rewritten; suggestion is explicit click.
-- [ ] Clear filters / reset documented in UI.
-- [ ] Vitest for suggest threshold (no aggressive fuzzy match).
+- [x] Query never silently rewritten; suggestion is explicit click.
+- [x] Clear search removes only `q`; clear filters preserves unrelated query params.
+- [x] Vitest for suggest threshold (no aggressive fuzzy match).
+
+**Rollout (M3 landed on `feat/global-ux-m3`):** Project-only corpus in `searchSuggest.ts`; org dashboard + issue list use `UxSearchEmpty`; board columns use inline copy with shared `resetBoardFiltersPreservingQuery`.
 
 **Risks:** Suggestion false positives — cap distance and corpus size.
 

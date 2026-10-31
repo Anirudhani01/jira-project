@@ -55,16 +55,42 @@ function BoardColumnEmpty({
   visualKind,
   hiddenByFilters,
   trulyEmpty,
+  queryActive,
+  nonQueryFiltersActive,
+  onClearFilters,
+  onClearSearch,
 }: {
   boardChrome: boolean;
   visualKind: ReturnType<typeof columnVisualKind>;
   hiddenByFilters: boolean;
   trulyEmpty: boolean;
+  queryActive: boolean;
+  nonQueryFiltersActive: boolean;
+  onClearFilters?: () => void;
+  onClearSearch?: () => void;
 }) {
   if (hiddenByFilters) {
+    const message =
+      queryActive && nonQueryFiltersActive
+        ? 'No issues match your search or filters'
+        : queryActive
+          ? 'No issues match your search'
+          : 'No issues match filters';
     return (
-      <li className="pointer-events-none flex flex-1 items-center justify-center rounded-md border border-dashed border-line-strong px-3 py-8 text-center text-xs text-fg-muted">
-        No issues match filters
+      <li className="flex flex-1 flex-col items-center justify-center gap-2 rounded-md border border-dashed border-line-strong px-3 py-8 text-center text-xs text-fg-muted">
+        <p>{message}</p>
+        <div className="flex flex-wrap justify-center gap-2">
+          {nonQueryFiltersActive && onClearFilters ? (
+            <Button type="button" variant="link" size="sm" onClick={onClearFilters}>
+              Clear filters
+            </Button>
+          ) : null}
+          {queryActive && onClearSearch ? (
+            <Button type="button" variant="link" size="sm" onClick={onClearSearch}>
+              Clear search
+            </Button>
+          ) : null}
+        </div>
       </li>
     );
   }
@@ -114,6 +140,10 @@ export function BoardColumnView({
   filtersActive,
   canCreate,
   onCreate,
+  queryActive,
+  nonQueryFiltersActive,
+  onClearFilters,
+  onClearSearch,
   ...cardProps
 }: {
   column: BoardColumnType;
@@ -123,6 +153,10 @@ export function BoardColumnView({
   dimmed: boolean;
   filteredCount: number;
   filtersActive: boolean;
+  queryActive: boolean;
+  nonQueryFiltersActive: boolean;
+  onClearFilters?: () => void;
+  onClearSearch?: () => void;
   canCreate: boolean;
   onCreate: () => void;
 } & Omit<IssueCardProps, 'card'>) {
@@ -242,6 +276,10 @@ export function BoardColumnView({
             visualKind={visualKind}
             hiddenByFilters={hiddenByFilters}
             trulyEmpty={trulyEmpty}
+            queryActive={queryActive}
+            nonQueryFiltersActive={nonQueryFiltersActive}
+            {...(onClearFilters ? { onClearFilters } : {})}
+            {...(onClearSearch ? { onClearSearch } : {})}
           />
         ) : (
           column.issues.map((card: Issue) => (

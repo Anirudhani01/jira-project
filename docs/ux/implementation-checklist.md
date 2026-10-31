@@ -111,9 +111,12 @@ UX standards (see docs/ux/global-ux-state-system.md)
 
 ### M3 — Search empty
 
-- [ ] GlobalSearchBar no-results; query preserved
-- [ ] Optional suggest — click to apply; conservative matching + tests
-- [ ] Issue list / board filter-empty alignment
+- [x] `searchSuggest.ts` + unit tests (project name/key only; conservative rules)
+- [x] GlobalSearchBar no-results; query preserved; clear search drops `q` only
+- [x] Optional suggest — explicit click to apply via existing URL sync
+- [x] Org project dashboard + issue list `UxSearchEmpty`; true empty keeps create/get-started
+- [x] Board column inline filter-empty; Clear filters reuses `resetBoardFiltersPreservingQuery`
+- [x] Clear filters preserves `q`; clear search preserves other params
 
 ### M4 — Forms + success
 
