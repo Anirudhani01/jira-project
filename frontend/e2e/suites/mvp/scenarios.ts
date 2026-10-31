@@ -20,6 +20,7 @@ import {
   passwordInput,
   sessionUserId,
   signOut,
+  selectComboboxOption,
   signUpAndSignIn,
 } from '../../helpers';
 
@@ -30,15 +31,21 @@ export const mvpScenarios: MvpScenario[] = [
     planJourney: '01',
     id: '01-signup-org',
     smoke: true,
-    title: 'sign up, verify email, create org, empty project list',
+    title: 'sign up, verify email, create org, empty project dashboard',
     run: async ({ page, request }) => {
       const { email, slug, suffix } = e2eIdentity('j1');
       await signUpAndSignIn(page, request, email);
       await createOrganization(page, slug, `E2E Org ${suffix}`);
       await page.goto(`/o/${slug}`);
       await expect(page.getByRole('heading', { name: `E2E Org ${suffix}` })).toBeVisible();
-      await expect(page.getByText('No projects yet')).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Create project' })).toBeVisible();
+      const orgSections = page.getByRole('navigation', { name: 'Organization sections' });
+      await expect(orgSections).toBeVisible();
+      await expect(orgSections.getByRole('link', { name: 'Projects' })).toHaveAttribute(
+        'aria-current',
+        'page',
+      );
+      await expect(page.getByRole('link', { name: 'Create new project' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Create project' }).first()).toBeVisible();
       await expectNoSeriousViolations(page);
     },
   },
@@ -132,9 +139,12 @@ export const mvpScenarios: MvpScenario[] = [
       const dialog = page.getByRole('dialog');
       await dialog.getByLabel('Summary').fill('Checkout fails on Safari');
       await dialog.getByLabel('Description').fill('Steps to reproduce in staging.');
-      await dialog.getByLabel('Priority').selectOption({ label: 'High' });
-      await dialog.getByLabel('Type').selectOption({ label: 'Bug' });
-      await dialog.getByLabel('Assignee').selectOption({ label: 'E2E User' });
+      await selectComboboxOption(page, dialog, 'Priority', /^High priority High$/, {
+        search: 'high',
+        verify: 'High',
+      });
+      await selectComboboxOption(page, dialog, 'Type', 'Bug');
+      await selectComboboxOption(page, dialog, 'Assignee', /E2E User/);
       await dialog.getByRole('button', { name: 'Create', exact: true }).click();
       const issueKey = `${key}-1`;
       await expect(page.getByRole('heading', { name: 'Checkout fails on Safari' })).toBeVisible();
@@ -180,12 +190,17 @@ export const mvpScenarios: MvpScenario[] = [
       await page.goto(`/o/${slug}/p/${key}/issues`);
       await page.locator('#main').getByRole('button', { name: 'Create issue' }).first().click();
       const dialog = page.getByRole('dialog');
-      await dialog.getByLabel('Type').selectOption({ label: 'Sub-task' });
+      await selectComboboxOption(page, dialog, 'Type', 'Sub-task');
       await dialog.getByLabel('Summary').fill('Child sub-task');
-      await dialog.getByLabel('Parent (required for a sub-task)').fill(parentKey);
+      const parentFieldLabel = 'Parent (required for a sub-task)';
+      await selectComboboxOption(page, dialog, parentFieldLabel, new RegExp(parentKey), {
+        search: parentKey,
+      });
       await dialog.getByRole('button', { name: 'Create', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Child sub-task' })).toBeVisible();
-      await expect(page.getByRole('link', { name: new RegExp(parentKey, 'i') })).toBeVisible();
+      await expect(
+        page.locator('#main').getByRole('link', { name: `${parentKey} Parent story` }),
+      ).toBeVisible();
       await expectNoSeriousViolations(page);
     },
   },

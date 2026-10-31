@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type APIRequestContext, type Page } from '@playwright/test';
+import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -331,6 +331,30 @@ export async function addProjectMemberViaApi(
     },
     { orgSlug, projectKey, userId, role },
   );
+}
+
+function comboboxLabelPrefix(label: string): RegExp {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${escaped}`);
+}
+
+/** Radix/cmdk Combobox: open by field label, pick an option, assert trigger text. */
+export async function selectComboboxOption(
+  page: Page,
+  scope: Locator,
+  label: string,
+  option: RegExp | string,
+  opts?: { search?: string; verify?: RegExp | string },
+) {
+  const trigger = scope.getByRole('combobox', { name: comboboxLabelPrefix(label) });
+  await trigger.click();
+  if (opts?.search !== undefined) {
+    await page.getByRole('combobox', { name: `Search ${label}` }).fill(opts.search);
+    await page.getByRole('option', { name: option }).click();
+  } else {
+    await page.getByRole('option', { name: option }).click();
+  }
+  await expect(trigger).toContainText(opts?.verify ?? option);
 }
 
 export async function createIssueInDialog(
