@@ -15,6 +15,7 @@ import type { Workflow } from '../../lib/api/types';
 
 export function ProjectWorkflowSection({
   workflow,
+  onRetry,
 }: {
   workflow: {
     isPending: boolean;
@@ -22,6 +23,7 @@ export function ProjectWorkflowSection({
     error: unknown;
     data: Workflow | undefined;
   };
+  onRetry?: () => void;
 }) {
   if (workflow.isPending) {
     return (
@@ -32,7 +34,9 @@ export function ProjectWorkflowSection({
       </Card>
     );
   }
-  if (workflow.isError) return <ErrorState error={workflow.error} />;
+  if (workflow.isError) {
+    return <ErrorState error={workflow.error} {...(onRetry ? { onRetry } : {})} />;
+  }
 
   const data = workflow.data;
   const statusName = new Map((data?.statuses ?? []).map((s) => [s.id, s.name]));

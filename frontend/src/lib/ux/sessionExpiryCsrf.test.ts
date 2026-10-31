@@ -27,6 +27,7 @@ describe('session expiry vs CSRF refresh', () => {
       onPhaseChange: () => undefined,
       onDialogChange,
       clearSessionState: vi.fn(),
+      prepareLoginAfterExpiry: vi.fn().mockResolvedValue(undefined),
       navigateToLogin: vi.fn().mockResolvedValue(undefined),
     });
 
@@ -66,6 +67,7 @@ describe('session expiry vs CSRF refresh', () => {
       onPhaseChange: () => undefined,
       onDialogChange,
       clearSessionState: vi.fn(),
+      prepareLoginAfterExpiry: vi.fn().mockResolvedValue(undefined),
       navigateToLogin: vi.fn().mockResolvedValue(undefined),
     });
 
@@ -92,6 +94,7 @@ describe('session expiry vs CSRF refresh', () => {
       onPhaseChange: () => undefined,
       onDialogChange,
       clearSessionState: vi.fn(),
+      prepareLoginAfterExpiry: vi.fn().mockResolvedValue(undefined),
       navigateToLogin: vi.fn().mockResolvedValue(undefined),
     });
 

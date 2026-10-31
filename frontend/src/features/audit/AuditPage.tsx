@@ -47,17 +47,21 @@ export function AuditPage() {
   const toIso = (local: string) => (local ? new Date(local).toISOString() : '');
 
   return (
-    <section aria-labelledby="audit-title" className="space-y-4">
-      <div className="flex items-center justify-between">
+    <section aria-labelledby="audit-title" className="min-w-0 space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 id="audit-title" className="text-2xl font-semibold">
           Audit log
         </h1>
-        <Link className="text-blue-700 underline" to={`/o/${org}`}>
+        <Link className="shrink-0 text-blue-700 underline" to={`/o/${org}`}>
           Back to {organization.data.name}
         </Link>
       </div>
-      <div className="flex flex-wrap gap-4 text-sm" role="group" aria-label="Filters">
-        <label>
+      <div
+        className="flex flex-col gap-3 text-sm sm:flex-row sm:flex-wrap sm:gap-4"
+        role="group"
+        aria-label="Filters"
+      >
+        <label className="flex min-w-0 flex-col gap-1 sm:block">
           Action{' '}
           <input
             type="text"
@@ -67,27 +71,27 @@ export function AuditPage() {
             onBlur={(e) => {
               setFilter('action', e.target.value.trim());
             }}
-            className="rounded border border-slate-300 px-2 py-1"
+            className="mt-1 w-full max-w-full rounded border border-slate-300 px-2 py-1 sm:mt-0 sm:w-auto"
           />
         </label>
-        <label>
+        <label className="flex min-w-0 flex-col gap-1 sm:block">
           From{' '}
           <input
             type="datetime-local"
             onChange={(e) => {
               setFilter('from', toIso(e.target.value));
             }}
-            className="rounded border border-slate-300 px-2 py-1"
+            className="mt-1 w-full max-w-full rounded border border-slate-300 px-2 py-1 sm:mt-0 sm:w-auto"
           />
         </label>
-        <label>
+        <label className="flex min-w-0 flex-col gap-1 sm:block">
           To{' '}
           <input
             type="datetime-local"
             onChange={(e) => {
               setFilter('to', toIso(e.target.value));
             }}
-            className="rounded border border-slate-300 px-2 py-1"
+            className="mt-1 w-full max-w-full rounded border border-slate-300 px-2 py-1 sm:mt-0 sm:w-auto"
           />
         </label>
       </div>
@@ -105,39 +109,41 @@ export function AuditPage() {
         <p className="text-slate-600">No events match these filters.</p>
       ) : null}
       {items.length > 0 ? (
-        <table className="w-full text-left text-sm">
-          <caption className="sr-only">Audit events, newest first</caption>
-          <thead>
-            <tr className="border-b">
-              <th scope="col" className="py-1">
-                When
-              </th>
-              <th scope="col">Action</th>
-              <th scope="col">Outcome</th>
-              <th scope="col">Target</th>
-              <th scope="col">Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((event) => (
-              <tr key={event.id} className="border-b align-top">
-                <td className="py-1 pr-2 whitespace-nowrap">
-                  {new Date(event.created_at).toLocaleString()}
-                </td>
-                <td className="pr-2 font-mono">{event.action}</td>
-                <td className="pr-2">{event.outcome}</td>
-                <td className="pr-2">
-                  {event.target_type ? `${event.target_type} ${event.target_id ?? ''}` : '—'}
-                </td>
-                <td className="font-mono text-xs">
-                  {Object.entries(event.metadata)
-                    .map(([key, value]) => `${key}=${String(value)}`)
-                    .join(' ')}
-                </td>
+        <div className="min-w-0 max-w-full overflow-x-auto">
+          <table className="w-full min-w-[36rem] text-left text-sm">
+            <caption className="sr-only">Audit events, newest first</caption>
+            <thead>
+              <tr className="border-b">
+                <th scope="col" className="py-1">
+                  When
+                </th>
+                <th scope="col">Action</th>
+                <th scope="col">Outcome</th>
+                <th scope="col">Target</th>
+                <th scope="col">Details</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {items.map((event) => (
+                <tr key={event.id} className="border-b align-top">
+                  <td className="py-1 pr-2 whitespace-nowrap">
+                    {new Date(event.created_at).toLocaleString()}
+                  </td>
+                  <td className="pr-2 font-mono">{event.action}</td>
+                  <td className="pr-2">{event.outcome}</td>
+                  <td className="max-w-[10rem] pr-2 break-words sm:max-w-none">
+                    {event.target_type ? `${event.target_type} ${event.target_id ?? ''}` : '—'}
+                  </td>
+                  <td className="max-w-[14rem] break-all font-mono text-xs sm:max-w-md">
+                    {Object.entries(event.metadata)
+                      .map(([key, value]) => `${key}=${String(value)}`)
+                      .join(' ')}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : null}
       {events.hasNextPage ? (
         <button
