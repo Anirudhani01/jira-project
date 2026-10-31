@@ -3,13 +3,19 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from 're
 interface ShellContextValue {
   mobileNavOpen: boolean;
   setMobileNavOpen: (open: boolean) => void;
+  adminMobileNavOpen: boolean;
+  setAdminMobileNavOpen: (open: boolean) => void;
 }
 
 const ShellContext = createContext<ShellContextValue | null>(null);
 
 export function ShellProvider({ children }: { children: ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const value = useMemo(() => ({ mobileNavOpen, setMobileNavOpen }), [mobileNavOpen]);
+  const [adminMobileNavOpen, setAdminMobileNavOpen] = useState(false);
+  const value = useMemo(
+    () => ({ mobileNavOpen, setMobileNavOpen, adminMobileNavOpen, setAdminMobileNavOpen }),
+    [mobileNavOpen, adminMobileNavOpen],
+  );
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;
 }
 

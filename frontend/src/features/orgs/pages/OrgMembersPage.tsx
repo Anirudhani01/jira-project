@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type SyntheticEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { useParams } from 'react-router';
 
 import { FormError, SubmitButton, TextField } from '../../../components/ui/Form';
@@ -25,7 +25,11 @@ const ROLES = ['member', 'admin', 'owner'] as const;
 
 /** Members and invitations. The server enforces every rule (owners-only owner changes,
  * last-owner protection); this page only reflects the caller's permissions. */
-export function OrgMembersPage() {
+export function OrgMembersPage({
+  initialSection,
+}: {
+  initialSection?: 'members' | 'invitations';
+} = {}) {
   const { org: slug = '' } = useParams();
   const org = useOrg(slug);
   const canManage = org.data?.permissions.includes('org.members.manage') ?? false;
@@ -53,6 +57,11 @@ export function OrgMembersPage() {
   }, [inviteEmailError]);
 
   useFocusOnSubmitAttempt(focusGeneration, inviteFocusFields);
+
+  useEffect(() => {
+    if (initialSection !== 'invitations' || org.isPending || members.isPending) return;
+    document.getElementById('invite-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [initialSection, org.isPending, members.isPending]);
 
   if (org.isPending || members.isPending) return <LoadingState label="Loading members" />;
   if (org.error instanceof ApiError && org.error.status === 404) return <NotFoundPage />;

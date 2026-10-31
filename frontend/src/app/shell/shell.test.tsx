@@ -101,6 +101,35 @@ describe('app shell (PR 2)', () => {
     expect(screen.queryByRole('navigation', { name: 'Project' })).toBeNull();
   });
 
+  it('hides org sidebar and shows administration navigation on admin routes', async () => {
+    mockApi({
+      'GET /auth/session': () => json(SESSION),
+      'GET /orgs/acme': () =>
+        json({
+          id: '1',
+          slug: 'acme',
+          name: 'Acme',
+          role: 'owner',
+          permissions: ['org.view', 'org.manage', 'org.members.manage', 'org.audit.view'],
+          created_at: '2026-10-27T00:00:00Z',
+        }),
+      'GET /orgs/acme/projects': () => json({ items: [] }),
+      'GET /orgs/acme/members': () => json({ items: [] }),
+    });
+    const { container } = renderApp('/o/acme/admin/general');
+    expect(await screen.findByRole('navigation', { name: 'Administration' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to workspace' })).toHaveAttribute(
+      'href',
+      '/o/acme',
+    );
+    expect(screen.queryByRole('navigation', { name: 'Organization' })).toBeNull();
+    expect(container.querySelector('.admin-shell')).toBeTruthy();
+    expect(
+      await screen.findByRole('heading', { name: 'Organization settings' }),
+    ).toBeInTheDocument();
+  });
+
   it('global search on org settings navigates to org home with query on Enter', async () => {
     const user = userEvent.setup();
     mockApi({

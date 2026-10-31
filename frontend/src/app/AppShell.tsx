@@ -13,6 +13,7 @@ import { MobileProjectDrawer, ProjectSidebar } from './shell/ProjectSidebar';
 import { ShellProvider } from './shell/ShellContext';
 import { TopBar } from './shell/TopBar';
 import { useBoardShell } from './shell/useBoardShell';
+import { useAdminShell } from './shell/useAdminShell';
 import { useOrgDashboardHome, useShowOrgSidebar } from './shell/useOrgShell';
 import { useShowProjectSidebar } from './shell/useProjectContext';
 
@@ -20,6 +21,7 @@ function AppShellBody() {
   const online = useAppOnline();
   const inProject = useShowProjectSidebar();
   const inOrgShell = useShowOrgSidebar();
+  const inAdminShell = useAdminShell();
   const orgDashboardHome = useOrgDashboardHome();
   const boardShell = useBoardShell();
   const authRoute = useAuthRoute();
@@ -30,8 +32,9 @@ function AppShellBody() {
         'flex min-h-screen flex-col text-fg',
         authRoute && 'bg-surface',
         !authRoute && orgDashboardHome && 'org-dashboard-shell',
+        !authRoute && inAdminShell && 'admin-shell',
         !authRoute && boardShell && 'board-shell w-full min-w-0 overflow-x-hidden',
-        !authRoute && !orgDashboardHome && !boardShell && 'bg-bg',
+        !authRoute && !orgDashboardHome && !inAdminShell && !boardShell && 'bg-bg',
       )}
     >
       <a
@@ -62,11 +65,13 @@ function AppShellBody() {
               authRoute && 'p-0',
               !inProject &&
                 !authRoute &&
-                (orgDashboardHome
-                  ? 'px-4 py-6 sm:px-6 lg:px-8'
-                  : inOrgShell
-                    ? 'mx-auto w-full max-w-6xl px-4 py-8'
-                    : 'mx-auto w-full max-w-6xl px-4 py-8'),
+                (inAdminShell
+                  ? 'flex min-h-0 min-w-0 flex-1 flex-col p-0'
+                  : orgDashboardHome
+                    ? 'px-4 py-6 sm:px-6 lg:px-8'
+                    : inOrgShell
+                      ? 'mx-auto w-full max-w-6xl px-4 py-8'
+                      : 'mx-auto w-full max-w-6xl px-4 py-8'),
             )}
           >
             <MainOutlet />

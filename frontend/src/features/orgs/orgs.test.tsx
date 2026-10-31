@@ -108,6 +108,10 @@ describe('OrgHomePage', () => {
     });
     renderApp('/o/acme');
     await screen.findByRole('heading', { level: 1, name: 'Acme' });
+    expect(screen.getByRole('link', { name: 'Administration' })).toHaveAttribute(
+      'href',
+      '/o/acme/admin',
+    );
     expect(screen.getAllByRole('link', { name: 'Settings' }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole('navigation', { name: 'Organization' })).toBeInTheDocument();
   });
