@@ -174,6 +174,14 @@ export function BoardSprintHeader({
                   </span>
                 </>
               ) : null}
+              {detail.points_total > 0 ? (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="whitespace-nowrap">
+                    {detail.points_done}/{detail.points_total} points done
+                  </span>
+                </>
+              ) : null}
             </>
           ) : backlog.isPending ? (
             <span>Loading dates…</span>

@@ -1275,6 +1275,8 @@ export interface components {
              * Format: uuid
              */
             priority_id: string;
+            /** Story Points */
+            story_points?: number | null;
             /** Summary */
             summary: string;
             /**
@@ -1398,6 +1400,8 @@ export interface components {
             reporter: components["schemas"]["UserRef"];
             sprint: components["schemas"]["SprintRef"] | null;
             status: components["schemas"]["StatusRef"];
+            /** Story Points */
+            story_points: number | null;
             /** Summary */
             summary: string;
             type: components["schemas"]["TypeRef"];
@@ -1845,6 +1849,10 @@ export interface components {
             issue_count: number;
             /** Name */
             name: string;
+            /** Points Done */
+            points_done: number;
+            /** Points Total */
+            points_total: number;
             /** Project Key */
             project_key: string;
             /** Start At */
@@ -1963,6 +1971,8 @@ export interface components {
             priority_id?: string | null;
             /** Reporter Id */
             reporter_id?: string | null;
+            /** Story Points */
+            story_points?: number | null;
             /** Summary */
             summary?: string | null;
             /** Type Id */

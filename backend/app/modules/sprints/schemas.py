@@ -53,6 +53,8 @@ class SprintResponse(BaseModel):
     end_at: datetime | None
     completed_at: datetime | None
     issue_count: int
+    points_total: int
+    points_done: int
 
 
 class SprintListResponse(BaseModel):

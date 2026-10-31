@@ -70,6 +70,15 @@ function IssueRow({ issue, org, canPlan, targets, onMove }: RowProps) {
           </Link>{' '}
           {issue.summary}
           <span className="ml-2 text-xs text-slate-600">{issue.status.name}</span>
+          {issue.story_points !== null ? (
+            <span
+              title="Story points"
+              aria-label={`${String(issue.story_points)} story points`}
+              className="ml-2 rounded-full bg-slate-100 px-1.5 text-xs font-medium text-slate-700"
+            >
+              {issue.story_points}
+            </span>
+          ) : null}
         </span>
       </span>
       {canPlan ? (
@@ -324,6 +333,9 @@ export function BacklogPage() {
                   {sprint.name}{' '}
                   <span className="text-xs font-normal text-slate-600">
                     {sprint.state === 'active' ? 'Active' : 'Planned'} · {sprint.issue_count} issues
+                    {sprint.points_total > 0
+                      ? ` · ${String(sprint.points_done)}/${String(sprint.points_total)} points`
+                      : ''}
                   </span>
                 </h2>
                 {canPlan && sprint.state === 'future' ? (

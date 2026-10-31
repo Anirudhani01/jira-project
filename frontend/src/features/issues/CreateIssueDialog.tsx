@@ -21,7 +21,15 @@ function useParentLookup(org: string, key: string) {
   return trimmed ? result : undefined;
 }
 
-type ClientErrors = { summary?: string; parent?: string };
+type ClientErrors = { summary?: string; parent?: string; points?: string };
+
+export const POINTS_ERROR = 'Use a whole number from 0 to 100.';
+
+/** Empty means "no estimate"; otherwise a whole number 0-100. */
+export function validPoints(value: string): boolean {
+  const text = value.trim();
+  return text === '' || (/^\d{1,3}$/.test(text) && Number(text) <= 100);
+}
 
 /** Modal create form. One Idempotency-Key per dialog: resubmitting after a lost response
  * replays the original issue instead of creating a second one. */
@@ -48,6 +56,7 @@ export function CreateIssueDialog({
   const [assigneeId, setAssigneeId] = useState('');
   const [parentKey, setParentKey] = useState('');
   const [labelIds, setLabelIds] = useState<string[]>([]);
+  const [points, setPoints] = useState('');
   const [clientErrors, setClientErrors] = useState<ClientErrors>({});
   const [focusGeneration, setFocusGeneration] = useState(0);
   const summaryRef = useRef<HTMLInputElement>(null);
@@ -68,6 +77,7 @@ export function CreateIssueDialog({
       : undefined;
 
   const summaryError = clientErrors.summary ?? serverFieldError('summary');
+  const pointsError = clientErrors.points ?? serverFieldError('story_points');
   const parentError =
     clientErrors.parent ??
     (parentKey.trim() && parent && !parent.isPending && parent.isError
@@ -113,6 +123,7 @@ export function CreateIssueDialog({
 
     const nextClient: ClientErrors = {};
     if (!summary.trim()) nextClient.summary = 'Enter a summary.';
+    if (!validPoints(points)) nextClient.points = POINTS_ERROR;
     if (needsParent && !parentKey.trim()) {
       nextClient.parent = 'Enter a parent issue key.';
     } else if (parentKey.trim() && parent && !parent.isPending && !parent.data) {
@@ -136,6 +147,7 @@ export function CreateIssueDialog({
           ...(assigneeId ? { assignee_id: assigneeId } : {}),
           ...(parent?.data ? { parent_id: parent.data.id } : {}),
           ...(labelIds.length ? { label_ids: labelIds } : {}),
+          ...(points.trim() !== '' ? { story_points: Number(points) } : {}),
         },
       },
       {
@@ -234,6 +246,19 @@ export function CreateIssueDialog({
               ))}
             </select>
           </label>
+          <TextField
+            label="Story points (optional)"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={100}
+            step={1}
+            value={points}
+            error={pointsError}
+            onChange={(e) => {
+              setPoints(e.target.value);
+            }}
+          />
           <TextField
             ref={parentRef}
             label={needsParent ? 'Parent (required for a sub-task)' : 'Parent (optional)'}
