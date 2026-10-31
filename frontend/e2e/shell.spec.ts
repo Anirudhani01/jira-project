@@ -3,7 +3,10 @@ import { expect, test } from '@playwright/test';
 
 import { createOrganization, createProject, e2eIdentity, signUpAndSignIn } from './helpers';
 
-test('project sidebar: keyboard navigation Board → Backlog → Issues', async ({ page, request }) => {
+test('navigation v2: project tabs by keyboard, global sidebar, Ctrl+[ collapse', async ({
+  page,
+  request,
+}) => {
   const { email, slug, key, suffix } = e2eIdentity('shell');
 
   await signUpAndSignIn(page, request, email);
@@ -18,9 +21,19 @@ test('project sidebar: keyboard navigation Board → Backlog → Issues', async 
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(new RegExp(`/p/${key}/backlog`));
 
-  await projectNav.getByRole('link', { name: 'Issues' }).focus();
+  await projectNav.getByRole('link', { name: 'List' }).focus();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(new RegExp(`/p/${key}/issues`));
+
+  // Global sidebar: starred projects appear once starred; Ctrl+[ collapses and restores it.
+  const globalNav = page.getByRole('navigation', { name: 'Global' });
+  await expect(globalNav.getByRole('link', { name: 'For you' })).toBeVisible();
+  await page.getByRole('button', { name: /^Star / }).click();
+  await expect(globalNav.getByRole('link', { name: /Scrum app/ }).first()).toBeVisible();
+  await page.keyboard.press('Control+[');
+  await expect(page.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
+  await page.keyboard.press('Control+[');
+  await expect(page.getByRole('button', { name: 'Collapse sidebar' })).toBeVisible();
 
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   const serious = results.violations.filter((v) =>

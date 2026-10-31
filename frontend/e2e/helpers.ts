@@ -111,7 +111,8 @@ export function e2eIdentity(prefix: string) {
 
 /** Issue links include the summary in the accessible name — match by key substring. */
 export function issueLink(page: Page, issueKey: string) {
-  return page.getByRole('link', { name: issueKey, exact: true });
+  // Scoped to the page content: the sidebar's Recent list can link to the same issue.
+  return page.locator('#main').getByRole('link', { name: issueKey, exact: true });
 }
 
 /** Project settings → Members card (avoids matching org-level “member” copy). */

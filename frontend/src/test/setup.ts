@@ -4,6 +4,8 @@ import { afterEach } from 'vitest';
 
 afterEach(() => {
   cleanup();
+  // Navigation prefs (recent, starred, sidebar) live in localStorage; never leak between tests.
+  localStorage.clear();
 });
 
 // jsdom lacks the pointer-capture and scroll APIs that Radix primitives call.
