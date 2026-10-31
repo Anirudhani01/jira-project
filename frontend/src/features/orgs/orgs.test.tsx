@@ -126,12 +126,17 @@ describe('OrgHomePage', () => {
   });
 });
 
-describe('OrgSettingsPage', () => {
+describe('OrgSettingsPage (legacy /settings)', () => {
+  const SHELL = {
+    'GET /orgs/acme/notifications/unread-count': () => json({ count: 0 }),
+  };
+
   it('renames the organization with the CSRF token', async () => {
     const calls = mockApi({
       'GET /auth/session': () => json({ ...VERIFIED, orgs: [ACME] }),
       'GET /orgs/acme': () => json(ORG),
       'PATCH /orgs/acme': () => json({ ...ORG, name: 'Acme 2' }),
+      ...SHELL,
     });
     renderApp('/o/acme/settings');
     const user = userEvent.setup();
@@ -145,16 +150,17 @@ describe('OrgSettingsPage', () => {
     expect(patch?.headers.get('x-csrf-token')).toBe('csrf-abc');
   });
 
-  it('shows no form without the manage permission', async () => {
+  it('lets members view read-only settings without the rename form', async () => {
     mockApi({
       'GET /auth/session': () => json({ ...VERIFIED, orgs: [ACME] }),
       'GET /orgs/acme': () => json({ ...ORG, role: 'member', permissions: ['org.view'] }),
+      ...SHELL,
     });
     renderApp('/o/acme/settings');
-    expect(await screen.findByRole('region', { name: /don't have access/i })).toHaveTextContent(
-      /don.t have permission to change/,
-    );
+    expect(await screen.findByRole('heading', { name: 'General' })).toBeInTheDocument();
+    expect(screen.getByText(/Only organization owners and admins can change/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    expect(screen.queryByRole('region', { name: /don't have access/i })).toBeNull();
   });
 });
 
