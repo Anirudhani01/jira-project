@@ -31,7 +31,14 @@ import { BoardPageHeader } from './BoardPageHeader';
 import { BoardQuickFilters } from './BoardQuickFilters';
 import { BoardSkeleton } from './BoardSkeleton';
 import { BoardSprintHeader } from './BoardSprintHeader';
-import { boardFiltersActive, filterBoardIssues, parseBoardFilters } from './boardFilters';
+import {
+  boardFiltersActive,
+  boardNonQueryFiltersActive,
+  clearBoardSearchQuery,
+  filterBoardIssues,
+  parseBoardFilters,
+  resetBoardFiltersPreservingQuery,
+} from './boardFilters';
 import { IssueCard } from './IssueCard';
 import { allowedColumnIds, findCard, planMove } from './boardState';
 
@@ -81,8 +88,14 @@ export function BoardPage() {
   const move = useMoveCard(org, key);
   const [dragging, setDragging] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [search] = useSearchParams();
+  const [search, setSearch] = useSearchParams();
   const filters = parseBoardFilters(search);
+  const clearBoardFilters = () => {
+    setSearch(resetBoardFiltersPreservingQuery(search), { replace: true });
+  };
+  const clearBoardSearch = () => {
+    setSearch(clearBoardSearchQuery(search), { replace: true });
+  };
   const boardChrome = useBoardShell();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -223,6 +236,10 @@ export function BoardPage() {
                       dimmed={allowedForDrag !== null && !allowedForDrag.has(column.id)}
                       filteredCount={column.issues.length}
                       filtersActive={filtersActive}
+                      queryActive={Boolean(filters.q)}
+                      nonQueryFiltersActive={boardNonQueryFiltersActive(filters)}
+                      onClearFilters={clearBoardFilters}
+                      onClearSearch={clearBoardSearch}
                       canCreate={canCreate}
                       onCreate={() => {
                         setCreating(true);
@@ -244,6 +261,10 @@ export function BoardPage() {
                   dimmed={allowedForDrag !== null && !allowedForDrag.has(column.id)}
                   filteredCount={column.issues.length}
                   filtersActive={filtersActive}
+                  queryActive={Boolean(filters.q)}
+                  nonQueryFiltersActive={boardNonQueryFiltersActive(filters)}
+                  onClearFilters={clearBoardFilters}
+                  onClearSearch={clearBoardSearch}
                   canCreate={canCreate}
                   onCreate={() => {
                     setCreating(true);

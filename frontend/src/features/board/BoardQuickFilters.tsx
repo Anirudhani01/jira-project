@@ -9,9 +9,10 @@ import { cn } from '../../lib/cn';
 import { useSession } from '../auth/api';
 
 import {
-  boardFiltersActive,
+  boardNonQueryFiltersActive,
   collectBoardFilterMeta,
   parseBoardFilters,
+  resetBoardFiltersPreservingQuery,
   writeBoardFilters,
   type BoardFilters,
 } from './boardFilters';
@@ -199,23 +200,17 @@ export function BoardQuickFilters({
         </IconButton>
       ) : null}
 
-      {boardFiltersActive(filters) ? (
+      {boardNonQueryFiltersActive(filters) ? (
         <Button
           type="button"
           size="sm"
           variant="ghost"
           onClick={() => {
-            patch({
-              q: '',
-              mine: false,
-              assignees: [],
-              typeId: '',
-              labelId: '',
-            });
+            setSearch(resetBoardFiltersPreservingQuery(search));
           }}
         >
           <X className="size-4" aria-hidden="true" />
-          Clear
+          Clear filters
         </Button>
       ) : null}
     </div>

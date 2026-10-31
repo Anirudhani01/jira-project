@@ -154,7 +154,7 @@ describe('board page', () => {
     });
     renderApp('/o/acme/p/WEB/board?q=nomatch');
     await screen.findByRole('heading', { name: 'WEB board' });
-    expect(screen.getAllByText('No issues match filters').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('No issues match your search').length).toBeGreaterThan(0);
   });
 
   it('filters cards client-side from the URL', async () => {

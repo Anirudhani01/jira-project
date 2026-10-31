@@ -170,7 +170,7 @@ describe('issue list', () => {
       'GET /orgs/acme/issues': () => json({ items: [], next_cursor: null }),
     });
     renderApp('/o/acme/p/WEB/issues');
-    expect(await screen.findByText('No issues match these filters')).toBeInTheDocument();
+    expect(await screen.findByText('No issues yet')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Create issue' })).not.toBeInTheDocument();
   });
 });

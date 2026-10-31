@@ -2,7 +2,9 @@ import { useQueries } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 
+import { UxSearchEmpty } from '../../../components/ux/UxSearchEmpty';
 import { EmptyState } from '../../../components/ui/Card';
+import { suggestProjectQuery } from '../../../lib/ux/searchSuggest';
 import { ErrorState, ProjectGridSkeleton } from '../../../components/ui/States';
 import { apiFetch } from '../../../lib/api/client';
 import type { Project } from '../../../lib/api/types';
@@ -13,6 +15,8 @@ import {
   applyProjectDashboardFilters,
   DEFAULT_PROJECT_DASHBOARD_FILTERS,
   parseProjectDashboardFilters,
+  projectDashboardFiltersActive,
+  projectDashboardNonQueryFiltersActive,
   type ProjectDashboardFilters,
 } from './projectDashboardFilters';
 import { useProjectCardStats } from './hooks/useProjectCardStats';
@@ -76,6 +80,16 @@ export function ProjectDashboardSection({ org, canCreate }: { org: string; canCr
 
   const showCreate = canCreate && filters.status !== 'archived';
   const empty = filtered.length === 0;
+  const nonQueryFiltersActive = projectDashboardNonQueryFiltersActive(filters);
+  const searchOrFilterEmpty =
+    empty && (allItems.length > 0 || projectDashboardFiltersActive(filters));
+  const suggestion =
+    searchOrFilterEmpty && filters.q.trim()
+      ? suggestProjectQuery(
+          filters.q,
+          allItems.map((p) => ({ key: p.key, name: p.name })),
+        )
+      : null;
 
   return (
     <section aria-labelledby="org-projects-heading" className="space-y-4">
@@ -87,7 +101,33 @@ export function ProjectDashboardSection({ org, canCreate }: { org: string; canCr
         onChange={setFilters}
         resultCount={filtered.length}
       />
-      {empty && !showCreate ? (
+      {searchOrFilterEmpty ? (
+        <UxSearchEmpty
+          query={filters.q}
+          scope="projects"
+          filtersActive={nonQueryFiltersActive}
+          onClearFilters={() => {
+            setFilters({ ...DEFAULT_PROJECT_DASHBOARD_FILTERS, q: filters.q });
+          }}
+          {...(filters.q.trim()
+            ? {
+                onClearQuery: () => {
+                  setFilters({ q: '' });
+                },
+              }
+            : {})}
+          {...(suggestion
+            ? {
+                suggestion: {
+                  label: suggestion.label,
+                  onApply: () => {
+                    setFilters({ q: suggestion.applyValue });
+                  },
+                },
+              }
+            : {})}
+        />
+      ) : empty && !showCreate ? (
         <EmptyState
           title="No matching projects"
           description="Try adjusting your search or filters."

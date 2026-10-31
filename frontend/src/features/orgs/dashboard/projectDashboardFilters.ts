@@ -40,6 +40,25 @@ export function parseProjectDashboardFilters(params: URLSearchParams): ProjectDa
   };
 }
 
+export function projectDashboardFiltersActive(filters: ProjectDashboardFilters): boolean {
+  return Boolean(
+    filters.q.trim() ||
+    filters.boardType !== DEFAULT_PROJECT_DASHBOARD_FILTERS.boardType ||
+    filters.status !== DEFAULT_PROJECT_DASHBOARD_FILTERS.status ||
+    filters.sort !== DEFAULT_PROJECT_DASHBOARD_FILTERS.sort ||
+    filters.view !== DEFAULT_PROJECT_DASHBOARD_FILTERS.view,
+  );
+}
+
+export function projectDashboardNonQueryFiltersActive(filters: ProjectDashboardFilters): boolean {
+  return (
+    filters.boardType !== DEFAULT_PROJECT_DASHBOARD_FILTERS.boardType ||
+    filters.status !== DEFAULT_PROJECT_DASHBOARD_FILTERS.status ||
+    filters.sort !== DEFAULT_PROJECT_DASHBOARD_FILTERS.sort ||
+    filters.view !== DEFAULT_PROJECT_DASHBOARD_FILTERS.view
+  );
+}
+
 export function applyProjectDashboardFilters(
   projects: ProjectSummary[],
   filters: ProjectDashboardFilters,

@@ -2,7 +2,9 @@ import { Search } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useMatch, useNavigate, useSearchParams } from 'react-router';
 
+import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/cn';
+import { suggestProjectQuery } from '../../lib/ux/searchSuggest';
 import { filterOrgProjects } from '../../features/orgs/dashboard/filterOrgProjects';
 import { useProjects } from '../../features/projects/api';
 
@@ -19,9 +21,9 @@ export function GlobalSearchBar({
   boardChrome?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const id = useId();
-  const listId = `${id}-results`;
+  const panelId = `${id}-panel`;
   const navigate = useNavigate();
   const ctx = useProjectContext();
   const onOrgHome = useMatch({ path: '/o/:org', end: true }) !== null;
@@ -38,6 +40,11 @@ export function GlobalSearchBar({
 
   const value = onOrgHome || onBoard ? (params.get('q') ?? '') : localQuery;
 
+  const projectCorpus = useMemo(
+    () => (projects.data ?? []).map((p) => ({ key: p.key, name: p.name })),
+    [projects.data],
+  );
+
   const matches = useMemo(() => {
     if (!value.trim()) return [];
     if (onBoard || orgSlug) {
@@ -46,8 +53,16 @@ export function GlobalSearchBar({
     return [];
   }, [projects.data, value, onBoard, orgSlug]);
 
-  const showProjectResults =
-    expanded && value.trim().length > 0 && matches.length > 0 && (Boolean(orgSlug) || onBoard);
+  const suggestion = useMemo(
+    () => (value.trim() ? suggestProjectQuery(value, projectCorpus) : null),
+    [projectCorpus, value],
+  );
+
+  const syncsUrl = onOrgHome || onBoard;
+  const showProjectPanel = expanded && value.trim().length > 0 && (Boolean(orgSlug) || onBoard);
+
+  const showProjectResults = showProjectPanel && matches.length > 0;
+  const showNoResults = showProjectPanel && matches.length === 0;
 
   const label = boardChrome ? 'Search issues and projects' : 'Search projects, issues, or people';
 
@@ -86,6 +101,29 @@ export function GlobalSearchBar({
     );
   };
 
+  const applyQueryToUrl = (nextQuery: string) => {
+    if (!syncsUrl) return;
+    const sp = new URLSearchParams(params);
+    const trimmed = nextQuery.trim();
+    if (trimmed) sp.set('q', trimmed);
+    else sp.delete('q');
+    setParams(sp, { replace: true });
+  };
+
+  const clearSearchQuery = () => {
+    if (syncsUrl) {
+      const sp = new URLSearchParams(params);
+      sp.delete('q');
+      setParams(sp, { replace: true });
+    } else {
+      setLocalQuery('');
+    }
+  };
+
+  const panelTone = boardChrome
+    ? 'border-[var(--board-border)] bg-[var(--board-surface)] text-[var(--board-text)]'
+    : 'border-[var(--org-dash-border)] bg-[var(--org-dash-surface)] text-[var(--org-dash-text)]';
+
   return (
     <div className={cn('relative min-w-0 flex-1', className)}>
       <label htmlFor={id} className="sr-only">
@@ -102,8 +140,8 @@ export function GlobalSearchBar({
         name="global-search"
         autoComplete="off"
         role="combobox"
-        aria-expanded={showProjectResults}
-        aria-controls={showProjectResults ? listId : undefined}
+        aria-expanded={showProjectResults || showNoResults}
+        aria-controls={showProjectResults || showNoResults ? panelId : undefined}
         aria-autocomplete="list"
         placeholder={placeholder}
         value={value}
@@ -112,7 +150,7 @@ export function GlobalSearchBar({
         }}
         onBlur={(e) => {
           const next = e.relatedTarget;
-          if (!next || !listRef.current?.contains(next)) {
+          if (!next || !panelRef.current?.contains(next)) {
             setExpanded(false);
           }
         }}
@@ -137,7 +175,7 @@ export function GlobalSearchBar({
         }}
         onChange={(e) => {
           const next = e.target.value;
-          if (onOrgHome || onBoard) {
+          if (syncsUrl) {
             const sp = new URLSearchParams(params);
             if (next.trim()) sp.set('q', next);
             else sp.delete('q');
@@ -165,49 +203,79 @@ export function GlobalSearchBar({
         ⌘ K
       </kbd>
       {showProjectResults ? (
-        <ul
-          ref={listRef}
-          id={listId}
-          role="listbox"
+        <div ref={panelRef} className="absolute left-0 right-0 top-[calc(100%+4px)] z-50">
+          <ul
+            id={panelId}
+            role="listbox"
+            className={cn('max-h-64 overflow-auto rounded-lg border py-1 shadow-lg', panelTone)}
+          >
+            {matches.map((project) => (
+              <li key={project.key} role="option">
+                <button
+                  type="button"
+                  className={cn(
+                    'flex w-full items-center gap-2 px-3 py-2 text-left text-sm',
+                    boardChrome
+                      ? 'hover:bg-[var(--board-accent-soft)]'
+                      : 'hover:bg-[var(--org-dash-accent-soft)]',
+                  )}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                  }}
+                  onClick={() => {
+                    const org = ctx?.org ?? orgSlug ?? '';
+                    void navigate(`/o/${org}/p/${project.key}/board`);
+                    setExpanded(false);
+                  }}
+                >
+                  <span
+                    className={cn(
+                      'font-mono text-xs',
+                      boardChrome ? 'text-[var(--board-muted)]' : 'text-[var(--org-dash-muted)]',
+                    )}
+                  >
+                    {project.key}
+                  </span>
+                  <span className="truncate">{project.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {showNoResults ? (
+        <div
+          ref={panelRef}
+          id={panelId}
+          role="region"
+          aria-live="polite"
           className={cn(
-            'absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-64 overflow-auto rounded-lg border py-1 shadow-lg',
-            boardChrome
-              ? 'border-[var(--board-border)] bg-[var(--board-surface)]'
-              : 'border-[var(--org-dash-border)] bg-[var(--org-dash-surface)]',
+            'absolute left-0 right-0 top-[calc(100%+4px)] z-50 rounded-lg border px-4 py-3 shadow-lg',
+            panelTone,
           )}
         >
-          {matches.map((project) => (
-            <li key={project.key} role="option">
-              <button
+          <p className="text-sm font-medium">No projects for &ldquo;{value.trim()}&rdquo;</p>
+          <p className="mt-1 text-xs text-fg-muted">Try another term or clear the search.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={clearSearchQuery}>
+              Clear search
+            </Button>
+            {suggestion ? (
+              <Button
                 type="button"
-                className={cn(
-                  'flex w-full items-center gap-2 px-3 py-2 text-left text-sm',
-                  boardChrome
-                    ? 'text-[var(--board-text)] hover:bg-[var(--board-accent-soft)]'
-                    : 'text-[var(--org-dash-text)] hover:bg-[var(--org-dash-accent-soft)]',
-                )}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                }}
+                variant="link"
+                size="sm"
                 onClick={() => {
-                  const org = ctx?.org ?? orgSlug ?? '';
-                  void navigate(`/o/${org}/p/${project.key}/board`);
-                  setExpanded(false);
+                  applyQueryToUrl(suggestion.applyValue);
+                  inputRef.current?.focus();
                 }}
+                aria-label={`Did you mean "${suggestion.label}"?`}
               >
-                <span
-                  className={cn(
-                    'font-mono text-xs',
-                    boardChrome ? 'text-[var(--board-muted)]' : 'text-[var(--org-dash-muted)]',
-                  )}
-                >
-                  {project.key}
-                </span>
-                <span className="truncate">{project.name}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+                Did you mean &ldquo;{suggestion.label}&rdquo;?
+              </Button>
+            ) : null}
+          </div>
+        </div>
       ) : null}
     </div>
   );
