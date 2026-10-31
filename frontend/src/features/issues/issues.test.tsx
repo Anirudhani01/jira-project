@@ -67,12 +67,15 @@ describe('issue list', () => {
     expect(await screen.findByText('Login button misaligned')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Create issue' }));
     const dialog = await screen.findByRole('dialog');
+    const typePicker = await within(dialog).findByRole('combobox', { name: /^Type/ });
     await waitFor(() => {
-      expect(within(dialog).getByRole('option', { name: 'Task' })).toBeInTheDocument();
+      expect(typePicker).toHaveAccessibleName(/Task/);
     });
-    // Sub-tasks are now offered (M7); creating one without a parent is still rejected
-    // server-side, so the dialog requires a parent key before it will submit one.
-    expect(within(dialog).getByRole('option', { name: 'Sub-task' })).toBeInTheDocument();
+    // Sub-tasks are offered; the dialog requires a parent before it will submit one.
+    await userEvent.click(typePicker);
+    expect(await screen.findByRole('option', { name: /Sub-task/ })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Task/ })).toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
     await userEvent.type(within(dialog).getByLabelText('Summary'), 'New issue');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
     await waitFor(() => {
