@@ -167,6 +167,37 @@ describe('single-key shortcuts', () => {
   });
 });
 
+describe('numeric tab shortcuts', () => {
+  it('1 and 2 open the project tabs in the order shown', async () => {
+    mount();
+    const { router } = renderApp('/o/acme/p/WEB/board');
+    const user = userEvent.setup();
+    await screen.findByRole('navigation', { name: 'Project' });
+    await user.keyboard('2');
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/o/acme/p/WEB/issues');
+    });
+    await user.keyboard('1');
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/o/acme/p/WEB/board');
+    });
+  });
+
+  it('does nothing for a number with no tab, and ignores digits typed in a field', async () => {
+    mount();
+    const { router } = renderApp('/o/acme/p/WEB/board');
+    const user = userEvent.setup();
+    await screen.findByRole('navigation', { name: 'Project' });
+    await user.keyboard('9');
+    expect(router.state.location.pathname).toBe('/o/acme/p/WEB/board');
+    const search = await screen.findByRole('combobox', { name: /search issues and projects/i });
+    await user.click(search);
+    await user.keyboard('2');
+    expect(search).toHaveValue('2');
+    expect(router.state.location.pathname).toBe('/o/acme/p/WEB/board');
+  });
+});
+
 describe('command palette', () => {
   it('opens with Ctrl+K, filters actions, runs one with Enter and closes with Escape', async () => {
     mount();
