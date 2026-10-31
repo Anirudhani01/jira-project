@@ -9,11 +9,15 @@ export const projectsKey = (org: string) => ['org', org.toLowerCase(), 'projects
 export const projectKey = (org: string, key: string) =>
   [...projectsKey(org), key.toUpperCase()] as const;
 
-export function useProjects(org: string, options?: { enabled?: boolean }) {
+export function useProjects(org: string, options?: { enabled?: boolean; archived?: boolean }) {
+  const archived = options?.archived ?? false;
   return useQuery({
-    queryKey: projectsKey(org),
+    queryKey: archived ? ([...projectsKey(org), 'archived'] as const) : projectsKey(org),
     enabled: (options?.enabled ?? true) && org.length > 0,
-    queryFn: () => apiFetch<{ items: ProjectSummary[] }>(base(org)).then((r) => r.items),
+    queryFn: () =>
+      apiFetch<{ items: ProjectSummary[] }>(`${base(org)}${archived ? '?archived=true' : ''}`).then(
+        (r) => r.items,
+      ),
   });
 }
 
@@ -24,9 +28,10 @@ export function useProject(org: string, key: string) {
   });
 }
 
-export function useWorkflow(org: string, key: string) {
+export function useWorkflow(org: string, key: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: [...projectKey(org, key), 'workflow'],
+    enabled: (options?.enabled ?? true) && org.length > 0 && key.length > 0,
     queryFn: () => apiFetch<Workflow>(`${projectPath(org, key)}/workflow`),
   });
 }

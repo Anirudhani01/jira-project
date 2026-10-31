@@ -273,11 +273,14 @@ export function IssueListPriorityMenu({
   issue,
   priorities,
   canEdit,
+  containedMenu = false,
 }: {
   org: string;
   issue: Issue;
   priorities: Priority[];
   canEdit: boolean;
+  /** When true, menu is nested inside a modal dialog (Radix focus trap). */
+  containedMenu?: boolean;
 }) {
   const update = useUpdateIssue(org, issue.key);
 
@@ -291,7 +294,7 @@ export function IssueListPriorityMenu({
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={containedMenu ? false : true}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
@@ -308,13 +311,16 @@ export function IssueListPriorityMenu({
         {priorities.map((p) => (
           <DropdownMenuItem
             key={p.id}
+            textValue={p.name}
             disabled={update.isPending || issue.priority.id === p.id}
             onSelect={() => {
               update.mutate({ changes: { priority_id: p.id }, version: issue.version });
             }}
           >
             <span className="inline-flex items-center gap-2">
-              <PriorityIcon name={p.name} />
+              <span aria-hidden="true">
+                <PriorityIcon name={p.name} />
+              </span>
               {p.name}
             </span>
           </DropdownMenuItem>

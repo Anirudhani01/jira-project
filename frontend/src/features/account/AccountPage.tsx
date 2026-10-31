@@ -153,7 +153,7 @@ function PasswordForm() {
         />
         <TextField
           key={`confirm-${fieldsKey}`}
-          label="Confirm new password"
+          label="Confirm password"
           type="password"
           autoComplete="new-password"
           error={errors.confirm_password?.message}

@@ -21,6 +21,8 @@ export interface SessionExpiryControllerEnv {
   onPhaseChange: (phase: SessionExpiryPhase) => void;
   onDialogChange: (model: SessionExpiryDialogModel | null) => void;
   clearSessionState: () => void;
+  /** Revoke client session state before opening login (e.g. server logout). */
+  prepareLoginAfterExpiry: () => Promise<void>;
   navigateToLogin: (nextPath: string) => Promise<void>;
 }
 
@@ -147,9 +149,9 @@ function startNavigateToLogin(): void {
   if (!env) return;
   setPhase('navigating');
   env.onDialogChange(null);
-  env.clearSessionState();
   void (async () => {
     try {
+      await env.prepareLoginAfterExpiry();
       await env.navigateToLogin(pendingNext);
       queueMicrotask(() => {
         verifyNavigationReachedLogin();

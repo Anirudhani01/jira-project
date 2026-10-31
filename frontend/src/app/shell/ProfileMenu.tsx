@@ -21,10 +21,10 @@ export function ProfileMenu() {
   const { display_name } = session.data.user;
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex min-w-0 shrink items-center gap-1">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="gap-2 px-2">
+          <Button variant="ghost" size="sm" className="max-w-full shrink gap-2 px-2">
             <Avatar name={display_name} size="sm" />
             <span className="hidden max-w-[8rem] truncate sm:inline">{display_name}</span>
             <span className="sr-only">Open account menu for {display_name}</span>
