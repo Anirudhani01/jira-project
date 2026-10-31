@@ -20,6 +20,7 @@ import { useBoardShell } from '../../app/shell/useBoardShell';
 import { cn } from '../../lib/cn';
 import { ErrorState } from '../../components/ui/States';
 import { ApiError } from '../../lib/api/errors';
+import { mutationErrorMessage } from '../../lib/ux/permissionDenied';
 import type { Board } from '../../lib/api/types';
 import { useSession } from '../auth/api';
 import { CreateIssueDialog } from '../issues/CreateIssueDialog';
@@ -187,7 +188,8 @@ export function BoardPage() {
           role="alert"
           className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
-          Could not move the card: {move.error.message} The board was restored.
+          Could not move the card: {mutationErrorMessage(move.error, 'issue-mutation')} The board
+          was restored.
         </p>
       ) : null}
 

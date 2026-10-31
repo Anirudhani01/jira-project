@@ -119,6 +119,24 @@ describe('board page', () => {
     expect(within(todo).getByRole('link', { name: 'WEB-1' })).toBeInTheDocument();
   });
 
+  it('shows allowlisted copy when move is forbidden', async () => {
+    mockApi({
+      'GET /auth/session': () => json(SESSION),
+      'GET /orgs/acme/projects/WEB': () => json(PROJECT),
+      'GET /orgs/acme/projects/WEB/board': () => json(board()),
+      'POST /orgs/acme/issues/WEB-1/move': () =>
+        problem(403, 'forbidden', { detail: 'You cannot move issues in this project' }),
+    });
+    renderApp('/o/acme/p/WEB/board');
+    await screen.findByRole('heading', { name: 'WEB board' });
+    await userEvent.click(screen.getByRole('button', { name: 'More actions for WEB-1' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Doing' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('The board was restored');
+    expect(alert).not.toHaveTextContent('You cannot move issues');
+    expect(alert.textContent).toMatch(/permission/i);
+  });
+
   it('offers no move controls without the transition permission', async () => {
     mockApi({
       'GET /auth/session': () => json(SESSION),

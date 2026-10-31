@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { ApiError } from '../api/errors';
+import { describeError } from '../forms';
 
 import {
   isRbacForbidden,
   permissionDeniedCopy,
+  mutationErrorMessage,
   permissionDeniedInlineMessage,
   permissionDeniedRecovery,
   toUxPermissionDeniedProps,
@@ -72,6 +74,17 @@ describe('permissionDenied', () => {
     });
     expect(recovery.backHref).toBe('/o/acme/p/WEB/board');
     expect(recovery.membersHref).toBeUndefined();
+  });
+
+  it('mutationErrorMessage uses describeError for CSRF 403', () => {
+    const error = new ApiError({
+      status: 403,
+      code: 'csrf_failed',
+      title: 'CSRF',
+      detail: 'bad token',
+    });
+    expect(mutationErrorMessage(error, 'issue-mutation')).toBe(describeError(error));
+    expect(permissionDeniedInlineMessage(error, 'issue-mutation')).toBeNull();
   });
 
   it('inline message combines reason and guidance for mutations', () => {

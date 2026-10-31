@@ -1,4 +1,5 @@
 import { ApiError } from '../api/errors';
+import { describeError } from '../forms';
 
 import type { UxPermissionDeniedProps } from '../../components/ux/UxPermissionDenied';
 
@@ -160,6 +161,11 @@ export function permissionDeniedInlineMessage(
   const { reason, adminGuidance } = permissionDeniedCopy(surface, error);
   if (adminGuidance) return `${reason} ${adminGuidance}`;
   return reason;
+}
+
+/** RBAC 403 inline copy when applicable; otherwise existing describeError (CSRF, 401, network, etc.). */
+export function mutationErrorMessage(error: unknown, surface: PermissionDeniedSurface): string {
+  return permissionDeniedInlineMessage(error, surface) ?? describeError(error);
 }
 
 export function toUxPermissionDeniedProps(

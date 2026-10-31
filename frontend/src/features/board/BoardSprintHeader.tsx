@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/cn';
 import { FormError } from '../../components/ui/Form';
 import { Dialog, DialogContent, DialogTrigger } from '../../components/ui/Overlay';
-import { describeError } from '../../lib/forms';
+import { mutationErrorMessage } from '../../lib/ux/permissionDenied';
 import type { Board, Sprint } from '../../lib/api/types';
 import { useBacklog, useCompleteSprint } from '../backlog/api';
 
@@ -104,7 +104,9 @@ function CompleteSprintDialog({
               Complete sprint
             </Button>
           </div>
-          <FormError>{complete.error ? describeError(complete.error) : null}</FormError>
+          <FormError>
+            {complete.error ? mutationErrorMessage(complete.error, 'generic-project') : null}
+          </FormError>
         </div>
       </DialogContent>
     </Dialog>

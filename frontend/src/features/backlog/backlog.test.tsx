@@ -127,6 +127,21 @@ describe('backlog page', () => {
     expect(await screen.findByText(/closed|error|went wrong|conflict/i)).toBeInTheDocument();
   });
 
+  it('shows allowlisted copy when move is forbidden', async () => {
+    mockApi({
+      ...BASE,
+      'GET /orgs/acme/projects/SCR/backlog': () => json(backlog()),
+      'POST /orgs/acme/issues/SCR-2/move': () =>
+        problem(403, 'forbidden', { detail: 'internal-only move denial' }),
+    });
+    renderApp('/o/acme/p/SCR/backlog');
+    await screen.findByRole('heading', { name: 'SCR backlog' });
+    await userEvent.selectOptions(screen.getByLabelText('Move SCR-2 to'), 'Sprint 2');
+    const alert = await screen.findByRole('alert');
+    expect(alert).not.toHaveTextContent('internal-only');
+    expect(alert.textContent).toMatch(/permission/i);
+  });
+
   it('offers no planning controls without sprint.manage', async () => {
     mockApi({
       ...BASE,

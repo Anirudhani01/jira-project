@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 
 import { FormError, SubmitButton, TextField } from '../../components/ui/Form';
 import { ApiError } from '../../lib/api/errors';
-import { describeError } from '../../lib/forms';
+import { mutationErrorMessage } from '../../lib/ux/permissionDenied';
 import {
   useFocusOnSubmitAttempt,
   type FocusableFieldRef,
@@ -101,7 +101,7 @@ export function CreateIssueDialog({
       create.error.status === 422 &&
       create.error.fieldErrors.length
     )
-      ? describeError(create.error)
+      ? mutationErrorMessage(create.error, 'issue-mutation')
       : null;
 
   const submit = (event: SyntheticEvent) => {
