@@ -176,6 +176,7 @@ export function BoardColumnView({
   return (
     <section
       ref={setNodeRef}
+      data-board-column
       aria-labelledby={`col-${column.id}`}
       className={cn(
         'flex shrink-0 flex-col rounded-lg border border-line bg-surface-2/80',

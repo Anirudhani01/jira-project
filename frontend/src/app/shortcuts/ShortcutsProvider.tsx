@@ -9,9 +9,11 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 
 import { useToast } from '../../components/ui/Toast';
+import { useSession } from '../../features/auth/api';
+import { useAssignIssues } from '../../features/issues/assignIssues';
 import { CreateIssueDialog } from '../../features/issues/CreateIssueDialog';
 import {
   areShortcutsEnabled,
@@ -24,8 +26,10 @@ import { useRecents } from '../shell/navPrefs';
 import { useOrgSlug } from '../shell/useOrgShell';
 import { useProjectContext } from '../shell/useProjectContext';
 
+import { AssignDialog } from './AssignDialog';
 import { CommandPalette } from './CommandPalette';
 import { ShortcutsHelpDialog } from './ShortcutsHelpDialog';
+import { focusColumn, projectTabLink, targetIssueKey } from './targetIssue';
 
 interface ShortcutsValue {
   openCreateIssue: () => void;
@@ -62,6 +66,8 @@ function focusRow(delta: 1 | -1, cursor: RefObject<string | null>): void {
  * or when the user turned shortcuts off; `Ctrl/Cmd+K` still opens the palette. */
 export function ShortcutsProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const session = useSession();
   const toast = useToast();
   const org = useOrgSlug();
   const context = useProjectContext();
@@ -70,6 +76,8 @@ export function ShortcutsProvider({ children }: { children: ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [assigning, setAssigning] = useState<string | null>(null);
+  const assignMe = useAssignIssues(org ?? '');
   const [awaitingGo, setAwaitingGo] = useState(false);
   const goTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cursor = useRef<string | null>(null);
@@ -158,6 +166,45 @@ export function ShortcutsProvider({ children }: { children: ReactNode }) {
         case 'k':
           focusRow(-1, cursor);
           break;
+        case 'n':
+          if (focusColumn(1)) event.preventDefault();
+          break;
+        case 'p':
+          if (focusColumn(-1)) event.preventDefault();
+          break;
+        case 'i':
+        case 'a': {
+          const issueKey = targetIssueKey(location.pathname, document.activeElement);
+          if (!issueKey || !org) break;
+          event.preventDefault();
+          if (pressed === 'a') {
+            setAssigning(issueKey);
+            break;
+          }
+          const me = session.data?.user.id;
+          if (!me) break;
+          assignMe.mutate(
+            { keys: [issueKey], assigneeId: me },
+            {
+              onSuccess: (result) => {
+                const failure = result.results.find((r) => !r.ok);
+                toast(
+                  failure
+                    ? {
+                        title: `Could not assign ${issueKey}`,
+                        description: failure.message ?? failure.code ?? 'Try again.',
+                        variant: 'error',
+                      }
+                    : { title: `${issueKey} assigned to you`, variant: 'success' },
+                );
+              },
+              onError: () => {
+                toast({ title: `Could not assign ${issueKey}`, variant: 'error' });
+              },
+            },
+          );
+          break;
+        }
         case 'o':
           document
             .querySelector<HTMLElement>('[data-issue-row] a[href*="/issues/"]:focus')
@@ -172,6 +219,13 @@ export function ShortcutsProvider({ children }: { children: ReactNode }) {
           break;
         }
         default:
+          if (/^[1-9]$/.test(pressed)) {
+            const tab = projectTabLink(Number(pressed));
+            if (tab) {
+              event.preventDefault();
+              tab.click();
+            }
+          }
           break;
       }
     };
@@ -179,7 +233,19 @@ export function ShortcutsProvider({ children }: { children: ReactNode }) {
     return () => {
       window.removeEventListener('keydown', onKey);
     };
-  }, [awaitingGo, base, navigate, openCreateIssue, org, paletteOpen, stopGo]);
+  }, [
+    assignMe,
+    awaitingGo,
+    base,
+    location.pathname,
+    navigate,
+    openCreateIssue,
+    org,
+    paletteOpen,
+    session.data?.user.id,
+    stopGo,
+    toast,
+  ]);
 
   const setEnabled = useCallback(
     (value: boolean) => {
@@ -234,6 +300,22 @@ export function ShortcutsProvider({ children }: { children: ReactNode }) {
           onEnabledChange={setEnabled}
           onClose={() => {
             setHelpOpen(false);
+          }}
+        />
+      ) : null}
+      {assigning && org ? (
+        <AssignDialog
+          org={org}
+          issueKey={assigning}
+          onClose={() => {
+            setAssigning(null);
+          }}
+          onResult={({ title, description, error }) => {
+            toast({
+              title,
+              ...(description ? { description } : {}),
+              variant: error ? 'error' : 'success',
+            });
           }}
         />
       ) : null}
