@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 Summary = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)]
 Description = Annotated[str, StringConstraints(max_length=32000)]
@@ -190,6 +190,61 @@ class MoveIssueRequest(_Request):
     sprint_id: uuid.UUID | None = None  # send null to return the issue to the backlog
     after_key: IssueKey | None = None
     before_key: IssueKey | None = None
+
+
+BULK_MAX = 100
+BULK_ACTIONS = Literal[
+    "move_sprint", "assign", "set_priority", "set_parent", "set_fix_version", "delete"
+]
+_BULK_FIELD = {
+    "move_sprint": "sprint_id",
+    "assign": "assignee_id",
+    "set_priority": "priority_id",
+    "set_parent": "parent_id",
+    "set_fix_version": "fix_version_id",
+}
+
+
+class BulkIssueRequest(_Request):
+    """One action applied to up to ``BULK_MAX`` issues. The field matching the action must be
+    sent (``null`` means backlog / unassign / detach / clear); no other value field may be."""
+
+    keys: list[IssueKey] = Field(min_length=1, max_length=BULK_MAX)
+    action: BULK_ACTIONS
+    sprint_id: uuid.UUID | None = None
+    assignee_id: uuid.UUID | None = None
+    priority_id: uuid.UUID | None = None
+    parent_id: uuid.UUID | None = None
+    fix_version_id: uuid.UUID | None = None
+
+    @model_validator(mode="after")
+    def _shape(self) -> "BulkIssueRequest":
+        if len({key.upper() for key in self.keys}) != len(self.keys):
+            raise ValueError("keys must be unique")
+        wanted = _BULK_FIELD.get(self.action)
+        sent = self.model_fields_set & set(_BULK_FIELD.values())
+        if sent != ({wanted} if wanted else set()):
+            raise ValueError(
+                f"action {self.action} takes {wanted} only"
+                if wanted
+                else "delete takes no value field"
+            )
+        if self.action == "set_priority" and self.priority_id is None:
+            raise ValueError("priority_id is required")
+        return self
+
+
+class BulkItemResult(BaseModel):
+    key: str
+    ok: bool
+    code: str | None = None
+    message: str | None = None
+
+
+class BulkIssueResponse(BaseModel):
+    results: list[BulkItemResult]
+    succeeded: int
+    failed: int
 
 
 class CreateLabelRequest(_Request):

@@ -403,6 +403,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orgs/{org_slug}/issues/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Change
+         * @description Applies one action to up to 100 issues; each item is checked and applied on its own
+         *     and reported in ``results`` (some may fail while others succeed).
+         */
+        post: operations["bulk_change_api_v1_orgs__org_slug__issues_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orgs/{org_slug}/issues/{issue_key}": {
         parameters: {
             query?: never;
@@ -1304,6 +1325,50 @@ export interface components {
              * Format: uuid
              */
             to_status_id: string;
+        };
+        /**
+         * BulkIssueRequest
+         * @description One action applied to up to ``BULK_MAX`` issues. The field matching the action must be
+         *     sent (``null`` means backlog / unassign / detach / clear); no other value field may be.
+         */
+        BulkIssueRequest: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "move_sprint" | "assign" | "set_priority" | "set_parent" | "set_fix_version" | "delete";
+            /** Assignee Id */
+            assignee_id?: string | null;
+            /** Fix Version Id */
+            fix_version_id?: string | null;
+            /** Keys */
+            keys: string[];
+            /** Parent Id */
+            parent_id?: string | null;
+            /** Priority Id */
+            priority_id?: string | null;
+            /** Sprint Id */
+            sprint_id?: string | null;
+        };
+        /** BulkIssueResponse */
+        BulkIssueResponse: {
+            /** Failed */
+            failed: number;
+            /** Results */
+            results: components["schemas"]["BulkItemResult"][];
+            /** Succeeded */
+            succeeded: number;
+        };
+        /** BulkItemResult */
+        BulkItemResult: {
+            /** Code */
+            code?: string | null;
+            /** Key */
+            key: string;
+            /** Message */
+            message?: string | null;
+            /** Ok */
+            ok: boolean;
         };
         /** ChangePasswordRequest */
         ChangePasswordRequest: {
@@ -3104,6 +3169,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IssueListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_change_api_v1_orgs__org_slug__issues_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkIssueRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkIssueResponse"];
                 };
             };
             /** @description Validation Error */
