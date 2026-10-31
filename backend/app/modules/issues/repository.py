@@ -24,6 +24,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.db.tenant import require_org_context
 from app.modules.issues.list_sort import keyset_condition, list_order
@@ -245,6 +246,42 @@ async def list_backlog_views(
             .limit(limit)
         )
     )
+
+
+async def list_epics(
+    session: AsyncSession, project_id: uuid.UUID, *, include_done: bool
+) -> list[Any]:
+    """Epics of a project in rank order with their direct children's ``total`` and ``done``
+    counts (sub-tasks hang off stories, not epics, so they are not counted twice)."""
+    context = require_org_context(session)
+    child = aliased(Issue)
+    child_status = aliased(WorkflowStatus)
+    query = (
+        select(
+            Issue,
+            Project.key.label("project_key"),
+            WorkflowStatus.name.label("status_name"),
+            WorkflowStatus.category.label("status_category"),
+            func.count(child.id).label("total"),
+            func.count(child.id).filter(child_status.category == "done").label("done"),
+        )
+        .join(Project, Project.id == Issue.project_id)
+        .join(WorkflowStatus, WorkflowStatus.id == Issue.status_id)
+        .join(IssueType, IssueType.id == Issue.type_id)
+        .outerjoin(child, and_(child.parent_id == Issue.id, child.deleted_at.is_(None)))
+        .outerjoin(child_status, child_status.id == child.status_id)
+        .where(
+            Issue.org_id == context.org_id,
+            Issue.project_id == project_id,
+            Issue.deleted_at.is_(None),
+            IssueType.kind == "epic",
+        )
+        .group_by(Issue.id, Project.key, WorkflowStatus.name, WorkflowStatus.category)
+        .order_by(Issue.rank, Issue.id)
+    )
+    if not include_done:
+        query = query.where(WorkflowStatus.category != "done")
+    return list(await session.execute(query))
 
 
 async def find_issues_by_seq(

@@ -22,6 +22,7 @@ from app.modules.issues.schemas import (
     ChildrenResponse,
     CreateIssueRequest,
     CreateLabelRequest,
+    EpicListResponse,
     IssueListResponse,
     IssueResponse,
     LabelListResponse,
@@ -251,6 +252,14 @@ async def move_issue(
     issue = await service.move_issue(services, ref, body, expected)
     response.headers["ETag"] = _etag(issue)
     return issue
+
+
+@router.get("/projects/{project_key}/epics", response_model=EpicListResponse)
+async def list_epics(
+    access: ViewProjectLabels, services: Services, include_done: bool = False
+) -> EpicListResponse:
+    """Epics with child progress; epics in a done status are hidden unless asked for."""
+    return await service.list_epics(services, access, include_done=include_done)
 
 
 @router.get("/projects/{project_key}/labels", response_model=LabelListResponse)

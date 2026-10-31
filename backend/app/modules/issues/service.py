@@ -52,6 +52,8 @@ from app.modules.issues.schemas import (
     ApplyTransitionRequest,
     ChildrenResponse,
     CreateIssueRequest,
+    EpicListResponse,
+    EpicResponse,
     IssueRefShort,
     IssueResponse,
     LabelRef,
@@ -709,6 +711,32 @@ async def list_children(services: IdentityServices, ref: IssueRef) -> ChildrenRe
         items = await issue_responses(session, rows)
         done = sum(1 for item in items if item.status.category == "done")
         return ChildrenResponse(items=items, done=done, total=len(items))
+
+
+async def list_epics(
+    services: IdentityServices, access: ProjectAccess, *, include_done: bool
+) -> EpicListResponse:
+    async with project_transaction(services, access, Permission.PROJECT_VIEW) as (
+        session,
+        project,
+        _,
+    ):
+        rows = await repository.list_epics(session, project.id, include_done=include_done)
+        return EpicListResponse(
+            items=[
+                EpicResponse(
+                    id=row.Issue.id,
+                    key=f"{row.project_key}-{row.Issue.seq}",
+                    summary=row.Issue.summary,
+                    status=StatusRef(
+                        id=row.Issue.status_id, name=row.status_name, category=row.status_category
+                    ),
+                    done=int(row.done),
+                    total=int(row.total),
+                )
+                for row in rows
+            ]
+        )
 
 
 # --------------------------------------------------------------------- transitions

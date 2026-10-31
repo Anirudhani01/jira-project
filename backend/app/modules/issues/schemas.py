@@ -143,6 +143,19 @@ class ChildrenResponse(BaseModel):
     total: int
 
 
+class EpicResponse(BaseModel):
+    id: uuid.UUID
+    key: str
+    summary: str
+    status: StatusRef
+    done: int
+    total: int
+
+
+class EpicListResponse(BaseModel):
+    items: list[EpicResponse]
+
+
 class TransitionRef(BaseModel):
     id: uuid.UUID
     name: str
