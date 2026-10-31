@@ -67,9 +67,10 @@ export function useRenameOrg(slug: string) {
 export const membersKey = (slug: string) => ['org', slug.toLowerCase(), 'members'] as const;
 export const invitationsKey = (slug: string) => ['org', slug.toLowerCase(), 'invitations'] as const;
 
-export function useMembers(slug: string) {
+export function useMembers(slug: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: membersKey(slug),
+    enabled: options?.enabled ?? Boolean(slug),
     queryFn: () =>
       apiFetch<{ items: Member[] }>(`/orgs/${encodeURIComponent(slug)}/members`).then(
         (r) => r.items,
