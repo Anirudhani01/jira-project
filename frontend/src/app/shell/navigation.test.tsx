@@ -83,7 +83,7 @@ describe('navigation v2', () => {
 
   it('stars a project from its header and lists it under Starred, per user', async () => {
     mount();
-    renderApp('/o/acme/p/WEB/board');
+    renderApp('/o/acme/p/WEB/issues');
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Star Website' }));
     expect(screen.getByRole('button', { name: 'Unstar Website' })).toHaveAttribute(
@@ -92,7 +92,9 @@ describe('navigation v2', () => {
     );
     const stored = Object.entries(localStorage).find(([key]) => key.endsWith('.starred'));
     expect(stored?.[0]).toContain(SESSION.user.id);
-    expect(JSON.parse(stored?.[1] ?? '[]') as unknown).toEqual([{ key: 'WEB', name: 'Website' }]);
+    expect(JSON.parse(String(stored?.[1] ?? '[]')) as unknown).toEqual([
+      { key: 'WEB', name: 'Website' },
+    ]);
     await user.click(screen.getByRole('button', { name: 'Unstar Website' }));
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Star Website' })).toBeInTheDocument();
@@ -126,9 +128,16 @@ describe('navigation v2', () => {
     expect(await screen.findByRole('button', { name: 'Collapse sidebar' })).toBeInTheDocument();
   });
 
-  it('puts project settings in the More actions menu, not in the tabs', async () => {
+  it('shows only the tabs on the board page, which draws its own header', async () => {
     mount();
     renderApp('/o/acme/p/WEB/board');
+    await screen.findByRole('navigation', { name: 'Project' });
+    expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
+  });
+
+  it('puts project settings in the More actions menu, not in the tabs', async () => {
+    mount();
+    renderApp('/o/acme/p/WEB/issues');
     const user = userEvent.setup();
     const tabs = await screen.findByRole('navigation', { name: 'Project' });
     expect(within(tabs).queryByRole('link', { name: 'Settings' })).toBeNull();
