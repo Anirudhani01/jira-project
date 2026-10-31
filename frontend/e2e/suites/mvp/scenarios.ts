@@ -117,7 +117,7 @@ export const mvpScenarios: MvpScenario[] = [
       await signOut(page);
       await loginAs(page, owner.email);
       await addProjectMemberViaApi(page, owner.slug, owner.key, memberUserId, 'member');
-      await page.goto(`/o/${owner.slug}/p/${owner.key}`);
+      await page.goto(`/o/${owner.slug}/p/${owner.key}?tab=members`);
       const members = projectMembersSection(page);
       const memberRow = members.locator('li').filter({ hasText: member.email });
       await expect(memberRow).toBeVisible();
@@ -324,7 +324,7 @@ export const mvpScenarios: MvpScenario[] = [
         const assigneeId = await sessionUserId(assigneePage);
         await loginAs(ownerPage, owner.email, 'Owner User');
         await addProjectMemberViaApi(ownerPage, owner.slug, owner.key, assigneeId, 'member');
-        await ownerPage.goto(`/o/${owner.slug}/p/${owner.key}`);
+        await ownerPage.goto(`/o/${owner.slug}/p/${owner.key}?tab=members`);
         await expect(
           projectMembersSection(ownerPage).locator('li').filter({ hasText: assignee.email }),
         ).toBeVisible();

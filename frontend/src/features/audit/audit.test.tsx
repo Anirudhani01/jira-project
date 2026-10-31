@@ -70,4 +70,24 @@ describe('audit log', () => {
     );
     expect(calls.some((c) => c.path.includes('/audit-events'))).toBe(false);
   });
+
+  it('shows an active-filter chip, removes it, and expands the metadata of a row', async () => {
+    mockApi({
+      'GET /auth/session': () => json(SESSION),
+      'GET /orgs/acme': () => json(ORG),
+      'GET /orgs/acme/audit-events': () => json({ items: [EVENT], next_cursor: null }),
+    });
+    renderApp('/o/acme/settings/audit?action=project.created');
+    const chips = await screen.findByRole('list', { name: 'Active filters' });
+    expect(chips).toHaveTextContent('Action: project.created');
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', { name: /Show details for project.created/ }),
+    );
+    expect(await screen.findByText(/"project": "WEB"/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Remove Action filter' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('list', { name: 'Active filters' })).toBeNull();
+    });
+  });
 });
