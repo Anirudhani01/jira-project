@@ -136,6 +136,7 @@ export function GlobalSearchBar({
       <input
         ref={inputRef}
         id={id}
+        data-global-search
         type="search"
         name="global-search"
         autoComplete="off"

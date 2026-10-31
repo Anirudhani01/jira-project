@@ -60,6 +60,8 @@ export function BacklogRow({
   return (
     <li
       ref={setNodeRef}
+      data-issue-row
+      data-issue-key={issue.key}
       className={cn(
         'flex items-center gap-2 border-b border-line px-2 text-sm last:border-b-0',
         density === 'compact' ? 'py-0.5' : 'py-1.5',

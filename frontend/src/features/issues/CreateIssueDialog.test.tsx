@@ -183,4 +183,31 @@ describe('CreateIssueDialog', () => {
     expect(keys[0]).not.toBe(keys[1]);
     createIssueState.mutate.mockReset();
   });
+
+  it('closes itself after creating one issue, since the shell may own the dialog', async () => {
+    createIssueState.mutate.mockReset();
+    createIssueState.mutate.mockImplementation(
+      (
+        _request: unknown,
+        options?: { onSuccess?: (issue: { key: string; summary: string }) => void },
+      ) => {
+        options?.onSuccess?.({ key: 'WEB-5', summary: 'One' });
+      },
+    );
+    const onClose = vi.fn();
+    render(
+      <MemoryRouter>
+        <ToastProvider>
+          <CreateIssueDialog org="acme" project="WEB" onClose={onClose} />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('Summary'), 'One');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+    createIssueState.mutate.mockReset();
+  });
 });

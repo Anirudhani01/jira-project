@@ -1,5 +1,4 @@
 import { ChevronDown, CircleHelp, LayoutGrid, Menu, Monitor, Plus } from 'lucide-react';
-import { useState } from 'react';
 import { Link, useLocation } from 'react-router';
 
 import { Button, IconButton } from '../../components/ui/Button';
@@ -10,8 +9,9 @@ import {
   DropdownMenuTrigger,
 } from '../../components/ui/Overlay';
 import { useSession } from '../../features/auth/api';
-import { CreateIssueDialog } from '../../features/issues/CreateIssueDialog';
 import { OrgNotificationBell } from '../../features/notifications/NotificationBell';
+
+import { useShortcuts } from '../shortcuts/ShortcutsProvider';
 
 import { GlobalSearchBar } from './GlobalSearchBar';
 import { OrgMenu } from './OrgMenu';
@@ -42,12 +42,7 @@ function GuestNav() {
 
 function SignedInActions({ boardShell }: { boardShell: boolean }) {
   const ctx = useProjectContext();
-  const [creating, setCreating] = useState(false);
-
-  const openCreateIssue = () => {
-    if (!ctx?.projectKey) return;
-    setCreating(true);
-  };
+  const { openCreateIssue, openHelp } = useShortcuts();
 
   return (
     <div className="flex min-w-0 shrink items-center gap-1">
@@ -97,11 +92,11 @@ function SignedInActions({ boardShell }: { boardShell: boolean }) {
         )
       ) : null}
       <IconButton
-        label="Help — not available yet"
+        label="Keyboard shortcuts"
         size="sm"
         className="hidden sm:inline-flex"
-        disabled
-        title="Help is not available yet"
+        title="Keyboard shortcuts (?)"
+        onClick={openHelp}
       >
         <CircleHelp className="size-4" aria-hidden="true" />
       </IconButton>
@@ -113,15 +108,6 @@ function SignedInActions({ boardShell }: { boardShell: boolean }) {
         <ThemeToggle />
       )}
       <ProfileMenu />
-      {creating && ctx?.projectKey ? (
-        <CreateIssueDialog
-          org={ctx.org}
-          project={ctx.projectKey}
-          onClose={() => {
-            setCreating(false);
-          }}
-        />
-      ) : null}
     </div>
   );
 }

@@ -34,8 +34,8 @@ test('scrum backlog — inline create, bulk move, start and complete a sprint, a
   await backlog.getByRole('checkbox', { name: `Select ${key}-2` }).click();
   const bar = page.getByRole('region', { name: 'Bulk actions' });
   await expect(bar.getByText('2 selected')).toBeVisible();
-  await bar.getByLabel('Move to').selectOption({ label: 'Sprint 1' });
-  await bar.getByRole('button', { name: 'Move', exact: true }).click();
+  await bar.getByLabel('Value').selectOption({ label: 'Sprint 1' });
+  await bar.getByRole('button', { name: 'Apply' }).click();
   await expect(sprint.getByText('First task')).toBeVisible();
   await expect(sprint.getByText('Second task')).toBeVisible();
   await expect(backlog.getByText('Third task')).toBeVisible();

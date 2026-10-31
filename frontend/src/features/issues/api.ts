@@ -266,3 +266,25 @@ export function useIssueSearch(org: string, project: string, query: string) {
     staleTime: 15_000,
   });
 }
+
+/** Org-wide issue lookup for the command palette: text or a key, newest first. Nothing is
+ * requested until at least two characters are typed. */
+export function useOrgIssueSearch(org: string, query: string) {
+  const q = query.trim();
+  return useQuery({
+    queryKey: [...issuesKey(org), 'palette', q],
+    enabled: org.length > 0 && q.length >= 2,
+    queryFn: () => {
+      const params = new URLSearchParams({ q, sort: '-updated_at', limit: '8' });
+      return apiFetch<IssueList>(`${orgBase(org)}/issues?${params.toString()}`).then((r) =>
+        r.items.map((i) => ({
+          id: i.id,
+          key: i.key,
+          summary: i.summary,
+          type: i.type,
+        })),
+      );
+    },
+    staleTime: 15_000,
+  });
+}
