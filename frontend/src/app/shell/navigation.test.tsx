@@ -51,6 +51,12 @@ function mount() {
       }),
     'GET /orgs/acme/projects/WEB': () => json(PROJECT),
     'GET /orgs/acme/projects/WEB/board': () => json(BOARD),
+    'GET /orgs/acme/issue-types': () =>
+      json({ items: [{ id: 't1', name: 'Task', kind: 'standard', position: 1 }] }),
+    'GET /orgs/acme/priorities': () =>
+      json({ items: [{ id: 'p1', name: 'Medium', sort_order: 2, color: '#888888' }] }),
+    'GET /orgs/acme/projects/WEB/members': () => json({ items: [] }),
+    'GET /orgs/acme/projects/WEB/labels': () => json({ items: [] }),
   });
 }
 
@@ -146,5 +152,15 @@ describe('navigation v2', () => {
       'href',
       '/o/acme/p/WEB',
     );
+  });
+
+  it('opens the create-issue dialog from the top bar Create menu', async () => {
+    mount();
+    renderApp('/o/acme/p/WEB/board');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /^Create/ }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Create issue' }));
+    expect(await screen.findByRole('dialog', { name: 'Create issue' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Summary')).toBeInTheDocument();
   });
 });

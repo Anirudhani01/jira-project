@@ -1,5 +1,6 @@
 import { ChevronDown, CircleHelp, LayoutGrid, Menu, Monitor, Plus } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { useState } from 'react';
+import { Link, useLocation } from 'react-router';
 
 import { Button, IconButton } from '../../components/ui/Button';
 import {
@@ -9,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '../../components/ui/Overlay';
 import { useSession } from '../../features/auth/api';
+import { CreateIssueDialog } from '../../features/issues/CreateIssueDialog';
 import { OrgNotificationBell } from '../../features/notifications/NotificationBell';
 
 import { GlobalSearchBar } from './GlobalSearchBar';
@@ -40,11 +42,11 @@ function GuestNav() {
 
 function SignedInActions({ boardShell }: { boardShell: boolean }) {
   const ctx = useProjectContext();
-  const navigate = useNavigate();
+  const [creating, setCreating] = useState(false);
 
   const openCreateIssue = () => {
     if (!ctx?.projectKey) return;
-    void navigate(`/o/${ctx.org}/p/${ctx.projectKey}/issues`);
+    setCreating(true);
   };
 
   return (
@@ -111,6 +113,15 @@ function SignedInActions({ boardShell }: { boardShell: boolean }) {
         <ThemeToggle />
       )}
       <ProfileMenu />
+      {creating && ctx?.projectKey ? (
+        <CreateIssueDialog
+          org={ctx.org}
+          project={ctx.projectKey}
+          onClose={() => {
+            setCreating(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

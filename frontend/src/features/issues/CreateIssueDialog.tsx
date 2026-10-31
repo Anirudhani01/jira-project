@@ -1,25 +1,34 @@
 import { useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router';
 
-import { FormError, SubmitButton, TextField } from '../../components/ui/Form';
+import { useAppOnline } from '../../app/OnlineStatusProvider';
+import { Avatar } from '../../components/ui/Avatar';
+import { Button } from '../../components/ui/Button';
+import { Combobox, type ComboOption } from '../../components/ui/Combobox';
+import { FormError, SubmitButton } from '../../components/ui/Form';
+import { Field, Input, Textarea } from '../../components/ui/Input';
+import { PriorityIcon, TypeIcon } from '../../components/ui/IssueIcons';
+import { Dialog, DialogContent } from '../../components/ui/Overlay';
+import { useToast } from '../../components/ui/Toast';
+import { UxSlowHint } from '../../components/ux';
 import { ApiError } from '../../lib/api/errors';
-import { mutationErrorMessage } from '../../lib/ux/permissionDenied';
 import {
   useFocusOnSubmitAttempt,
   type FocusableFieldRef,
 } from '../../lib/ux/focusFirstInvalidControl';
+import { createFeedbackInvocationId, showSuccessToast } from '../../lib/ux/mutationFeedback';
+import { mutationErrorMessage } from '../../lib/ux/permissionDenied';
+import { useSlowPending } from '../../lib/ux/useSlowPending';
 import { useProjectMembers } from '../projects/api';
 
-import { useCreateIssue, useIssue, useIssueTypes, useLabels, usePriorities } from './api';
-
-/** Resolves a typed-in parent key ("WEB-3") to its id, enabled only once something has
- * been typed. Used by both the parent and (implicitly) the hierarchy-level check:
- * the server still validates the kind, so this is a lookup, not a guarantee. */
-function useParentLookup(org: string, key: string) {
-  const trimmed = key.trim();
-  const result = useIssue(org, trimmed);
-  return trimmed ? result : undefined;
-}
+import {
+  useCreateIssue,
+  useIssueSearch,
+  useIssueTypes,
+  useLabels,
+  usePriorities,
+  type IssueSearchHit,
+} from './api';
 
 type ClientErrors = { summary?: string; parent?: string; points?: string };
 
@@ -31,8 +40,9 @@ export function validPoints(value: string): boolean {
   return text === '' || (/^\d{1,3}$/.test(text) && Number(text) <= 100);
 }
 
-/** Modal create form. One Idempotency-Key per dialog: resubmitting after a lost response
- * replays the original issue instead of creating a second one. */
+/** Create-issue modal. One Idempotency-Key per submission attempt: resubmitting after a lost
+ * response replays the original issue instead of creating a second one. "Create another"
+ * keeps the dialog open with the shared fields and a fresh key. */
 export function CreateIssueDialog({
   org,
   project,
@@ -43,65 +53,58 @@ export function CreateIssueDialog({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
-  const [idempotencyKey] = useState(() => crypto.randomUUID());
+  const online = useAppOnline();
+  const toast = useToast();
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const types = useIssueTypes(org);
   const priorities = usePriorities(org);
   const members = useProjectMembers(org, project);
   const labels = useLabels(org, project);
   const create = useCreateIssue(org, project);
+
   const [summary, setSummary] = useState('');
   const [description, setDescription] = useState('');
-  const [typeId, setTypeId] = useState('');
-  const [priorityId, setPriorityId] = useState('');
-  const [assigneeId, setAssigneeId] = useState('');
-  const [parentKey, setParentKey] = useState('');
+  const [typeId, setTypeId] = useState<string | null>(null);
+  const [priorityId, setPriorityId] = useState<string | null>(null);
+  const [assigneeId, setAssigneeId] = useState<string | null>(null);
+  const [parent, setParent] = useState<IssueSearchHit | null>(null);
+  const [parentQuery, setParentQuery] = useState('');
   const [labelIds, setLabelIds] = useState<string[]>([]);
   const [points, setPoints] = useState('');
+  const [another, setAnother] = useState(false);
   const [clientErrors, setClientErrors] = useState<ClientErrors>({});
   const [focusGeneration, setFocusGeneration] = useState(0);
   const summaryRef = useRef<HTMLInputElement>(null);
-  const parentRef = useRef<HTMLInputElement>(null);
+  const parentRef = useRef<HTMLButtonElement>(null);
+  const pointsRef = useRef<HTMLInputElement>(null);
+
+  const search = useIssueSearch(org, project, parentQuery);
 
   const effectiveType =
-    typeId || (types.data?.find((t) => t.name === 'Task') ?? types.data?.[0])?.id;
+    typeId ?? (types.data?.find((t) => t.name === 'Task') ?? types.data?.[0])?.id ?? null;
   const effectivePriority =
-    priorityId || (priorities.data?.find((p) => p.name === 'Medium') ?? priorities.data?.[0])?.id;
+    priorityId ??
+    (priorities.data?.find((p) => p.name === 'Medium') ?? priorities.data?.[0])?.id ??
+    null;
   const selectedType = types.data?.find((t) => t.id === effectiveType);
   const needsParent = selectedType?.kind === 'subtask';
-  const parent = useParentLookup(org, parentKey);
-  const parentResolved = !parentKey.trim() || (parent && !parent.isPending && !parent.isError);
 
   const serverFieldError = (field: string) =>
     create.error instanceof ApiError
       ? create.error.fieldErrors.find((e) => e.field === `body.${field}`)?.message
       : undefined;
-
   const summaryError = clientErrors.summary ?? serverFieldError('summary');
+  const parentError = clientErrors.parent ?? serverFieldError('parent_id');
   const pointsError = clientErrors.points ?? serverFieldError('story_points');
-  const parentError =
-    clientErrors.parent ??
-    (parentKey.trim() && parent && !parent.isPending && parent.isError
-      ? 'No issue with that key.'
-      : undefined) ??
-    serverFieldError('parent_id');
 
-  const focusFields = useMemo((): FocusableFieldRef[] => {
-    return [
-      {
-        hasError: Boolean(summaryError),
-        focus: () => {
-          summaryRef.current?.focus();
-        },
-      },
-      {
-        hasError: Boolean(parentError),
-        focus: () => {
-          parentRef.current?.focus();
-        },
-      },
-    ];
-  }, [parentError, summaryError]);
-
+  const focusFields = useMemo(
+    (): FocusableFieldRef[] => [
+      { hasError: Boolean(summaryError), focus: () => summaryRef.current?.focus() },
+      { hasError: Boolean(parentError), focus: () => parentRef.current?.focus() },
+      { hasError: Boolean(pointsError), focus: () => pointsRef.current?.focus() },
+    ],
+    [parentError, pointsError, summaryError],
+  );
   useFocusOnSubmitAttempt(focusGeneration, focusFields);
 
   const formFailure =
@@ -113,23 +116,30 @@ export function CreateIssueDialog({
     )
       ? mutationErrorMessage(create.error, 'issue-mutation')
       : null;
+  const slow = useSlowPending(create.isPending);
+
+  const parentOptions: ComboOption[] = useMemo(() => {
+    const hits = [...(search.data ?? [])];
+    if (parent && !hits.some((h) => h.key === parent.key)) hits.unshift(parent);
+    return hits.map((hit) => ({
+      value: hit.key,
+      label: hit.key,
+      description: hit.summary,
+      icon: <TypeIcon kind={hit.type.kind} name={hit.type.name} />,
+    }));
+  }, [parent, search.data]);
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
-    if (!effectiveType || !effectivePriority) return;
+    if (!effectiveType || !effectivePriority || !online || create.isPending) return;
 
     setClientErrors({});
     create.reset();
 
     const nextClient: ClientErrors = {};
     if (!summary.trim()) nextClient.summary = 'Enter a summary.';
+    if (needsParent && !parent) nextClient.parent = 'Choose a parent issue for a sub-task.';
     if (!validPoints(points)) nextClient.points = POINTS_ERROR;
-    if (needsParent && !parentKey.trim()) {
-      nextClient.parent = 'Enter a parent issue key.';
-    } else if (parentKey.trim() && parent && !parent.isPending && !parent.data) {
-      nextClient.parent = 'No issue with that key.';
-    }
-
     if (Object.keys(nextClient).length > 0) {
       setClientErrors(nextClient);
       setFocusGeneration((g) => g + 1);
@@ -145,13 +155,31 @@ export function CreateIssueDialog({
           summary,
           ...(description ? { description } : {}),
           ...(assigneeId ? { assignee_id: assigneeId } : {}),
-          ...(parent?.data ? { parent_id: parent.data.id } : {}),
+          ...(parent ? { parent_id: parent.id } : {}),
           ...(labelIds.length ? { label_ids: labelIds } : {}),
           ...(points.trim() !== '' ? { story_points: Number(points) } : {}),
         },
       },
       {
-        onSuccess: (issue) => void navigate(`/o/${org}/issues/${issue.key}`),
+        onSuccess: (issue) => {
+          if (!another) {
+            // Opening the new issue is the confirmation: no extra toast for this path.
+            void navigate(`/o/${org}/issues/${issue.key}`);
+            return;
+          }
+          showSuccessToast(toast, {
+            feedbackInvocationId: createFeedbackInvocationId(),
+            title: `${issue.key} created`,
+            description: issue.summary,
+          });
+          setSummary('');
+          setDescription('');
+          setPoints('');
+          setClientErrors({});
+          setIdempotencyKey(crypto.randomUUID());
+          setFocusGeneration(0);
+          summaryRef.current?.focus();
+        },
         onError: () => {
           setFocusGeneration((g) => g + 1);
         },
@@ -160,148 +188,174 @@ export function CreateIssueDialog({
   };
 
   return (
-    <div className="fixed inset-0 flex items-start justify-center bg-slate-900/40 p-4">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="create-issue-title"
-        className="w-full max-w-lg rounded bg-white p-6 shadow"
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') onClose();
-        }}
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent
+        title="Create issue"
+        description={`New issue in project ${project}.`}
+        className="w-[min(94vw,40rem)]"
       >
         <form onSubmit={submit} noValidate className="space-y-4">
-          <h2 id="create-issue-title" className="text-lg font-semibold">
-            Create issue in {project}
-          </h2>
           <FormError>{formFailure}</FormError>
-          <label className="block text-sm font-medium">
-            Type
-            <select
-              className="mt-1 block w-full rounded border border-slate-300 px-2 py-2"
-              value={effectiveType ?? ''}
-              onChange={(e) => {
-                setTypeId(e.target.value);
-              }}
-            >
-              {(types.data ?? []).map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <TextField
-            ref={summaryRef}
-            label="Summary"
-            maxLength={255}
-            value={summary}
-            error={summaryError}
-            onChange={(e) => {
-              setSummary(e.target.value);
-            }}
+          <Combobox
+            label="Type"
+            options={(types.data ?? []).map((t) => ({
+              value: t.id,
+              label: t.name,
+              icon: <TypeIcon kind={t.kind} name={t.name} />,
+            }))}
+            value={effectiveType}
+            onChange={setTypeId}
+            loading={types.isPending}
           />
-          <label className="block text-sm font-medium">
-            Description
-            <textarea
-              className="mt-1 block w-full rounded border border-slate-300 px-2 py-2"
-              maxLength={32000}
-              rows={4}
-              value={description}
-              onChange={(e) => {
-                setDescription(e.target.value);
-              }}
+          <Field label="Summary" error={summaryError ?? null}>
+            {(props) => (
+              <Input
+                ref={summaryRef}
+                maxLength={255}
+                value={summary}
+                onChange={(e) => {
+                  setSummary(e.target.value);
+                }}
+                {...props}
+              />
+            )}
+          </Field>
+          <Field label="Description">
+            {(props) => (
+              <Textarea
+                maxLength={32000}
+                rows={4}
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                }}
+                {...props}
+              />
+            )}
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Combobox
+              label="Priority"
+              options={(priorities.data ?? []).map((p) => ({
+                value: p.id,
+                label: p.name,
+                icon: <PriorityIcon name={p.name} />,
+              }))}
+              value={effectivePriority}
+              onChange={setPriorityId}
+              loading={priorities.isPending}
             />
-          </label>
-          <label className="block text-sm font-medium">
-            Priority
-            <select
-              className="mt-1 block w-full rounded border border-slate-300 px-2 py-2"
-              value={effectivePriority ?? ''}
-              onChange={(e) => {
-                setPriorityId(e.target.value);
-              }}
-            >
-              {(priorities.data ?? []).map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-sm font-medium">
-            Assignee
-            <select
-              className="mt-1 block w-full rounded border border-slate-300 px-2 py-2"
+            <Combobox
+              label="Assignee"
+              clearLabel="Unassigned"
+              searchPlaceholder="Search people…"
+              emptyText="No matching people"
+              options={(members.data ?? []).map((m) => ({
+                value: m.user_id,
+                label: m.display_name,
+                description: m.email,
+                icon: <Avatar name={m.display_name} size="xs" />,
+              }))}
               value={assigneeId}
-              onChange={(e) => {
-                setAssigneeId(e.target.value);
-              }}
-            >
-              <option value="">Unassigned</option>
-              {(members.data ?? []).map((m) => (
-                <option key={m.user_id} value={m.user_id}>
-                  {m.display_name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <TextField
-            label="Story points (optional)"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={100}
-            step={1}
-            value={points}
-            error={pointsError}
-            onChange={(e) => {
-              setPoints(e.target.value);
-            }}
-          />
-          <TextField
-            ref={parentRef}
+              onChange={setAssigneeId}
+              loading={members.isPending}
+            />
+          </div>
+          <Combobox
             label={needsParent ? 'Parent (required for a sub-task)' : 'Parent (optional)'}
-            placeholder="e.g. WEB-3"
-            value={parentKey}
-            error={parentError}
-            onChange={(e) => {
-              setParentKey(e.target.value);
+            clearLabel="No parent"
+            searchPlaceholder="Search by key or summary…"
+            emptyText={
+              parentQuery.trim()
+                ? `No issues match “${parentQuery.trim()}”`
+                : 'No issues in this project yet'
+            }
+            options={parentOptions}
+            value={parent?.key ?? null}
+            onChange={(key) => {
+              setParent(
+                key === null
+                  ? null
+                  : (search.data?.find((hit) => hit.key === key) ??
+                      (parent?.key === key ? parent : null)),
+              );
             }}
+            onSearch={setParentQuery}
+            loading={search.isFetching}
+            error={parentError ?? null}
+            triggerRef={parentRef}
           />
-          {(labels.data ?? []).length > 0 && (
-            <fieldset className="space-y-1">
-              <legend className="text-sm font-medium">Labels</legend>
-              {(labels.data ?? []).map((l) => (
-                <label key={l.id} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={labelIds.includes(l.id)}
-                    onChange={(e) => {
-                      setLabelIds((ids) =>
-                        e.target.checked ? [...ids, l.id] : ids.filter((id) => id !== l.id),
-                      );
-                    }}
-                  />
+          {(labels.data ?? []).length > 0 ? (
+            <Combobox
+              label="Labels"
+              multiple
+              placeholder="None"
+              searchPlaceholder="Search labels…"
+              options={(labels.data ?? []).map((l) => ({
+                value: l.id,
+                label: l.name,
+                icon: (
                   <span
-                    className="inline-block h-3 w-3 rounded-full"
+                    aria-hidden="true"
+                    className="inline-block size-3 rounded-full"
                     style={{ backgroundColor: l.color }}
                   />
-                  {l.name}
-                </label>
-              ))}
-            </fieldset>
-          )}
-          <div className="flex gap-3">
-            <SubmitButton pending={create.isPending} disabled={!parentResolved}>
-              Create
-            </SubmitButton>
-            <button type="button" className="underline" onClick={onClose}>
-              Cancel
-            </button>
+                ),
+              }))}
+              value={labelIds}
+              onChange={setLabelIds}
+            />
+          ) : null}
+          <Field label="Story points (optional)" error={pointsError ?? null}>
+            {(props) => (
+              <Input
+                ref={pointsRef}
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={100}
+                step={1}
+                value={points}
+                onChange={(e) => {
+                  setPoints(e.target.value);
+                }}
+                {...props}
+              />
+            )}
+          </Field>
+          {!online ? (
+            <p role="status" className="rounded-md bg-warning-soft px-3 py-2 text-sm text-warning">
+              You are offline. Your input is kept; reconnect to create the issue.
+            </p>
+          ) : null}
+          <UxSlowHint visible={slow} stage="Still creating the issue…" />
+          <div className="flex items-center justify-between gap-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={another}
+                onChange={(e) => {
+                  setAnother(e.target.checked);
+                }}
+              />
+              Create another
+            </label>
+            <div className="flex gap-2">
+              <Button type="button" variant="ghost" onClick={onClose}>
+                Cancel
+              </Button>
+              <SubmitButton pending={create.isPending} disabled={!online}>
+                Create
+              </SubmitButton>
+            </div>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
