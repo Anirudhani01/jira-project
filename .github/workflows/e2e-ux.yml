@@ -74,32 +74,40 @@ jobs:
           make migrate
 
       - name: Start API, worker, and Vite (make dev equivalent)
+        env:
+          # Match CI: no checkout .env; Makefile must export the same vars as local `make dev`.
+          ENV_FILE: .env.example
         run: |
           set -euo pipefail
           mkdir -p .tmp
           PID_FILE="${RUNNER_TEMP}/e2e-ux-pids"
           : > "$PID_FILE"
 
-          (
-            cd backend && env -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT=venv uv run uvicorn app.main:create_app \
-              --factory --reload --no-access-log --host 127.0.0.1 --port 8000
-          ) >> .tmp/backend-dev.log 2>&1 &
-          echo $! >> "$PID_FILE"
+          dump_dev_logs() {
+            echo '--- .tmp/backend-dev.log (last 120 lines) ---'
+            tail -120 .tmp/backend-dev.log 2>/dev/null || echo '(missing)'
+            echo '--- .tmp/worker-dev.log (last 120 lines) ---'
+            tail -120 .tmp/worker-dev.log 2>/dev/null || echo '(missing)'
+            echo '--- .tmp/frontend-dev.log (last 120 lines) ---'
+            tail -120 .tmp/frontend-dev.log 2>/dev/null || echo '(missing)'
+          }
 
-          (
-            cd backend && env -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT=venv uv run python -m app.worker
-          ) >> .tmp/worker-dev.log 2>&1 &
-          echo $! >> "$PID_FILE"
+          on_stack_failure() {
+            dump_dev_logs
+            exit 1
+          }
 
-          (
-            cd frontend && pnpm dev
-          ) >> .tmp/frontend-dev.log 2>&1 &
+          make backend-dev >> .tmp/backend-dev.log 2>&1 &
+          echo $! >> "$PID_FILE"
+          make worker-dev >> .tmp/worker-dev.log 2>&1 &
+          echo $! >> "$PID_FILE"
+          make frontend-dev >> .tmp/frontend-dev.log 2>&1 &
           echo $! >> "$PID_FILE"
 
           curl --fail-with-body --retry 30 --retry-delay 2 --retry-all-errors \
-            http://127.0.0.1:8000/readyz
+            http://127.0.0.1:8000/readyz || on_stack_failure
           curl --fail-with-body --retry 30 --retry-delay 2 --retry-all-errors \
-            http://127.0.0.1:5173/
+            http://127.0.0.1:5173/ || on_stack_failure
 
       - name: Install Playwright Chromium
         working-directory: frontend
