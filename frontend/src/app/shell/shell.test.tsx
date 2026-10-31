@@ -104,6 +104,7 @@ describe('app shell (PR 2)', () => {
   it('hides org sidebar and shows administration navigation on admin routes', async () => {
     mockApi({
       'GET /auth/session': () => json(SESSION),
+      ...UNREAD,
       'GET /orgs/acme': () =>
         json({
           id: '1',
@@ -125,15 +126,14 @@ describe('app shell (PR 2)', () => {
     );
     expect(screen.queryByRole('navigation', { name: 'Global' })).toBeNull();
     expect(container.querySelector('.admin-shell')).toBeTruthy();
-    expect(
-      await screen.findByRole('heading', { name: 'Organization settings' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'General' })).toBeInTheDocument();
   });
 
   it('global search on org settings navigates to org home with query on Enter', async () => {
     const user = userEvent.setup();
     mockApi({
       'GET /auth/session': () => json(SESSION),
+      ...UNREAD,
       'GET /orgs/acme': () =>
         json({
           id: '1',
@@ -148,7 +148,8 @@ describe('app shell (PR 2)', () => {
     });
     const { router } = renderApp('/o/acme/settings');
     await screen.findByRole('navigation', { name: 'Primary' });
-    await screen.findByRole('heading', { name: 'Organization settings' });
+    await screen.findByRole('navigation', { name: 'Administration' });
+    await screen.findByRole('heading', { name: 'General' });
     const search = screen.getByRole('combobox', { name: /search projects, issues, or people/i });
     await user.type(search, 'website');
     await user.keyboard('{Enter}');
