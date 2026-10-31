@@ -1,0 +1,135 @@
+# Global UX M6 Playwright suite on main (path-scoped) + manual dispatch.
+# First run on default branch requires merge; workflow_dispatch cannot validate a file absent from main.
+name: E2E UX states
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'backend/migrations/**'
+      - 'backend/uv.lock'
+      - 'frontend/pnpm-lock.yaml'
+      - '.env.example'
+      - 'Makefile'
+      - '.github/workflows/e2e-ux.yml'
+      - 'infra/docker-compose.yml'
+      - 'infra/postgres/**'
+      - '.nvmrc'
+      - 'backend/.python-version'
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-ux-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ux-states:
+    name: Playwright ux-states
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: write
+    env:
+      CI: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: backend/.python-version
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.32"
+          enable-cache: true
+
+      - name: Set up pnpm (version from frontend/package.json packageManager)
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Start infra and migrate
+        run: |
+          set -euo pipefail
+          make infra-up
+          make migrate
+
+      - name: Start API, worker, and Vite (make dev equivalent)
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp
+          PID_FILE="${RUNNER_TEMP}/e2e-ux-pids"
+          : > "$PID_FILE"
+
+          (
+            cd backend && env -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT=venv uv run uvicorn app.main:create_app \
+              --factory --reload --no-access-log --host 127.0.0.1 --port 8000
+          ) >> .tmp/backend-dev.log 2>&1 &
+          echo $! >> "$PID_FILE"
+
+          (
+            cd backend && env -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT=venv uv run python -m app.worker
+          ) >> .tmp/worker-dev.log 2>&1 &
+          echo $! >> "$PID_FILE"
+
+          (
+            cd frontend && pnpm dev
+          ) >> .tmp/frontend-dev.log 2>&1 &
+          echo $! >> "$PID_FILE"
+
+          curl --fail-with-body --retry 30 --retry-delay 2 --retry-all-errors \
+            http://127.0.0.1:8000/readyz
+          curl --fail-with-body --retry 30 --retry-delay 2 --retry-all-errors \
+            http://127.0.0.1:5173/
+
+      - name: Install Playwright Chromium
+        working-directory: frontend
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Run ux-states E2E
+        run: make e2e-ux-states
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-ux-states-${{ github.run_id }}
+          path: |
+            frontend/test-results/
+            frontend/playwright-report/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Stop dev processes and containers
+        if: always()
+        run: |
+          set +e
+          PID_FILE="${RUNNER_TEMP}/e2e-ux-pids"
+          if [ -f "$PID_FILE" ]; then
+            while read -r pid; do
+              if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                kill "$pid" 2>/dev/null || true
+                pkill -P "$pid" 2>/dev/null || true
+              fi
+            done < "$PID_FILE"
+          fi
+          make down

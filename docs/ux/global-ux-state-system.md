@@ -465,10 +465,24 @@ Milestone acceptance criteria, feature coverage matrix, and testing matrix: **[i
 - [x] E2E: offline banner (no reload), session `next`, draft restore, create single POST + pending disabled, search empty (mobile).
 - [x] E2E: light theme smoke; keyboard focus on session dialog; multi-401 single dialog.
 - [x] E2E: member audit deny; viewer board without create.
-- [ ] CI E2E workflow on `main` only (follow-up).
+- [x] CI E2E workflow on `main` (`.github/workflows/e2e-ux.yml`; Global UX M7 P0).
 - [x] `make ci` green (`CI=true make ci` passed locally).
 
 **Risks:** Flaky offline E2E — use `context.setOffline` with stable selectors.
+
+---
+
+### M7 — CI E2E gate + regression depth (Global UX)
+
+Distinct from backend phase-1 **M7** in [phase-1-plan.md](../architecture/phase-1-plan.md).
+
+| Track | Scope |
+|-------|--------|
+| **P0** | Post-merge **`e2e-ux`** workflow: path-filtered `main` pushes + `workflow_dispatch`; **`frontend/e2e/ux-states.spec.ts`** only; `make dev`-equivalent stack (Vite **5173**); health checks; artifact upload on failure; **`make e2e-ux-states`**. Does not change PR-required **`ci.yml`**. |
+| **P1** | Deeper E2E (real session→draft restore without sessionStorage seed), dark theme smoke, invite duplicate POST guard, sprint mutation Vitest 403. |
+| **P2** | Read-only regression audit doc. |
+
+**Note:** `workflow_dispatch` cannot exercise this workflow until the YAML exists on the default branch; validate locally with `make dev` + `make e2e-ux-states` before merge.
 
 ---
 
@@ -499,4 +513,5 @@ See **[implementation-checklist.md § Testing matrix](./implementation-checklist
 | 2026-10-30 | Initial application-wide standard (10 UX states + architecture) |
 | 2026-10-30 | Plan approved in principle; clarifications for session, offline, slow, search, testing, M1 scope |
 | 2026-10-30 | **M0 complete** — checklist doc, auth matrix, CI link; M1 still blocked |
+| 2026-10-31 | **Global UX M7 P0** — `e2e-ux.yml` + `make e2e-ux-states` (ux-states CI on main) |
 | 2026-10-30 | **M1 complete** — shared UX types/mapper/components, DesignPage demo, tests; M2 not started |

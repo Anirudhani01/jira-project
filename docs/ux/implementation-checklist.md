@@ -138,8 +138,20 @@ UX standards (see docs/ux/global-ux-state-system.md)
 - [x] Board/backlog/create mutation errors via `mutationErrorMessage` (RBAC 403 inline; CSRF/session/network unchanged)
 - [x] `frontend/e2e/ux-states.spec.ts` + `ux-helpers.ts` (isolated data, workers=1, auth routes excluded from 401 mock)
 - [x] E2E: theme, mobile search empty, offline banner (no reload), draft restore, create POST count + pending, multi-401, safeNext, keyboard, member audit, viewer board, invite pending
-- [ ] Post-merge `e2e-ux` GitHub Actions job (follow-up PR)
+- [x] Post-merge `e2e-ux` GitHub Actions job (`.github/workflows/e2e-ux.yml`; P0 in Global UX M7)
 - [x] `make ci` green
+
+### M7 — CI E2E + regression hardening (Global UX)
+
+**P0 (this PR):** CI workflow only — no Playwright spec changes.
+
+- [x] `.github/workflows/e2e-ux.yml`: `main` push (approved path filters) + `workflow_dispatch`; runs `e2e/ux-states.spec.ts` only
+- [x] Stack: `make install`, `infra-up`, `migrate`, background API/worker/Vite (:5173); health checks on `/readyz` and UI; PID cleanup + `make down`
+- [x] Tooling aligned with `ci.yml` (Python/uv/pnpm/Node from repo pins); `.env.example` when no `.env`
+- [x] Playwright traces / `test-results` uploaded on failure
+- [x] `make e2e-ux-states` Makefile target (local + CI)
+- [ ] **P1:** Real M2 session→draft lifecycle E2E, dark theme smoke, invite POST count, sprint Vitest 403 (follow-up PR)
+- [ ] **P2:** Read-only `docs/ux/m7-regression-audit.md`
 
 ---
 
@@ -210,4 +222,5 @@ Legend: **Y** = must implement when milestone owns area | **y** = partial today 
 
 | Date | Change |
 |------|--------|
+| 2026-10-31 | Global UX M7 P0 — `e2e-ux.yml`, `make e2e-ux-states`, M7 checklist section |
 | 2026-10-30 | M0 complete — checklist, auth matrix, coverage, testing matrix |

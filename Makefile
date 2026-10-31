@@ -167,6 +167,10 @@ e2e-pr8: node-version-check ## Axe + light/dark screenshots for issue list (requ
 e2e-pr10-settings: node-version-check ## Axe + light/dark screenshots for project settings (requires make dev)
 	$(PNPM) exec playwright test e2e/project-settings.spec.ts
 
+.PHONY: e2e-ux-states
+e2e-ux-states: node-version-check ## Global UX M6 suite only (requires API :8000, worker, Vite :5173)
+	$(PNPM) exec playwright test e2e/ux-states.spec.ts --project=chromium
+
 .PHONY: openapi openapi-check
 openapi: node-version-check ## Regenerate backend/openapi.json and frontend API types
 	$(UV) run python -m app.scripts.export_openapi
