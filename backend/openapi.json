@@ -834,6 +834,19 @@
             "title": "Priority Id",
             "type": "string"
           },
+          "story_points": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Story Points"
+          },
           "summary": {
             "maxLength": 255,
             "minLength": 1,
@@ -1168,6 +1181,17 @@
           "status": {
             "$ref": "#/components/schemas/StatusRef"
           },
+          "story_points": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Story Points"
+          },
           "summary": {
             "title": "Summary",
             "type": "string"
@@ -1198,6 +1222,7 @@
           "assignee",
           "parent",
           "sprint",
+          "story_points",
           "labels",
           "version",
           "created_at",
@@ -2290,6 +2315,14 @@
             "title": "Name",
             "type": "string"
           },
+          "points_done": {
+            "title": "Points Done",
+            "type": "integer"
+          },
+          "points_total": {
+            "title": "Points Total",
+            "type": "integer"
+          },
           "project_key": {
             "title": "Project Key",
             "type": "string"
@@ -2320,7 +2353,9 @@
           "start_at",
           "end_at",
           "completed_at",
-          "issue_count"
+          "issue_count",
+          "points_total",
+          "points_done"
         ],
         "title": "SprintResponse",
         "type": "object"
@@ -2607,6 +2642,19 @@
               }
             ],
             "title": "Reporter Id"
+          },
+          "story_points": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Story Points"
           },
           "summary": {
             "anyOf": [
