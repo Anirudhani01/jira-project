@@ -30,19 +30,21 @@ function PasswordHarness() {
 }
 
 describe('PasswordField', () => {
-  it('uses distinct show/hide labels per field label', () => {
+  it('keeps field labels on inputs and distinct show/hide toggles', () => {
     render(
       <>
         <PasswordField label="Current password" />
         <PasswordField label="New password" />
       </>,
     );
-    expect(
-      screen.getByRole('button', { name: 'Show password for Current password' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Show password for New password' }),
-    ).toBeInTheDocument();
+    const current = screen.getByLabelText('Current password');
+    const next = screen.getByLabelText('New password');
+    expect(current).toHaveAttribute('id');
+    expect(next).toHaveAttribute('id');
+    const toggles = screen.getAllByRole('button', { name: 'Show password' });
+    expect(toggles).toHaveLength(2);
+    expect(toggles.some((btn) => btn.getAttribute('aria-controls') === current.id)).toBe(true);
+    expect(toggles.some((btn) => btn.getAttribute('aria-controls') === next.id)).toBe(true);
   });
 
   it('clears strength UI after react-hook-form reset', async () => {

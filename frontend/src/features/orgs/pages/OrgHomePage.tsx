@@ -35,6 +35,7 @@ export function OrgHomePage() {
   const canCreate = org.data.permissions.includes('project.create');
   const canInvite = org.data.permissions.includes('org.members.manage');
   const showAudit = org.data.permissions.includes('org.audit.view');
+  const activeProjectCount = (projects.data ?? []).filter((p) => !p.archived).length;
 
   return (
     <div className="org-dashboard mx-auto w-full min-w-0 max-w-[1280px] space-y-6 sm:space-y-8">
@@ -54,7 +55,10 @@ export function OrgHomePage() {
             canInviteMembers={canInvite}
             firstProjectKey={firstProjectKey}
           />
-          <OrgPromoBanner orgSlug={org.data.slug} canCreateProject={canCreate} />
+          <OrgPromoBanner
+            orgSlug={org.data.slug}
+            canCreateProject={canCreate && activeProjectCount > 0}
+          />
         </div>
         <OrgDashboardSidebar
           orgSlug={org.data.slug}

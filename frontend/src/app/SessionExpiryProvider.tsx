@@ -13,9 +13,13 @@ import { useLocation, useNavigate } from 'react-router';
 
 import { UxSessionExpiredDialog } from '../components/ux/UxSessionExpiredDialog';
 import { useToast } from '../components/ui/Toast';
-import { registerEstablishedSessionLifecycle } from '../features/auth/establishedSession';
+import {
+  notifyConfirmedLogout,
+  registerEstablishedSessionLifecycle,
+} from '../features/auth/establishedSession';
 import { sessionKey, useSession } from '../features/auth/api';
-import { getLogoutIntent } from '../features/auth/logoutIntent';
+import { apiFetch } from '../lib/api/client';
+import { getLogoutIntent, setLogoutIntent } from '../features/auth/logoutIntent';
 import { useAuthRoute } from '../features/auth/useAuthRoute';
 import { safeNext } from '../features/auth/safeNext';
 import { setCsrfToken } from '../lib/api/client';
@@ -68,6 +72,19 @@ export function SessionExpiryProvider({ children }: { children: ReactNode }) {
     queryClient.setQueryData(sessionKey, null);
   }, [queryClient]);
 
+  const prepareLoginAfterExpiry = useCallback(async () => {
+    setLogoutIntent(true);
+    try {
+      await apiFetch<undefined>('/auth/logout', { method: 'POST' });
+      notifyConfirmedLogout();
+    } catch {
+      /* Cookie may already be invalid after 401; still proceed to login. */
+    } finally {
+      setLogoutIntent(false);
+      clearSessionState();
+    }
+  }, [clearSessionState]);
+
   const navigateToLogin = useCallback(
     async (nextPath: string) => {
       const next = safeNext(nextPath);
@@ -93,6 +110,7 @@ export function SessionExpiryProvider({ children }: { children: ReactNode }) {
       },
       onDialogChange: setDialog,
       clearSessionState,
+      prepareLoginAfterExpiry,
       navigateToLogin,
     });
 
@@ -121,7 +139,7 @@ export function SessionExpiryProvider({ children }: { children: ReactNode }) {
     return () => {
       setCacheErrorHandlers(null);
     };
-  }, [clearSessionState, navigateToLogin, queryClient, toast]);
+  }, [clearSessionState, navigateToLogin, prepareLoginAfterExpiry, queryClient, toast]);
 
   useEffect(() => {
     const prev = prevSessionData.current;

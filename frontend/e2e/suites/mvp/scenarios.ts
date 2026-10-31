@@ -391,9 +391,10 @@ export const mvpScenarios: MvpScenario[] = [
 
       await page.getByLabel('Current password').fill(PASSWORD);
       await page.getByLabel('New password').fill(NEW_E2E_PASSWORD);
-      await page.getByLabel('Confirm new password').fill(NEW_E2E_PASSWORD);
+      await page.getByLabel('Confirm password').fill(NEW_E2E_PASSWORD);
       await page.getByRole('button', { name: 'Change password' }).click();
       await expect(page.getByText('Password changed.')).toBeVisible();
+      await signOut(page);
       await page.goto('/login');
       await page.getByLabel('Email').fill(email);
       await passwordInput(page).fill(NEW_E2E_PASSWORD);

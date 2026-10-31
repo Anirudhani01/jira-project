@@ -61,7 +61,7 @@ export const DropdownMenu = DropdownPrimitive.Root;
 export const DropdownMenuTrigger = DropdownPrimitive.Trigger;
 
 const menuSurface =
-  'z-50 min-w-44 overflow-hidden rounded-md border border-line bg-surface p-1 text-sm shadow-md';
+  'z-[80] min-w-44 overflow-hidden rounded-md border border-line bg-surface p-1 text-sm shadow-md';
 
 export function DropdownMenuContent({
   className,

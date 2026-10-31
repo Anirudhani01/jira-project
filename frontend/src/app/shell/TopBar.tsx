@@ -50,7 +50,7 @@ function SignedInActions({ boardShell }: { boardShell: boolean }) {
   };
 
   return (
-    <div className="flex shrink-0 items-center gap-1">
+    <div className="flex min-w-0 shrink items-center gap-1">
       {ctx?.projectKey ? (
         boardShell ? (
           <DropdownMenu>
@@ -144,10 +144,10 @@ export function TopBar({
     <header
       className={
         orgDashboardHome
-          ? 'org-dash-topbar border-b border-[var(--org-dash-border)] bg-[var(--org-dash-surface)]'
+          ? 'org-dash-topbar max-w-full overflow-x-hidden border-b border-[var(--org-dash-border)] bg-[var(--org-dash-surface)]'
           : boardShell
             ? 'board-topbar max-w-full overflow-x-clip border-b'
-            : 'border-b border-line bg-surface'
+            : 'max-w-full overflow-x-hidden border-b border-line bg-surface'
       }
     >
       <nav
@@ -155,7 +155,7 @@ export function TopBar({
         className={
           boardShell
             ? 'board-topbar-nav flex h-[72px] min-w-0 max-w-full items-center gap-1 px-3 sm:gap-2 sm:px-5 lg:gap-3 lg:px-6'
-            : `flex items-center gap-2 px-5 lg:gap-3 lg:px-6 h-14`
+            : 'flex h-14 min-w-0 max-w-full items-center gap-2 overflow-x-hidden px-3 sm:px-5 lg:gap-3 lg:px-6'
         }
       >
         {showGlobalNav ? (
@@ -175,7 +175,9 @@ export function TopBar({
           className={
             boardShell
               ? 'flex min-w-0 shrink items-center gap-2 text-lg font-semibold tracking-tight text-fg no-underline hover:text-accent'
-              : 'flex shrink-0 items-center gap-2 text-lg font-semibold tracking-tight text-fg no-underline hover:text-accent'
+              : orgDashboardHome
+                ? 'flex min-w-0 shrink items-center gap-2 text-lg font-semibold tracking-tight text-fg no-underline hover:text-accent'
+                : 'flex shrink-0 items-center gap-2 text-lg font-semibold tracking-tight text-fg no-underline hover:text-accent'
           }
         >
           <span
@@ -189,7 +191,11 @@ export function TopBar({
           >
             <LayoutGrid className="size-4" aria-hidden="true" />
           </span>
-          {boardShell ? <span className="hidden sm:inline">Jira Project</span> : 'Jira Project'}
+          {boardShell || orgDashboardHome ? (
+            <span className="hidden sm:inline">Jira Project</span>
+          ) : (
+            'Jira Project'
+          )}
         </Link>
         {signedIn ? (
           boardShell ? (
@@ -198,10 +204,10 @@ export function TopBar({
               <ProjectSwitcher />
             </div>
           ) : (
-            <>
+            <div className="flex min-w-0 shrink items-center">
               <OrgMenu />
               <ProjectSwitcher />
-            </>
+            </div>
           )
         ) : null}
         {showGlobalSearch ? (
@@ -209,7 +215,7 @@ export function TopBar({
             className={
               boardShell
                 ? 'board-topbar-search min-w-0 max-w-xl flex-1 max-sm:mx-0 sm:mx-2 lg:max-w-2xl'
-                : 'mx-2 max-w-xl lg:max-w-2xl'
+                : 'mx-2 min-w-0 max-w-xl flex-1 lg:max-w-2xl'
             }
             orgDashboard={orgDashboardHome}
             boardChrome={boardShell}

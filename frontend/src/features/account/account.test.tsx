@@ -65,7 +65,7 @@ describe('AccountPage', () => {
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText('Current password'), 'wrong-password-1');
     await user.type(screen.getByLabelText('New password'), 'Copper-Meadow-Falcon-58');
-    await user.type(screen.getByLabelText('Confirm new password'), 'Copper-Meadow-Falcon-58');
+    await user.type(screen.getByLabelText('Confirm password'), 'Copper-Meadow-Falcon-58');
     await user.click(screen.getByRole('button', { name: 'Change password' }));
     expect(await screen.findByText('is incorrect')).toBeInTheDocument();
   });
@@ -79,7 +79,7 @@ describe('AccountPage', () => {
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText('Current password'), 'current-password-1');
     await user.type(screen.getByLabelText('New password'), 'Copper-Meadow-Falcon-58');
-    await user.type(screen.getByLabelText('Confirm new password'), 'Copper-Meadow-Falcon-59');
+    await user.type(screen.getByLabelText('Confirm password'), 'Copper-Meadow-Falcon-59');
     await user.click(screen.getByRole('button', { name: 'Change password' }));
     expect(await screen.findByText('Passwords do not match.')).toBeInTheDocument();
     expect(calls.some((c) => c.path === '/me/password')).toBe(false);
