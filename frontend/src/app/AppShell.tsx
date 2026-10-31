@@ -7,20 +7,19 @@ import { useAppOnline } from './OnlineStatusProvider';
 import { MainOutlet } from './MainOutlet';
 import { useAuthRoute } from '../features/auth/useAuthRoute';
 
-import { Breadcrumbs } from './shell/Breadcrumbs';
-import { MobileOrgDrawer, OrgSidebar } from './shell/OrgSidebar';
-import { MobileProjectDrawer, ProjectSidebar } from './shell/ProjectSidebar';
+import { GlobalSidebar, MobileGlobalDrawer } from './shell/GlobalSidebar';
+import { ProjectTabs } from './shell/ProjectTabs';
 import { ShellProvider } from './shell/ShellContext';
 import { TopBar } from './shell/TopBar';
 import { useBoardShell } from './shell/useBoardShell';
 import { useAdminShell } from './shell/useAdminShell';
-import { useOrgDashboardHome, useShowOrgSidebar } from './shell/useOrgShell';
+import { useOrgDashboardHome, useShowGlobalSidebar } from './shell/useOrgShell';
 import { useShowProjectSidebar } from './shell/useProjectContext';
 
 function AppShellBody() {
   const online = useAppOnline();
   const inProject = useShowProjectSidebar();
-  const inOrgShell = useShowOrgSidebar();
+  const inOrgShell = useShowGlobalSidebar();
   const inAdminShell = useAdminShell();
   const orgDashboardHome = useOrgDashboardHome();
   const boardShell = useBoardShell();
@@ -52,10 +51,9 @@ function AppShellBody() {
       <div
         className={cn('flex min-h-0 flex-1', boardShell && 'min-w-0 max-w-full overflow-x-hidden')}
       >
-        <OrgSidebar />
-        <ProjectSidebar />
+        <GlobalSidebar />
         <div className="flex min-w-0 flex-1 flex-col">
-          {inProject && !boardShell ? <Breadcrumbs /> : null}
+          {inProject ? <ProjectTabs /> : null}
           <main
             id="main"
             className={cn(
@@ -78,8 +76,7 @@ function AppShellBody() {
           </main>
         </div>
       </div>
-      <MobileOrgDrawer />
-      <MobileProjectDrawer />
+      <MobileGlobalDrawer />
     </div>
   );
 }

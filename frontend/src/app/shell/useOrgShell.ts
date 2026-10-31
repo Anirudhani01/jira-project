@@ -21,3 +21,11 @@ export function useShowOrgSidebar(): boolean {
 export function useOrgDashboardHome(): boolean {
   return useMatch({ path: '/o/:org', end: true }) !== null;
 }
+
+/** Global left navigation: everywhere inside an organization except Administration, which has
+ * its own navigation. Project pages keep it and add project tabs. */
+export function useShowGlobalSidebar(): boolean {
+  const inOrg = useMatch('/o/:org/*') !== null;
+  const inAdmin = useAdminShell();
+  return inOrg && !inAdmin;
+}
