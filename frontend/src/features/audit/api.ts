@@ -5,6 +5,7 @@ import type { AuditEventList } from '../../lib/api/types';
 
 export interface AuditFilters {
   action?: string;
+  actor?: string;
   from?: string;
   to?: string;
 }
