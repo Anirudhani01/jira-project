@@ -6,6 +6,7 @@ export interface BacklogFields {
   type: boolean;
   key: boolean;
   epic: boolean;
+  version: boolean;
   labels: boolean;
   priority: boolean;
   assignee: boolean;
@@ -17,6 +18,7 @@ export const FIELD_LABELS: Record<keyof BacklogFields, string> = {
   type: 'Work type',
   key: 'Key',
   epic: 'Epic',
+  version: 'Fix version',
   labels: 'Labels',
   priority: 'Priority',
   assignee: 'Assignee',
@@ -28,6 +30,7 @@ export const DEFAULT_FIELDS: BacklogFields = {
   type: true,
   key: true,
   epic: true,
+  version: true,
   labels: true,
   priority: true,
   assignee: true,
@@ -104,4 +107,32 @@ export function defaultSprintDates(now: Date = new Date()): { start: string; end
     `${String(d.getFullYear())}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   const end = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
   return { start: local(now), end: local(end) };
+}
+
+/** URL filter value: an epic key / version id, `none` for "without", or empty for no filter. */
+export interface PlanFilter {
+  epic: string;
+  version: string;
+}
+
+export const NONE = 'none';
+
+/** Keeps issues in the selected epic (parent key) and/or fix version. */
+export function filterByPlan(issues: readonly Issue[], filter: PlanFilter): Issue[] {
+  return issues.filter((issue) => {
+    if (filter.epic) {
+      const parent = issue.parent?.key ?? null;
+      if (filter.epic === NONE ? parent !== null : parent !== filter.epic) return false;
+    }
+    if (filter.version) {
+      const version = issue.fix_version?.id ?? null;
+      if (filter.version === NONE ? version !== null : version !== filter.version) return false;
+    }
+    return true;
+  });
+}
+
+/** Percentage (0-100, whole number) for a progress bar; 0 when there is nothing to do. */
+export function percent(done: number, total: number): number {
+  return total <= 0 ? 0 : Math.round((done / total) * 100);
 }

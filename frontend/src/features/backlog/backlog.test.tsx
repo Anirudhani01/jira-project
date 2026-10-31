@@ -27,6 +27,7 @@ function issue(key: string, sprint: Issue['sprint'] = null, version = 1): Issue 
     labels: [],
     sprint,
     story_points: null,
+    fix_version: null,
     version,
     created_at: '2026-10-28T00:00:00Z',
     updated_at: '2026-10-28T00:00:00Z',
@@ -238,10 +239,17 @@ describe('backlog page', () => {
     expect(box).toHaveValue('zzz-nothing');
   });
 
-  it('selects a range with shift and moves the selection in one go', async () => {
+  it('selects a range with shift and moves the selection with one request', async () => {
     const calls = mount({
-      'POST /orgs/acme/issues/SCR-1/move': () => json(issue('SCR-1')),
-      'POST /orgs/acme/issues/SCR-2/move': () => json(issue('SCR-2')),
+      'POST /orgs/acme/issues/bulk': () =>
+        json({
+          results: [
+            { key: 'SCR-1', ok: true, code: null, message: null },
+            { key: 'SCR-2', ok: true, code: null, message: null },
+          ],
+          succeeded: 2,
+          failed: 0,
+        }),
     });
     await openBacklog();
     const user = userEvent.setup();
@@ -251,31 +259,41 @@ describe('backlog page', () => {
     await user.keyboard('{/Shift}');
     const bar = await screen.findByRole('region', { name: 'Bulk actions' });
     expect(within(bar).getByText('2 selected')).toBeInTheDocument();
-    await user.selectOptions(within(bar).getByLabelText('Move to'), 'Sprint 2');
-    await user.click(within(bar).getByRole('button', { name: 'Move' }));
+    await user.selectOptions(within(bar).getByLabelText('Value'), 'Sprint 2');
+    await user.click(within(bar).getByRole('button', { name: 'Apply' }));
     await waitFor(() => {
-      expect(calls.filter((c) => c.method === 'POST')).toHaveLength(2);
+      expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1);
     });
-    expect(calls.filter((c) => c.method === 'POST').map((c) => c.body)).toEqual([
-      { sprint_id: NEXT.id },
-      { sprint_id: NEXT.id },
-    ]);
-    expect(await screen.findByText('2 issues moved to Sprint 2')).toBeInTheDocument();
+    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
+      keys: ['SCR-1', 'SCR-2'],
+      action: 'move_sprint',
+      sprint_id: NEXT.id,
+    });
+    expect(await screen.findByText('2 issues updated')).toBeInTheDocument();
   });
 
-  it('reports partial bulk failures without losing the successful moves', async () => {
+  it('reports partial bulk failures with the reason and keeps the failed one selected', async () => {
     mount({
-      'POST /orgs/acme/issues/SCR-1/move': () => json(issue('SCR-1')),
-      'POST /orgs/acme/issues/SCR-2/move': () => problem(412, 'version_conflict'),
+      'POST /orgs/acme/issues/bulk': () =>
+        json({
+          results: [
+            { key: 'SCR-1', ok: true, code: null, message: null },
+            { key: 'SCR-2', ok: false, code: 'version_conflict', message: 'Changed meanwhile.' },
+          ],
+          succeeded: 1,
+          failed: 1,
+        }),
     });
     await openBacklog();
     const user = userEvent.setup();
     await user.click(screen.getByRole('checkbox', { name: 'Select SCR-1' }));
     await user.click(screen.getByRole('checkbox', { name: 'Select SCR-2' }));
     const bar = await screen.findByRole('region', { name: 'Bulk actions' });
-    await user.selectOptions(within(bar).getByLabelText('Move to'), 'Sprint 2');
-    await user.click(within(bar).getByRole('button', { name: 'Move' }));
-    expect(await screen.findByText('1 moved, 1 could not be moved')).toBeInTheDocument();
+    await user.selectOptions(within(bar).getByLabelText('Value'), 'Sprint 2');
+    await user.click(within(bar).getByRole('button', { name: 'Apply' }));
+    expect(await screen.findByText('1 updated, 1 could not be changed')).toBeInTheDocument();
+    expect(await screen.findByText(/SCR-2: Changed meanwhile\./)).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Select SCR-2' })).toBeChecked();
   });
 
   it('creates an issue inline in a sprint: create, then move it into that sprint', async () => {

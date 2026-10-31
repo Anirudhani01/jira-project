@@ -29,6 +29,7 @@ import { discardIssueFieldDraft, loadIssueFieldDrafts } from '../../lib/ux/draft
 import type { IssueFieldDraftPayload } from '../../lib/ux/draftTypes';
 import { registerIssueDetailDraftSnapshot } from '../../lib/ux/issueDetailDraft';
 import { useSession } from '../auth/api';
+import { FixVersionField } from './FixVersionField';
 import { StoryPointsField } from './StoryPointsField';
 import { IssueActivitySection } from './IssueActivitySection';
 import { IssueChildrenSection } from './IssueChildrenSection';
@@ -536,6 +537,9 @@ function IssueView({
             </SidebarField>
             <SidebarField label="Story points">
               <StoryPointsField org={org} issue={issue} canEdit={canEdit} />
+            </SidebarField>
+            <SidebarField label="Fix version">
+              <FixVersionField org={org} issue={issue} canEdit={canEdit} />
             </SidebarField>
             <SidebarField label="Assignee">
               <IssueListAssigneeMenu

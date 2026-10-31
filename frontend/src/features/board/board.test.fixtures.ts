@@ -25,6 +25,7 @@ export function card(
     labels: [],
     sprint: null,
     story_points: null,
+    fix_version: null,
     version,
     created_at: '2026-10-28T00:00:00Z',
     updated_at: '2026-10-28T00:00:00Z',

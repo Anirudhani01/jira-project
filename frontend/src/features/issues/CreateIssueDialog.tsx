@@ -19,6 +19,7 @@ import {
 import { createFeedbackInvocationId, showSuccessToast } from '../../lib/ux/mutationFeedback';
 import { mutationErrorMessage } from '../../lib/ux/permissionDenied';
 import { useSlowPending } from '../../lib/ux/useSlowPending';
+import { useVersions } from '../backlog/planApi';
 import { useProjectMembers } from '../projects/api';
 
 import {
@@ -47,10 +48,13 @@ export function CreateIssueDialog({
   org,
   project,
   onClose,
+  defaultKind,
 }: {
   org: string;
   project: string;
   onClose: () => void;
+  /** Preselects the first issue type of this kind (e.g. `epic` from the Epics panel). */
+  defaultKind?: string;
 }) {
   const navigate = useNavigate();
   const online = useAppOnline();
@@ -60,6 +64,7 @@ export function CreateIssueDialog({
   const priorities = usePriorities(org);
   const members = useProjectMembers(org, project);
   const labels = useLabels(org, project);
+  const versions = useVersions(org, project, false);
   const create = useCreateIssue(org, project);
 
   const [summary, setSummary] = useState('');
@@ -70,6 +75,7 @@ export function CreateIssueDialog({
   const [parent, setParent] = useState<IssueSearchHit | null>(null);
   const [parentQuery, setParentQuery] = useState('');
   const [labelIds, setLabelIds] = useState<string[]>([]);
+  const [fixVersionId, setFixVersionId] = useState<string | null>(null);
   const [points, setPoints] = useState('');
   const [another, setAnother] = useState(false);
   const [clientErrors, setClientErrors] = useState<ClientErrors>({});
@@ -81,7 +87,10 @@ export function CreateIssueDialog({
   const search = useIssueSearch(org, project, parentQuery);
 
   const effectiveType =
-    typeId ?? (types.data?.find((t) => t.name === 'Task') ?? types.data?.[0])?.id ?? null;
+    typeId ??
+    (defaultKind ? types.data?.find((t) => t.kind === defaultKind) : undefined)?.id ??
+    (types.data?.find((t) => t.name === 'Task') ?? types.data?.[0])?.id ??
+    null;
   const effectivePriority =
     priorityId ??
     (priorities.data?.find((p) => p.name === 'Medium') ?? priorities.data?.[0])?.id ??
@@ -157,6 +166,7 @@ export function CreateIssueDialog({
           ...(assigneeId ? { assignee_id: assigneeId } : {}),
           ...(parent ? { parent_id: parent.id } : {}),
           ...(labelIds.length ? { label_ids: labelIds } : {}),
+          ...(fixVersionId ? { fix_version_id: fixVersionId } : {}),
           ...(points.trim() !== '' ? { story_points: Number(points) } : {}),
         },
       },
@@ -309,6 +319,16 @@ export function CreateIssueDialog({
               }))}
               value={labelIds}
               onChange={setLabelIds}
+            />
+          ) : null}
+          {(versions.data ?? []).length > 0 ? (
+            <Combobox
+              label="Fix version"
+              clearLabel="No version"
+              searchPlaceholder="Search versions…"
+              options={(versions.data ?? []).map((v) => ({ value: v.id, label: v.name }))}
+              value={fixVersionId}
+              onChange={setFixVersionId}
             />
           ) : null}
           <Field label="Story points (optional)" error={pointsError ?? null}>
