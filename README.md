@@ -83,6 +83,8 @@ make reset-db  # DESTRUCTIVE: also deletes the local database volume
 
 CI (`.github/workflows/ci.yml`) runs `make ci` then `make images` when applicable. **`main`** always gets the full gate. **Docs-only** PRs (explicit allowlist in `docs/ci.md`) run **`make ci-docs`**; require the **`CI`** check on PRs. See [`docs/ci.md`](docs/ci.md).
 
+After merge to **`main`**, path-scoped pushes also run **E2E UX states** (`.github/workflows/e2e-ux.yml`): Playwright `e2e/ux-states.spec.ts` against a local dev stack (`make e2e-ux-states` with `make dev`). Not a PR-required check.
+
 ## Identity (M1, M2) at a glance
 
 | Endpoint | Notes |
