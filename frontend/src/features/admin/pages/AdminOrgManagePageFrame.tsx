@@ -9,16 +9,19 @@ import { ApiError } from '../../../lib/api/errors';
 import { toUxPermissionDeniedProps } from '../../../lib/ux/permissionDenied';
 import { useOrg } from '../../orgs/api';
 
-/** Loads org context and restricts content to members with `org.manage` (owner/admin). */
+/** Loads org context; by default restricts to `org.manage` (owner/admin). */
 export function AdminOrgManagePageFrame({
   title,
   titleId,
   description,
+  requireManage = true,
   children,
 }: {
   title: string;
   titleId: string;
   description: string;
+  /** When false, any member who can load the org may view the page (edit gates live in children). */
+  requireManage?: boolean;
   children: ReactNode;
 }) {
   const { org: slug = '' } = useParams();
@@ -33,7 +36,7 @@ export function AdminOrgManagePageFrame({
   if (org.isError) {
     return <ErrorState error={org.error} onRetry={() => void org.refetch()} />;
   }
-  if (!org.data.permissions.includes('org.manage')) {
+  if (requireManage && !org.data.permissions.includes('org.manage')) {
     return <UxPermissionDenied {...toUxPermissionDeniedProps('org-settings', { orgSlug: slug })} />;
   }
 
