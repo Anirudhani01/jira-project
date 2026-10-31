@@ -231,3 +231,36 @@ export function useCreateLabel(org: string, project: string) {
     },
   });
 }
+
+export interface IssueSearchHit {
+  id: string;
+  key: string;
+  summary: string;
+  type: { name: string; kind: string };
+}
+
+/** Lightweight lookup for pickers (parent, links): matches summary text or a key such as
+ * `WEB-3`; an empty query lists the project's most recently updated issues. */
+export function useIssueSearch(org: string, project: string, query: string) {
+  const q = query.trim();
+  return useQuery({
+    queryKey: [...issuesKey(org), 'search', project.toUpperCase(), q],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        project: project.toUpperCase(),
+        sort: '-updated_at',
+        limit: '10',
+      });
+      if (q) params.set('q', q);
+      return apiFetch<IssueList>(`${orgBase(org)}/issues?${params.toString()}`).then((r) =>
+        r.items.map((i): IssueSearchHit => ({
+          id: i.id,
+          key: i.key,
+          summary: i.summary,
+          type: i.type,
+        })),
+      );
+    },
+    staleTime: 15_000,
+  });
+}

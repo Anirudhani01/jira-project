@@ -16,3 +16,18 @@ if (typeof Element !== 'undefined') {
   proto.releasePointerCapture ??= () => undefined;
   proto.scrollIntoView ??= () => undefined;
 }
+
+// cmdk measures its list with ResizeObserver, which jsdom lacks.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class {
+    observe() {
+      /* no-op */
+    }
+    unobserve() {
+      /* no-op */
+    }
+    disconnect() {
+      /* no-op */
+    }
+  };
+}
