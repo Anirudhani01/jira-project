@@ -455,18 +455,18 @@ Milestone acceptance criteria, feature coverage matrix, and testing matrix: **[i
 
 ### M6 — Board, backlog, issues + E2E hardening
 
-**Scope:** Remaining feature surfaces + Playwright coverage.
+**Scope:** Board/backlog/create mutation error presentation + `e2e/ux-states.spec.ts` (notifications deferred).
 
-| Files | Board, backlog, issue detail/list, notifications, `e2e/ux-states.spec.ts` (new) |
+| Files | `BoardPage`, `BoardSprintHeader`, `BacklogPage`, `CreateIssueDialog`, `permissionDenied.ts`, `e2e/ux-states.spec.ts`, `e2e/ux-helpers.ts` |
 
 **Acceptance criteria:**
 
-- [ ] E2E: offline banner, reconnect refetch (smoke), session redirect with `next`, draft pilot, duplicate submit blocked, search empty.
-- [ ] E2E: **light + dark** screenshots or theme toggle assertions on UX demo or one journey page.
-- [ ] E2E: **keyboard** — tab to retry, dialog focus trap on session expired.
-- [ ] E2E: **responsive** — offline banner + empty state at mobile viewport (existing Playwright projects).
-- [ ] E2E: **permission** — member blocked from audit vs admin.
-- [ ] `make ci` green.
+- [x] Board/backlog/create: RBAC 403 via `mutationErrorMessage`; no raw backend detail on move alert.
+- [x] E2E: offline banner (no reload), session `next`, draft restore, create single POST + pending disabled, search empty (mobile).
+- [x] E2E: light theme smoke; keyboard focus on session dialog; multi-401 single dialog.
+- [x] E2E: member audit deny; viewer board without create.
+- [ ] CI E2E workflow on `main` only (follow-up).
+- [x] `make ci` green (`CI=true make ci` passed locally).
 
 **Risks:** Flaky offline E2E — use `context.setOffline` with stable selectors.
 

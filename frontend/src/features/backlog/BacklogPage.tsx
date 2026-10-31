@@ -18,7 +18,7 @@ import { FormError } from '../../components/ui/Form';
 import { ErrorState, LoadingState } from '../../components/ui/States';
 import { ApiError } from '../../lib/api/errors';
 import type { Issue, Sprint } from '../../lib/api/types';
-import { describeError } from '../../lib/forms';
+import { mutationErrorMessage } from '../../lib/ux/permissionDenied';
 import { useProject } from '../projects/api';
 
 import {
@@ -165,7 +165,9 @@ function StartForm({ sprint, org, project }: { sprint: Sprint; org: string; proj
       <button type="submit" className="rounded bg-blue-700 px-2 py-1 text-white">
         Start
       </button>
-      <FormError>{start.error ? describeError(start.error) : null}</FormError>
+      <FormError>
+        {start.error ? mutationErrorMessage(start.error, 'generic-project') : null}
+      </FormError>
     </form>
   );
 }
@@ -202,7 +204,9 @@ function CompleteForm(props: { sprint: Sprint; futures: Sprint[]; org: string; p
       >
         Complete sprint
       </button>
-      <FormError>{complete.error ? describeError(complete.error) : null}</FormError>
+      <FormError>
+        {complete.error ? mutationErrorMessage(complete.error, 'generic-project') : null}
+      </FormError>
     </div>
   );
 }
@@ -272,7 +276,9 @@ export function BacklogPage() {
           Board
         </Link>
       </div>
-      <FormError>{move.error ? describeError(move.error) : null}</FormError>
+      <FormError>
+        {move.error ? mutationErrorMessage(move.error, 'issue-mutation') : null}
+      </FormError>
       {canPlan ? (
         <form
           className="flex gap-2"
@@ -304,7 +310,9 @@ export function BacklogPage() {
           <button type="submit" className="rounded bg-blue-700 px-3 py-1 text-white">
             Create sprint
           </button>
-          <FormError>{create.error ? describeError(create.error) : null}</FormError>
+          <FormError>
+            {create.error ? mutationErrorMessage(create.error, 'generic-project') : null}
+          </FormError>
         </form>
       ) : null}
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>

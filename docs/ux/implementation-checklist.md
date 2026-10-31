@@ -135,10 +135,11 @@ UX standards (see docs/ux/global-ux-state-system.md)
 
 ### M6 — Board, backlog, issues + E2E
 
-- [ ] Remaining surfaces on shared components
-- [ ] `e2e/ux-states.spec.ts` (or equivalent coverage)
-- [ ] E2E: light/dark, responsive, keyboard, multi-401, draft recovery, offline→online, duplicate submit, permission roles
-- [ ] `make ci` green
+- [x] Board/backlog/create mutation errors via `mutationErrorMessage` (RBAC 403 inline; CSRF/session/network unchanged)
+- [x] `frontend/e2e/ux-states.spec.ts` + `ux-helpers.ts` (isolated data, workers=1, auth routes excluded from 401 mock)
+- [x] E2E: theme, mobile search empty, offline banner (no reload), draft restore, create POST count + pending, multi-401, safeNext, keyboard, member audit, viewer board, invite pending
+- [ ] Post-merge `e2e-ux` GitHub Actions job (follow-up PR)
+- [x] `make ci` green
 
 ---
 

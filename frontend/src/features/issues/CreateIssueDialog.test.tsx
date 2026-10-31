@@ -3,14 +3,27 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
+import { ApiError } from '../../lib/api/errors';
+
 import { CreateIssueDialog } from './CreateIssueDialog';
+
+const createIssueState = vi.hoisted(() => ({
+  error: null as ApiError | null,
+  isPending: false,
+  mutate: vi.fn(),
+  reset: vi.fn(),
+}));
 
 vi.mock('./api', () => ({
   useCreateIssue: () => ({
-    mutate: vi.fn(),
-    reset: vi.fn(),
-    isPending: false,
-    error: null,
+    mutate: createIssueState.mutate,
+    reset: createIssueState.reset,
+    get isPending() {
+      return createIssueState.isPending;
+    },
+    get error() {
+      return createIssueState.error;
+    },
   }),
   useIssueTypes: () => ({
     data: [{ id: 't1', name: 'Task', kind: 'standard' }],
@@ -27,6 +40,23 @@ vi.mock('../projects/api', () => ({
 }));
 
 describe('CreateIssueDialog', () => {
+  it('shows allowlisted copy on create 403', () => {
+    createIssueState.error = new ApiError({
+      status: 403,
+      code: 'forbidden',
+      title: 'Forbidden',
+      detail: 'secret create denial',
+    });
+    render(
+      <MemoryRouter>
+        <CreateIssueDialog org="acme" project="WEB" onClose={() => undefined} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent(/permission/i);
+    expect(screen.getByRole('alert')).not.toHaveTextContent('secret create denial');
+    createIssueState.error = null;
+  });
+
   it('focuses summary after client validation failure', async () => {
     const user = userEvent.setup();
     render(
