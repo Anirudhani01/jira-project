@@ -117,6 +117,7 @@ class NewIssue:
     description: str | None
     parent_id: uuid.UUID | None = None
     assignee_id: uuid.UUID | None = None
+    story_points: int | None = None
 
 
 async def insert_issue(session: AsyncSession, new: NewIssue) -> None:
@@ -136,6 +137,7 @@ async def insert_issue(session: AsyncSession, new: NewIssue) -> None:
             description=new.description,
             parent_id=new.parent_id,
             assignee_id=new.assignee_id,
+            story_points=new.story_points,
             rank=initial_rank(new.seq),
         )
     )

@@ -72,4 +72,29 @@ describe('CreateIssueDialog', () => {
       expect(screen.getByLabelText('Summary')).toHaveFocus();
     });
   });
+
+  it('sends story_points only when an estimate is entered, and blocks invalid ones', async () => {
+    createIssueState.mutate.mockClear();
+    render(
+      <MemoryRouter>
+        <CreateIssueDialog org="acme" project="WEB" onClose={() => undefined} />
+      </MemoryRouter>,
+    );
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('Summary'), 'Estimated work');
+    await user.type(screen.getByLabelText('Story points (optional)'), '250');
+    await user.click(screen.getByRole('button', { name: /^Create$/ }));
+    expect(await screen.findByText('Use a whole number from 0 to 100.')).toBeInTheDocument();
+    expect(createIssueState.mutate).not.toHaveBeenCalled();
+
+    const points = screen.getByLabelText('Story points (optional)');
+    await user.clear(points);
+    await user.type(points, '8');
+    await user.click(screen.getByRole('button', { name: /^Create$/ }));
+    await waitFor(() => {
+      expect(createIssueState.mutate).toHaveBeenCalledTimes(1);
+    });
+    const [request] = createIssueState.mutate.mock.calls[0] as [{ body: Record<string, unknown> }];
+    expect(request.body.story_points).toBe(8);
+  });
 });

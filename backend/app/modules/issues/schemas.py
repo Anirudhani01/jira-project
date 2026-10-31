@@ -7,10 +7,11 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 Summary = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)]
 Description = Annotated[str, StringConstraints(max_length=32000)]
+StoryPoints = Annotated[int, Field(ge=0, le=100, strict=True)]
 SortOrder = Literal[
     "-updated_at",
     "updated_at",
@@ -38,6 +39,7 @@ class CreateIssueRequest(_Request):
     assignee_id: uuid.UUID | None = None
     parent_id: uuid.UUID | None = None
     label_ids: list[uuid.UUID] | None = None
+    story_points: StoryPoints | None = None
 
 
 class UpdateIssueRequest(_Request):
@@ -51,6 +53,7 @@ class UpdateIssueRequest(_Request):
     reporter_id: uuid.UUID | None = None
     parent_id: uuid.UUID | None = None
     label_ids: list[uuid.UUID] | None = None
+    story_points: StoryPoints | None = None  # send null to clear
 
 
 class TypeRef(BaseModel):
@@ -107,6 +110,7 @@ class IssueResponse(BaseModel):
     assignee: UserRef | None
     parent: IssueRefShort | None
     sprint: SprintRef | None
+    story_points: int | None
     labels: list[LabelRef]
     version: int
     created_at: datetime

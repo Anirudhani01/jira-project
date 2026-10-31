@@ -19,6 +19,7 @@ function issue(key: string, sprint: Issue['sprint'] = null, version = 1): Issue 
     parent: null,
     labels: [],
     sprint,
+    story_points: null,
     version,
     created_at: '2026-10-28T00:00:00Z',
     updated_at: '2026-10-28T00:00:00Z',
@@ -35,6 +36,8 @@ const sprint = (id: string, name: string, state: string): Sprint => ({
   end_at: null,
   completed_at: null,
   issue_count: 1,
+  points_total: 0,
+  points_done: 0,
 });
 
 const ACTIVE = sprint('sp-1', 'Sprint 1', 'active');

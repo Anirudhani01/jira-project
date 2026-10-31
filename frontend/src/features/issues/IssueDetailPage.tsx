@@ -29,6 +29,7 @@ import { discardIssueFieldDraft, loadIssueFieldDrafts } from '../../lib/ux/draft
 import type { IssueFieldDraftPayload } from '../../lib/ux/draftTypes';
 import { registerIssueDetailDraftSnapshot } from '../../lib/ux/issueDetailDraft';
 import { useSession } from '../auth/api';
+import { StoryPointsField } from './StoryPointsField';
 import { IssueActivitySection } from './IssueActivitySection';
 import { IssueChildrenSection } from './IssueChildrenSection';
 import { IssueDescriptionSection } from './IssueDescriptionSection';
@@ -532,6 +533,9 @@ function IssueView({
                 canEdit={canEdit}
                 containedMenu={presentation === 'modal'}
               />
+            </SidebarField>
+            <SidebarField label="Story points">
+              <StoryPointsField org={org} issue={issue} canEdit={canEdit} />
             </SidebarField>
             <SidebarField label="Assignee">
               <IssueListAssigneeMenu

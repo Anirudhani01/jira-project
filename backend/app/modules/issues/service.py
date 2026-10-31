@@ -133,6 +133,7 @@ def _response(
         sprint=SprintRef(id=issue.sprint_id, name=row.sprint_name, state=row.sprint_state)
         if issue.sprint_id is not None and row.sprint_name is not None
         else None,
+        story_points=issue.story_points,
         labels=[
             LabelRef(id=label.id, name=label.name, color=label.color)
             for label in labels_by_issue.get(issue.id, [])
@@ -326,6 +327,7 @@ async def create_issue(
                     description=body.description,
                     parent_id=body.parent_id,
                     assignee_id=body.assignee_id,
+                    story_points=body.story_points,
                 ),
             )
             if body.label_ids:
@@ -543,6 +545,16 @@ async def _changes(
         old_assignee = {"id": str(issue.assignee_id)} if issue.assignee_id else None
         new_assignee = {"id": str(body.assignee_id)} if body.assignee_id else None
         changes.append(("assignee_id", body.assignee_id, "assignee", old_assignee, new_assignee))
+    if "story_points" in fields and body.story_points != issue.story_points:
+        changes.append(
+            (
+                "story_points",
+                body.story_points,
+                "story_points",
+                issue.story_points,
+                body.story_points,
+            )
+        )
     changes += await _reporter_change(session, project, issue, body, fields)
     return changes
 
