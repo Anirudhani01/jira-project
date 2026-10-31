@@ -6,6 +6,7 @@ import { ErrorState, LoadingState } from '../../../components/ui/States';
 import { NotFoundPage } from '../../../app/pages/NotFoundPage';
 import { ApiError } from '../../../lib/api/errors';
 import { describeError } from '../../../lib/forms';
+import { permissionDeniedInlineMessage } from '../../../lib/ux/permissionDenied';
 import {
   useFocusOnSubmitAttempt,
   type FocusableFieldRef,
@@ -77,8 +78,13 @@ export function OrgMembersPage() {
       invite.error.status === 422 &&
       invite.error.fieldErrors.length
     )
-      ? describeError(invite.error)
+      ? (permissionDeniedInlineMessage(invite.error, 'org-members-mutation') ??
+        describeError(invite.error))
       : null;
+
+  const failureMessage = failure
+    ? (permissionDeniedInlineMessage(failure, 'org-members-mutation') ?? describeError(failure))
+    : null;
 
   const onInvite = (event: SyntheticEvent) => {
     event.preventDefault();
@@ -107,7 +113,7 @@ export function OrgMembersPage() {
       <h1 id="members-title" className="text-2xl font-semibold">
         Members of {org.data.name}
       </h1>
-      <FormError>{failure ? describeError(failure) : null}</FormError>
+      <FormError>{failureMessage}</FormError>
       <table className="w-full text-left text-sm">
         <thead>
           <tr>

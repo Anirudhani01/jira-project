@@ -126,11 +126,12 @@ UX standards (see docs/ux/global-ux-state-system.md)
 - [x] Preserve navigation / full-page / inline success; no new form success toasts; CSRF toast unchanged
 - [x] One success signal per action; pending disables submit (existing `SubmitButton`)
 
-### M5 — Org & project adoption
+### M5 — Permission denied UX
 
-- [ ] `UxPermissionDenied` on audit, settings, etc.
-- [ ] Project grid, members, org home empty/loading/error
-- [ ] Vitest role differences (member vs admin)
+- [x] `permissionDenied.ts` — allowlisted copy, recovery, inline messages (no backend detail)
+- [x] `UxPermissionDenied` on audit, org settings, create-project gate (after org load)
+- [x] Inline 403 copy on org/project/issue mutations; mapper permission hints only (no 409)
+- [x] Vitest: member vs admin, loading before deny, audit query `enabled`
 
 ### M6 — Board, backlog, issues + E2E
 

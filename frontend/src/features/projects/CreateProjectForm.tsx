@@ -10,6 +10,7 @@ import { SimpleFormPage } from '../../components/ui/SimpleFormPage';
 import { ApiError } from '../../lib/api/errors';
 import { describeError } from '../../lib/forms';
 import { applyServerErrorsWithFocus } from '../../lib/ux/formFocus';
+import { isRbacForbidden, permissionDeniedInlineMessage } from '../../lib/ux/permissionDenied';
 
 import { useCreateProject } from './api';
 import { PROJECT_TEMPLATES, type ProjectTemplateId } from './projectTemplates';
@@ -61,7 +62,9 @@ export function CreateProjectForm({
   });
   const failure =
     create.error && !(create.error instanceof ApiError && [409, 422].includes(create.error.status))
-      ? describeError(create.error)
+      ? isRbacForbidden(create.error)
+        ? permissionDeniedInlineMessage(create.error, 'create-project')
+        : describeError(create.error)
       : null;
 
   return (

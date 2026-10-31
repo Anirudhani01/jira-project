@@ -9,6 +9,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { ErrorState, LoadingState } from '../../components/ui/States';
 import { ApiError } from '../../lib/api/errors';
 import { describeError } from '../../lib/forms';
+import { permissionDeniedInlineMessage } from '../../lib/ux/permissionDenied';
 
 import {
   useProject,
@@ -36,7 +37,10 @@ export function ProjectPage() {
   const p = project.data;
   const canManage = p.permissions.includes('project.manage');
   const canManageMembers = p.permissions.includes('project.members.manage');
-  const failure = archive.error ?? removeMember.error;
+  const failureRaw = archive.error ?? removeMember.error;
+  const failure = failureRaw
+    ? (permissionDeniedInlineMessage(failureRaw, 'project-settings') ?? describeError(failureRaw))
+    : null;
   const base = `/o/${org}/p/${p.key}`;
 
   return (
@@ -91,7 +95,7 @@ export function ProjectPage() {
         </Button>
       </nav>
 
-      <FormError>{failure ? describeError(failure) : null}</FormError>
+      <FormError>{failure}</FormError>
 
       <ProjectWorkflowSection workflow={workflow} />
       <ProjectMembersSection

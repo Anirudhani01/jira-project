@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { json, mockApi, renderApp, SIGNED_IN } from '../../test/api';
+import { json, mockApi, problem, renderApp, SIGNED_IN } from '../../test/api';
 
 const SESSION = {
   ...SIGNED_IN,
@@ -47,12 +47,27 @@ describe('audit log', () => {
     });
   });
 
-  it('tells members without audit access that the log is restricted', async () => {
+  it('shows permission denied when the audit query returns forbidden', async () => {
     mockApi({
+      'GET /auth/session': () => json(SESSION),
+      'GET /orgs/acme': () => json(ORG),
+      'GET /orgs/acme/audit-events': () =>
+        problem(403, 'forbidden', { detail: 'must not appear in UI' }),
+    });
+    renderApp('/o/acme/settings/audit');
+    expect(await screen.findByRole('region', { name: /don't have access/i })).toBeInTheDocument();
+    expect(screen.queryByText('must not appear in UI')).not.toBeInTheDocument();
+  });
+
+  it('tells members without audit access that the log is restricted', async () => {
+    const calls = mockApi({
       'GET /auth/session': () => json(SESSION),
       'GET /orgs/acme': () => json({ ...ORG, role: 'member', permissions: ['org.view'] }),
     });
     renderApp('/o/acme/settings/audit');
-    expect(await screen.findByRole('alert')).toHaveTextContent(/owners and admins/);
+    expect(await screen.findByRole('region', { name: /don't have access/i })).toHaveTextContent(
+      /owners and admins/,
+    );
+    expect(calls.some((c) => c.path.includes('/audit-events'))).toBe(false);
   });
 });

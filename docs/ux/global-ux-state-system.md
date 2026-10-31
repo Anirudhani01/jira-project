@@ -439,17 +439,15 @@ Milestone acceptance criteria, feature coverage matrix, and testing matrix: **[i
 
 ---
 
-### M5 — Org & project adoption
+### M5 — Permission denied UX + role-aware recovery
 
-**Scope:** Org home, dashboard, members, settings, audit, project list/settings.
-
-| Files | ~15–20 feature + test files listed in coverage matrix |
+**Scope:** Safe permission copy (`permissionDenied.ts`), `UxPermissionDenied` on audit/settings/create-project, inline mutation 403 copy, mapper permission hints only (no 409 taxonomy).
 
 **Acceptance criteria:**
 
-- [ ] Permission denied uses `UxPermissionDenied` (audit, settings).
-- [ ] Role-based Vitest: member vs admin sees different affordances.
-- [ ] Empty/loading/error on project grid and members list.
+- [ ] No raw backend `detail` in permission UI; loading before proactive deny.
+- [ ] Recovery: org home, project board, members link labeled “View organization members”.
+- [ ] 404 / 401 / CSRF / M4 unchanged; frontend-only.
 
 **Risks:** Regression on 404-as-not-found for cross-tenant — keep current behavior.
 

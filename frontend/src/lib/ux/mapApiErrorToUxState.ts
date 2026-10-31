@@ -1,6 +1,7 @@
 import { ApiError } from '../api/errors';
 import { describeError } from '../forms';
 
+import { isInvitationForbidden, permissionDeniedMapperDescription } from './permissionDenied';
 import type { MapApiErrorContext, UxErrorPresentation } from './types';
 
 const GENERIC: UxErrorPresentation = {
@@ -108,14 +109,29 @@ export function mapApiErrorToUxState(
         error,
       );
     }
+    if (isInvitationForbidden(error)) {
+      return withRequestId(
+        {
+          kind: 'generic',
+          title: 'Something went wrong',
+          description: describeError(error),
+          requestId: null,
+          showRequestId: false,
+          retryable: false,
+        },
+        error,
+      );
+    }
+    const denied = permissionDeniedMapperDescription(error);
     return withRequestId(
       {
         kind: 'permission_denied',
-        title: 'Permission denied',
-        description: error.detail ?? error.title,
+        title: denied.title,
+        description: denied.description,
         requestId: null,
         showRequestId: false,
         retryable: false,
+        ...(denied.recoveryHint ? { recoveryHint: denied.recoveryHint } : {}),
       },
       error,
     );
