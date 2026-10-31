@@ -6,7 +6,8 @@ import { z } from 'zod';
 import { Button } from '../../../components/ui/Button';
 import { FormError, SubmitButton, TextField } from '../../../components/ui/Form';
 import { ApiError } from '../../../lib/api/errors';
-import { applyServerErrors, describeError } from '../../../lib/forms';
+import { describeError } from '../../../lib/forms';
+import { applyServerErrorsWithFocus } from '../../../lib/ux/formFocus';
 import { AuthLayout } from '../AuthLayout';
 import { useSignup } from '../api';
 
@@ -21,6 +22,8 @@ const schema = z.object({
     .max(128, 'Use at most 128 characters.'),
 });
 type Values = z.infer<typeof schema>;
+
+const FIELD_ORDER = ['display_name', 'email', 'password'] as const;
 
 /**
  * The response is identical whether or not the email already has an account (plan R2),
@@ -41,7 +44,14 @@ export function SignupPage() {
     try {
       await signup.mutateAsync(values);
     } catch (error) {
-      applyServerErrors(error, ['display_name', 'email', 'password'], form.setError);
+      applyServerErrorsWithFocus(
+        error,
+        FIELD_ORDER,
+        FIELD_ORDER,
+        form.setError,
+        form.control,
+        form.setFocus,
+      );
     }
   });
 

@@ -120,9 +120,11 @@ UX standards (see docs/ux/global-ux-state-system.md)
 
 ### M4 — Forms + success
 
-- [ ] `mutationFeedback` dedupe; `focusFirstError`
-- [ ] Auth, create org/project/issue, account forms updated
-- [ ] One success signal per action; pending disables submit
+- [x] `mutationFeedback.ts` — success toast dedupe by `feedbackInvocationId` (bounded registry)
+- [x] `formFocus.ts` / `focusFirstInvalidControl.ts` — server + non-RHF focus after failed submit
+- [x] `firstMappedServerErrorField` in `forms.ts` (non-breaking); RHF forms + issue create + org invite
+- [x] Preserve navigation / full-page / inline success; no new form success toasts; CSRF toast unchanged
+- [x] One success signal per action; pending disables submit (existing `SubmitButton`)
 
 ### M5 — Org & project adoption
 

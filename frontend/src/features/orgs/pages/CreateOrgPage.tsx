@@ -6,7 +6,8 @@ import { z } from 'zod';
 import { FormError, SubmitButton, TextField } from '../../../components/ui/Form';
 import { SimpleFormPage } from '../../../components/ui/SimpleFormPage';
 import { ApiError } from '../../../lib/api/errors';
-import { applyServerErrors, describeError } from '../../../lib/forms';
+import { describeError } from '../../../lib/forms';
+import { applyServerErrorsWithFocus } from '../../../lib/ux/formFocus';
 import { useSession } from '../../auth/api';
 import { rememberOrg, useCreateOrg } from '../api';
 
@@ -24,6 +25,8 @@ const schema = z.object({
     ),
 });
 type Values = z.infer<typeof schema>;
+
+const FIELD_ORDER = ['name', 'slug'] as const;
 
 export const VERIFY_FIRST_MESSAGE =
   'Verify your email address before creating an organization. Open the verification link we emailed you.';
@@ -54,7 +57,14 @@ export function CreateOrgPage() {
       rememberOrg(org.slug);
       await navigate(`/o/${org.slug}`);
     } catch (error) {
-      applyServerErrors(error, ['name', 'slug'], form.setError);
+      applyServerErrorsWithFocus(
+        error,
+        FIELD_ORDER,
+        FIELD_ORDER,
+        form.setError,
+        form.control,
+        form.setFocus,
+      );
     }
   });
 

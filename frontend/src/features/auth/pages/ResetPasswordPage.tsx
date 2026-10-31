@@ -6,7 +6,8 @@ import { z } from 'zod';
 import { Button } from '../../../components/ui/Button';
 import { FormError, SubmitButton, TextField } from '../../../components/ui/Form';
 import { ApiError } from '../../../lib/api/errors';
-import { applyServerErrors, describeError } from '../../../lib/forms';
+import { describeError } from '../../../lib/forms';
+import { applyServerErrorsWithFocus } from '../../../lib/ux/formFocus';
 import { AuthLayout } from '../AuthLayout';
 import { useConfirmPasswordReset } from '../api';
 import { useFragmentToken } from '../useFragmentToken';
@@ -25,6 +26,9 @@ const schema = z
   });
 type Values = z.infer<typeof schema>;
 
+const FIELD_ORDER = ['new_password', 'confirm_password'] as const;
+const ALLOWED_SERVER_FIELDS = ['new_password'] as const;
+
 export const INVALID_RESET_LINK_MESSAGE =
   'This link is invalid, has expired or was already used. Request a new one.';
 
@@ -39,7 +43,14 @@ export function ResetPasswordPage() {
     try {
       await confirm.mutateAsync({ token, new_password });
     } catch (error) {
-      applyServerErrors(error, ['new_password'], form.setError);
+      applyServerErrorsWithFocus(
+        error,
+        FIELD_ORDER,
+        ALLOWED_SERVER_FIELDS,
+        form.setError,
+        form.control,
+        form.setFocus,
+      );
     }
   });
 

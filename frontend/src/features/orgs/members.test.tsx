@@ -74,6 +74,28 @@ describe('OrgMembersPage (admin)', () => {
     expect(post?.headers.get('x-csrf-token')).toBe('csrf-abc');
   });
 
+  it('maps invite validation errors onto the email field and focuses it', async () => {
+    mockApi({
+      'GET /auth/session': () => json(VERIFIED),
+      'GET /orgs/acme': () => json(ORG),
+      'GET /orgs/acme/members': () => json(MEMBERS),
+      'GET /orgs/acme/invitations': () => json({ items: [] }),
+      'POST /orgs/acme/invitations': () =>
+        problem(422, 'validation_error', {
+          errors: [{ field: 'body.email', message: 'Enter a valid email address.' }],
+        }),
+    });
+    renderApp('/o/acme/settings/members');
+    const user = userEvent.setup();
+    await screen.findByRole('cell', { name: 'Max' });
+    await user.type(screen.getByLabelText('Email to invite'), 'not-an-email');
+    await user.click(screen.getByRole('button', { name: 'Send invitation' }));
+    expect(await screen.findByText('Enter a valid email address.')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByLabelText('Email to invite')).toHaveFocus();
+    });
+  });
+
   it('shows the last-owner conflict from the server', async () => {
     mockApi({
       'GET /auth/session': () => json(VERIFIED),

@@ -6,12 +6,15 @@ import { z } from 'zod';
 import { Button } from '../../../components/ui/Button';
 import { FormError, SubmitButton, TextField } from '../../../components/ui/Form';
 import { ApiError } from '../../../lib/api/errors';
-import { applyServerErrors, describeError } from '../../../lib/forms';
+import { describeError } from '../../../lib/forms';
+import { applyServerErrorsWithFocus } from '../../../lib/ux/formFocus';
 import { AuthLayout } from '../AuthLayout';
 import { useRequestPasswordReset } from '../api';
 
 const schema = z.object({ email: z.email('Enter a valid email address.').max(254) });
 type Values = z.infer<typeof schema>;
+
+const FIELD_ORDER = ['email'] as const;
 
 /** The response is the same whether or not an account exists, so this copy must be too. */
 export const RESET_REQUESTED_MESSAGE =
@@ -28,7 +31,14 @@ export function ForgotPasswordPage() {
     try {
       await request.mutateAsync(values);
     } catch (error) {
-      applyServerErrors(error, ['email'], form.setError);
+      applyServerErrorsWithFocus(
+        error,
+        FIELD_ORDER,
+        FIELD_ORDER,
+        form.setError,
+        form.control,
+        form.setFocus,
+      );
     }
   });
 
