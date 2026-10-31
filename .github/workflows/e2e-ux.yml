@@ -107,7 +107,7 @@ jobs:
           curl --fail-with-body --retry 30 --retry-delay 2 --retry-all-errors \
             http://127.0.0.1:8000/readyz || on_stack_failure
           curl --fail-with-body --retry 30 --retry-delay 2 --retry-all-errors \
-            http://127.0.0.1:5173/ || on_stack_failure
+            http://localhost:5173/ || on_stack_failure
 
       - name: Install Playwright Chromium
         working-directory: frontend
