@@ -6,7 +6,8 @@ import { z } from 'zod';
 import { Button } from '../../../components/ui/Button';
 import { FormError, TextField } from '../../../components/ui/Form';
 import { ApiError } from '../../../lib/api/errors';
-import { applyServerErrors, describeError } from '../../../lib/forms';
+import { describeError } from '../../../lib/forms';
+import { applyServerErrorsWithFocus } from '../../../lib/ux/formFocus';
 import { AuthLayout } from '../AuthLayout';
 import { authEyebrowClass, authFieldClass, authSubmitClass } from '../authUi';
 import { useLogin, useSession } from '../api';
@@ -17,6 +18,8 @@ const schema = z.object({
   password: z.string().min(1, 'Enter your password.').max(128),
 });
 type Values = z.infer<typeof schema>;
+
+const FIELD_ORDER = ['email', 'password'] as const;
 
 export function LoginPage() {
   const [params] = useSearchParams();
@@ -34,7 +37,14 @@ export function LoginPage() {
       await login.mutateAsync(values);
       await navigate(next, { replace: true });
     } catch (error) {
-      applyServerErrors(error, ['email', 'password'], form.setError);
+      applyServerErrorsWithFocus(
+        error,
+        FIELD_ORDER,
+        FIELD_ORDER,
+        form.setError,
+        form.control,
+        form.setFocus,
+      );
     }
   });
 

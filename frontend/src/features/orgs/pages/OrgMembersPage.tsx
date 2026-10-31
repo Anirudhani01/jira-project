@@ -1,4 +1,4 @@
-import { useState, type SyntheticEvent } from 'react';
+import { useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { useParams } from 'react-router';
 
 import { FormError, SubmitButton, TextField } from '../../../components/ui/Form';
@@ -6,6 +6,10 @@ import { ErrorState, LoadingState } from '../../../components/ui/States';
 import { NotFoundPage } from '../../../app/pages/NotFoundPage';
 import { ApiError } from '../../../lib/api/errors';
 import { describeError } from '../../../lib/forms';
+import {
+  useFocusOnSubmitAttempt,
+  type FocusableFieldRef,
+} from '../../../lib/ux/focusFirstInvalidControl';
 import {
   useInvitations,
   useInvite,
@@ -32,6 +36,22 @@ export function OrgMembersPage() {
   const revoke = useRevokeInvitation(slug);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('member');
+  const [inviteEmailError, setInviteEmailError] = useState<string | undefined>();
+  const [focusGeneration, setFocusGeneration] = useState(0);
+  const emailRef = useRef<HTMLInputElement>(null);
+
+  const inviteFocusFields = useMemo((): FocusableFieldRef[] => {
+    return [
+      {
+        hasError: Boolean(inviteEmailError),
+        focus: () => {
+          emailRef.current?.focus();
+        },
+      },
+    ];
+  }, [inviteEmailError]);
+
+  useFocusOnSubmitAttempt(focusGeneration, inviteFocusFields);
 
   if (org.isPending || members.isPending) return <LoadingState label="Loading members" />;
   if (org.error instanceof ApiError && org.error.status === 404) return <NotFoundPage />;
@@ -39,15 +59,44 @@ export function OrgMembersPage() {
   if (members.isError) return <ErrorState error={members.error} />;
 
   const isOwner = org.data.role === 'owner';
-  const failure = [update, remove, invite, revoke].find((m) => m.error)?.error ?? null;
+  const failure =
+    [update, remove, revoke].find((m) => m.error)?.error ??
+    (invite.error &&
+    !(
+      invite.error instanceof ApiError &&
+      invite.error.status === 422 &&
+      invite.error.fieldErrors.length
+    )
+      ? invite.error
+      : null);
+
+  const inviteFormFailure =
+    invite.error &&
+    !(
+      invite.error instanceof ApiError &&
+      invite.error.status === 422 &&
+      invite.error.fieldErrors.length
+    )
+      ? describeError(invite.error)
+      : null;
 
   const onInvite = (event: SyntheticEvent) => {
     event.preventDefault();
+    setInviteEmailError(undefined);
+    invite.reset();
     invite.mutate(
       { email, role },
       {
         onSuccess: () => {
           setEmail('');
+          setInviteEmailError(undefined);
+        },
+        onError: (error) => {
+          if (error instanceof ApiError) {
+            const fieldError = error.fieldErrors.find((e) => e.field === 'body.email');
+            if (fieldError) setInviteEmailError(fieldError.message);
+          }
+          setFocusGeneration((g) => g + 1);
         },
       },
     );
@@ -133,11 +182,14 @@ export function OrgMembersPage() {
           <h2 id="invite-title" className="text-lg font-semibold">
             Invite someone
           </h2>
-          <form onSubmit={onInvite} className="flex max-w-xl items-end gap-3">
+          <FormError>{inviteFormFailure}</FormError>
+          <form onSubmit={onInvite} noValidate className="flex max-w-xl items-end gap-3">
             <TextField
+              ref={emailRef}
               label="Email to invite"
               type="email"
               value={email}
+              error={inviteEmailError}
               onChange={(e) => {
                 setEmail(e.target.value);
               }}

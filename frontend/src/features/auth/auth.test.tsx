@@ -149,6 +149,16 @@ describe('SignupPage', () => {
     await user.click(screen.getByRole('button', { name: 'Create account' }));
     expect(await screen.findByText('This password has appeared in a breach.')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Password')).toHaveFocus();
+  });
+
+  it('focuses the first client validation error on submit', async () => {
+    mockApi({ 'GET /auth/session': () => problem(401, 'unauthenticated') });
+    renderApp('/signup');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Create account' }));
+    expect(await screen.findByText('Enter your name.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Name')).toHaveFocus();
   });
 
   it('validates the minimum password length before calling the API', async () => {

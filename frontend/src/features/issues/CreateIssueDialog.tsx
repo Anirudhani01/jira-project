@@ -1,9 +1,13 @@
-import { useState, type SyntheticEvent } from 'react';
+import { useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router';
 
 import { FormError, SubmitButton, TextField } from '../../components/ui/Form';
 import { ApiError } from '../../lib/api/errors';
 import { describeError } from '../../lib/forms';
+import {
+  useFocusOnSubmitAttempt,
+  type FocusableFieldRef,
+} from '../../lib/ux/focusFirstInvalidControl';
 import { useProjectMembers } from '../projects/api';
 
 import { useCreateIssue, useIssue, useIssueTypes, useLabels, usePriorities } from './api';
@@ -16,6 +20,8 @@ function useParentLookup(org: string, key: string) {
   const result = useIssue(org, trimmed);
   return trimmed ? result : undefined;
 }
+
+type ClientErrors = { summary?: string; parent?: string };
 
 /** Modal create form. One Idempotency-Key per dialog: resubmitting after a lost response
  * replays the original issue instead of creating a second one. */
@@ -42,6 +48,10 @@ export function CreateIssueDialog({
   const [assigneeId, setAssigneeId] = useState('');
   const [parentKey, setParentKey] = useState('');
   const [labelIds, setLabelIds] = useState<string[]>([]);
+  const [clientErrors, setClientErrors] = useState<ClientErrors>({});
+  const [focusGeneration, setFocusGeneration] = useState(0);
+  const summaryRef = useRef<HTMLInputElement>(null);
+  const parentRef = useRef<HTMLInputElement>(null);
 
   const effectiveType =
     typeId || (types.data?.find((t) => t.name === 'Task') ?? types.data?.[0])?.id;
@@ -52,16 +62,69 @@ export function CreateIssueDialog({
   const parent = useParentLookup(org, parentKey);
   const parentResolved = !parentKey.trim() || (parent && !parent.isPending && !parent.isError);
 
-  const fieldError = (field: string) =>
+  const serverFieldError = (field: string) =>
     create.error instanceof ApiError
       ? create.error.fieldErrors.find((e) => e.field === `body.${field}`)?.message
       : undefined;
 
+  const summaryError = clientErrors.summary ?? serverFieldError('summary');
+  const parentError =
+    clientErrors.parent ??
+    (parentKey.trim() && parent && !parent.isPending && parent.isError
+      ? 'No issue with that key.'
+      : undefined) ??
+    serverFieldError('parent_id');
+
+  const focusFields = useMemo((): FocusableFieldRef[] => {
+    return [
+      {
+        hasError: Boolean(summaryError),
+        focus: () => {
+          summaryRef.current?.focus();
+        },
+      },
+      {
+        hasError: Boolean(parentError),
+        focus: () => {
+          parentRef.current?.focus();
+        },
+      },
+    ];
+  }, [parentError, summaryError]);
+
+  useFocusOnSubmitAttempt(focusGeneration, focusFields);
+
+  const formFailure =
+    create.error &&
+    !(
+      create.error instanceof ApiError &&
+      create.error.status === 422 &&
+      create.error.fieldErrors.length
+    )
+      ? describeError(create.error)
+      : null;
+
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
     if (!effectiveType || !effectivePriority) return;
-    if (needsParent && !parentKey.trim()) return;
-    if (parentKey.trim() && !parent?.data) return;
+
+    setClientErrors({});
+    create.reset();
+
+    const nextClient: ClientErrors = {};
+    if (!summary.trim()) nextClient.summary = 'Enter a summary.';
+    if (needsParent && !parentKey.trim()) {
+      nextClient.parent = 'Enter a parent issue key.';
+    } else if (parentKey.trim() && parent && !parent.isPending && !parent.data) {
+      nextClient.parent = 'No issue with that key.';
+    }
+
+    if (Object.keys(nextClient).length > 0) {
+      setClientErrors(nextClient);
+      setFocusGeneration((g) => g + 1);
+      return;
+    }
+
     create.mutate(
       {
         idempotencyKey,
@@ -75,7 +138,12 @@ export function CreateIssueDialog({
           ...(labelIds.length ? { label_ids: labelIds } : {}),
         },
       },
-      { onSuccess: (issue) => void navigate(`/o/${org}/issues/${issue.key}`) },
+      {
+        onSuccess: (issue) => void navigate(`/o/${org}/issues/${issue.key}`),
+        onError: () => {
+          setFocusGeneration((g) => g + 1);
+        },
+      },
     );
   };
 
@@ -90,11 +158,11 @@ export function CreateIssueDialog({
           if (e.key === 'Escape') onClose();
         }}
       >
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} noValidate className="space-y-4">
           <h2 id="create-issue-title" className="text-lg font-semibold">
             Create issue in {project}
           </h2>
-          <FormError>{create.error ? describeError(create.error) : null}</FormError>
+          <FormError>{formFailure}</FormError>
           <label className="block text-sm font-medium">
             Type
             <select
@@ -112,11 +180,11 @@ export function CreateIssueDialog({
             </select>
           </label>
           <TextField
+            ref={summaryRef}
             label="Summary"
-            required
             maxLength={255}
             value={summary}
-            error={fieldError('summary')}
+            error={summaryError}
             onChange={(e) => {
               setSummary(e.target.value);
             }}
@@ -167,14 +235,11 @@ export function CreateIssueDialog({
             </select>
           </label>
           <TextField
+            ref={parentRef}
             label={needsParent ? 'Parent (required for a sub-task)' : 'Parent (optional)'}
             placeholder="e.g. WEB-3"
             value={parentKey}
-            error={
-              parentKey.trim() && parent && !parent.isPending && parent.isError
-                ? 'No issue with that key.'
-                : fieldError('parent_id')
-            }
+            error={parentError}
             onChange={(e) => {
               setParentKey(e.target.value);
             }}

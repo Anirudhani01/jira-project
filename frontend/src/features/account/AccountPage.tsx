@@ -10,7 +10,8 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { ErrorState, LoadingState } from '../../components/ui/States';
 import { ApiError } from '../../lib/api/errors';
 import type { SessionListItem } from '../../lib/api/types';
-import { applyServerErrors, describeError } from '../../lib/forms';
+import { describeError } from '../../lib/forms';
+import { applyServerErrorsWithFocus } from '../../lib/ux/formFocus';
 import {
   useChangePassword,
   useRevokeOtherSessions,
@@ -34,6 +35,10 @@ const passwordSchema = z
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
+const PROFILE_FIELD_ORDER = ['display_name'] as const;
+const PASSWORD_FIELD_ORDER = ['current_password', 'new_password', 'confirm_password'] as const;
+const PASSWORD_ALLOWED_SERVER = ['current_password', 'new_password'] as const;
+
 function nonFieldError(error: unknown): string | null {
   if (!error || (error instanceof ApiError && error.status === 422)) return null;
   return describeError(error);
@@ -49,7 +54,14 @@ function ProfileForm({ displayName, email }: { displayName: string; email: strin
     try {
       await update.mutateAsync(values);
     } catch (error) {
-      applyServerErrors(error, ['display_name'], form.setError);
+      applyServerErrorsWithFocus(
+        error,
+        PROFILE_FIELD_ORDER,
+        PROFILE_FIELD_ORDER,
+        form.setError,
+        form.control,
+        form.setFocus,
+      );
     }
   });
   return (
@@ -92,7 +104,14 @@ function PasswordForm() {
       form.reset();
       setFieldsKey((k) => k + 1);
     } catch (error) {
-      applyServerErrors(error, ['current_password', 'new_password'], form.setError);
+      applyServerErrorsWithFocus(
+        error,
+        PASSWORD_FIELD_ORDER,
+        PASSWORD_ALLOWED_SERVER,
+        form.setError,
+        form.control,
+        form.setFocus,
+      );
     }
   });
   return (

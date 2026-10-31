@@ -421,17 +421,21 @@ Milestone acceptance criteria, feature coverage matrix, and testing matrix: **[i
 
 | Files | Purpose |
 |-------|---------|
-| `frontend/src/lib/ux/mutationFeedback.ts` | Toast dedupe |
-| `frontend/src/components/ui/Form.tsx` | `focusFirstError()` helper |
-| Auth pages, `CreateIssueDialog.tsx`, `CreateProjectForm.tsx`, `AccountPage.tsx` | Apply helpers |
+| `frontend/src/lib/ux/mutationFeedback.ts` | Success toast dedupe by `feedbackInvocationId` |
+| `frontend/src/lib/ux/formFocus.ts` | RHF server focus via `applyServerErrorsWithFocus` |
+| `frontend/src/lib/ux/focusFirstInvalidControl.ts` | Non-RHF focus after render (issue create, org invite) |
+| `frontend/src/lib/forms.ts` | `firstMappedServerErrorField` (companion; `applyServerErrors` unchanged) |
+| Auth, create org/project, account, `CreateIssueDialog`, `OrgMembersPage` invite | Adopt focus helpers |
 
 **Acceptance criteria:**
 
-- [ ] 422 → inline fields; first error focused.
-- [ ] One success signal per mutation.
-- [ ] Duplicate submit prevented while pending.
+- [x] 422 → inline fields; first mapped registered field focused (`FIELD_ORDER`).
+- [x] `showSuccessToast` — one toast per invocation id; new user action → new id.
+- [x] Success UX: keep navigation / full-page / inline status; helper for future ephemeral toasts only.
+- [x] CSRF refresh success toast unchanged (recovery feedback, not wired to dedupe helper in M4).
+- [x] Duplicate submit prevented while pending.
 
-**Risks:** Double toast if both inline + hook — document precedence.
+**Risks:** Double toast if both inline + hook — M4 does not add form success toasts; precedence documented above.
 
 ---
 

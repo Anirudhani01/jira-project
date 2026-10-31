@@ -20,6 +20,25 @@ export function applyServerErrors<T extends FieldValues>(
   return applied;
 }
 
+/** First field in `fieldOrder` that would receive a mapped server error (same rules as applyServerErrors). */
+export function firstMappedServerErrorField<T extends FieldValues>(
+  error: unknown,
+  fieldOrder: readonly Path<T>[],
+  allowedFields: readonly Path<T>[],
+): Path<T> | null {
+  if (!(error instanceof ApiError)) return null;
+  const allowed = new Set(allowedFields);
+  const mapped = new Set<Path<T>>();
+  for (const fieldError of error.fieldErrors) {
+    const name = fieldError.field.replace(/^body\./, '') as Path<T>;
+    if (allowed.has(name)) mapped.add(name);
+  }
+  for (const name of fieldOrder) {
+    if (mapped.has(name)) return name;
+  }
+  return null;
+}
+
 /** A user-facing sentence for an API failure that is not tied to one field. */
 export function describeError(error: unknown): string {
   if (!(error instanceof ApiError)) return 'Something went wrong. Please try again.';

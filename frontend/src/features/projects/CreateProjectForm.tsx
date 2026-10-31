@@ -8,7 +8,8 @@ import { Button } from '../../components/ui/Button';
 import { FormError, SubmitButton, TextField } from '../../components/ui/Form';
 import { SimpleFormPage } from '../../components/ui/SimpleFormPage';
 import { ApiError } from '../../lib/api/errors';
-import { applyServerErrors, describeError } from '../../lib/forms';
+import { describeError } from '../../lib/forms';
+import { applyServerErrorsWithFocus } from '../../lib/ux/formFocus';
 
 import { useCreateProject } from './api';
 import { PROJECT_TEMPLATES, type ProjectTemplateId } from './projectTemplates';
@@ -23,6 +24,8 @@ const schema = z.object({
   board_type: z.enum(['kanban', 'scrum']),
 });
 type Values = z.infer<typeof schema>;
+
+const FIELD_ORDER = ['name', 'key'] as const;
 
 /** Create step; remounted when `templateId` changes so `board_type` matches the URL immediately. */
 export function CreateProjectForm({
@@ -46,7 +49,14 @@ export function CreateProjectForm({
       const project = await create.mutateAsync({ ...values, board_type: templateId });
       await navigate(`/o/${org}/p/${project.key}/board`);
     } catch (error) {
-      applyServerErrors(error, ['name', 'key'], form.setError);
+      applyServerErrorsWithFocus(
+        error,
+        FIELD_ORDER,
+        FIELD_ORDER,
+        form.setError,
+        form.control,
+        form.setFocus,
+      );
     }
   });
   const failure =
