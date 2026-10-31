@@ -113,7 +113,7 @@ describe('OrgHomePage', () => {
       '/o/acme/admin',
     );
     expect(screen.getAllByRole('link', { name: 'Settings' }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByRole('navigation', { name: 'Organization' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Global' })).toBeInTheDocument();
   });
 
   it('renders not-found for inaccessible organizations', async () => {

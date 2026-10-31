@@ -91,8 +91,8 @@ describe('app shell (PR 2)', () => {
     });
     renderApp('/o/acme');
     await screen.findByRole('navigation', { name: 'Primary' });
-    expect(await screen.findByRole('navigation', { name: 'Organization' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+    expect(await screen.findByRole('navigation', { name: 'Global' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'For you' })).toHaveAttribute('aria-current', 'page');
     await screen.findByRole('heading', { level: 1, name: 'Acme' });
     expect(
       screen.getByRole('combobox', { name: /search projects, issues, or people/i }),
@@ -123,7 +123,7 @@ describe('app shell (PR 2)', () => {
       'href',
       '/o/acme',
     );
-    expect(screen.queryByRole('navigation', { name: 'Organization' })).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Global' })).toBeNull();
     expect(container.querySelector('.admin-shell')).toBeTruthy();
     expect(
       await screen.findByRole('heading', { name: 'Organization settings' }),
@@ -158,14 +158,14 @@ describe('app shell (PR 2)', () => {
     });
   });
 
-  it('shows project nav with Board and Issues for kanban (no Backlog)', async () => {
+  it('shows project tabs Board and List for kanban (no Backlog)', async () => {
     mockProject(PROJECT_KANBAN);
     renderApp('/o/acme/p/WEB/board');
     const projectNav = await screen.findByRole('navigation', { name: 'Project' });
     expect(projectNav).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Board' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByRole('link', { name: 'Backlog' })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Issues' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'List' })).toBeInTheDocument();
   });
 
   it('shows board-shell top search on the board route only', async () => {
@@ -211,13 +211,13 @@ describe('app shell (PR 2)', () => {
     renderApp('/o/acme/p/WEB/board');
     const user = userEvent.setup();
     await screen.findByRole('navigation', { name: 'Project' });
-    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+    await user.click(await screen.findByRole('button', { name: 'Collapse sidebar' }));
     await waitFor(() => {
       expect(localStorage.getItem(SIDEBAR_COLLAPSED_KEY)).toBe('1');
     });
   });
 
-  it('navigates Board → Issues via the project sidebar', async () => {
+  it('navigates Board → List via the project tabs', async () => {
     mockApi({
       'GET /auth/session': () => json(SESSION),
       ...UNREAD,
@@ -241,7 +241,7 @@ describe('app shell (PR 2)', () => {
     });
     const { router } = renderApp('/o/acme/p/WEB/board');
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('link', { name: 'Issues' }));
+    await user.click(await screen.findByRole('link', { name: 'List' }));
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/o/acme/p/WEB/issues');
     });

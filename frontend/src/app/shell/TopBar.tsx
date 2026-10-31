@@ -17,8 +17,8 @@ import { ProfileMenu } from './ProfileMenu';
 import { ProjectSwitcher } from './ProjectSwitcher';
 import { useShell } from './ShellContext';
 import { ThemeToggle } from './ThemeToggle';
-import { useProjectContext, useShowProjectSidebar } from './useProjectContext';
-import { useShowOrgSidebar } from './useOrgShell';
+import { useProjectContext } from './useProjectContext';
+import { useShowGlobalSidebar } from './useOrgShell';
 
 function GuestNav() {
   const { pathname } = useLocation();
@@ -124,8 +124,7 @@ export function TopBar({
 }) {
   const session = useSession();
   const { setMobileNavOpen } = useShell();
-  const showProjectSidebar = useShowProjectSidebar();
-  const showOrgNav = useShowOrgSidebar();
+  const showGlobalNav = useShowGlobalSidebar();
   const ctx = useProjectContext();
   const signedIn = Boolean(session.data);
   const showGlobalSearch = signedIn && Boolean(ctx?.org) && (!ctx?.projectKey || boardShell);
@@ -148,9 +147,9 @@ export function TopBar({
             : `flex items-center gap-2 px-5 lg:gap-3 lg:px-6 h-14`
         }
       >
-        {showProjectSidebar || showOrgNav ? (
+        {showGlobalNav ? (
           <IconButton
-            label={showOrgNav ? 'Open organization navigation' : 'Open project navigation'}
+            label="Open navigation"
             size="sm"
             className="lg:hidden"
             onClick={() => {
