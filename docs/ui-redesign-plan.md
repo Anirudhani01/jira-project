@@ -246,6 +246,11 @@ Full build/test specs for each UI PR: section 8d.
 - [`docs/ui-redesign/pr-8-issue-list-plan.md`](ui-redesign/pr-8-issue-list-plan.md)
 - [`docs/ui-redesign/pr-project-settings-plan.md`](ui-redesign/pr-project-settings-plan.md)
 
+> **Reference research:** see [`ui-redesign/jira-reference-research.md`](ui-redesign/jira-reference-research.md)
+> for how the reference product behaves (sourced), the legal boundary on copying, the gap
+> analysis and proposed plan amendments (navigation model, board view settings, exact
+> shortcut keys). Amendments take effect once the decisions in that document are answered.
+
 ## 8d. PR-by-PR specification (PRs 2-18)
 
 Every PR obeys the contract in section 0 (existing routes/API contracts kept, lint + typecheck +
