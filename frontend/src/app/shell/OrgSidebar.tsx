@@ -103,8 +103,8 @@ function OrgSidebarNav({
           <BarChart3 className="size-4 shrink-0" aria-hidden />,
         )}
         {link(
-          `/o/${org}/settings`,
-          'Settings',
+          `/o/${org}/admin`,
+          'Administration',
           <Settings className="size-4 shrink-0" aria-hidden />,
         )}
       </nav>

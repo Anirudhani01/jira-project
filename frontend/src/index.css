@@ -262,6 +262,50 @@
   background: var(--org-dash-surface);
 }
 
+/* Enterprise Administration shell (scoped blue; mirrors org dashboard tokens). */
+.admin-shell {
+  --admin-bg: #f8fafc;
+  --admin-surface: #ffffff;
+  --admin-text: #0f172a;
+  --admin-muted: #64748b;
+  --admin-border: #e2e8f0;
+  --admin-accent: #2563eb;
+  --admin-accent-soft: #eff6ff;
+  --admin-accent-hover: #1d4ed8;
+  --admin-accent-on-soft: #1d4ed8;
+  background-color: var(--admin-bg);
+  color: var(--admin-text);
+  /* Map global accent utilities to admin blue (same pattern as org-dashboard-shell). */
+  --accent: var(--admin-accent);
+  --accent-hover: var(--admin-accent-hover);
+  --accent-fg: #ffffff;
+}
+
+.admin-shell .admin-page :focus-visible {
+  outline-color: var(--admin-accent);
+}
+
+.admin-shell .admin-card {
+  border-color: var(--admin-border);
+  background: var(--admin-surface);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+:root[data-theme='dark'] .admin-shell {
+  --admin-bg: #0f1419;
+  --admin-surface: #1a2332;
+  --admin-text: #e7eaf2;
+  --admin-muted: #94a3b8;
+  --admin-border: #2d3a4f;
+  --admin-accent: #3b82f6;
+  --admin-accent-soft: #1e3a5f;
+  --admin-accent-hover: #60a5fa;
+  --admin-accent-on-soft: #dbeafe;
+  --accent: var(--admin-accent);
+  --accent-hover: var(--admin-accent-hover);
+  --accent-fg: #ffffff;
+}
+
 /* Project board shell — scoped to `/o/:org/p/:key/board` only. */
 .board-shell {
   --board-bg: #f8fafc;

@@ -1,5 +1,6 @@
 import { useMatch } from 'react-router';
 
+import { useAdminShell } from './useAdminShell';
 import { useShowProjectSidebar } from './useProjectContext';
 
 /** Org slug from `/o/:org/...` when the user is inside an organization (with or without a project). */
@@ -8,11 +9,12 @@ export function useOrgSlug(): string | null {
   return match?.params.org ?? null;
 }
 
-/** Left org navigation (not the per-project sidebar). */
+/** Left org navigation (not the per-project sidebar). Hidden in Administration. */
 export function useShowOrgSidebar(): boolean {
   const inOrg = useMatch('/o/:org/*') !== null;
   const inProject = useShowProjectSidebar();
-  return inOrg && !inProject;
+  const inAdmin = useAdminShell();
+  return inOrg && !inProject && !inAdmin;
 }
 
 /** Organization home dashboard at `/o/:org` (scoped blue shell in M1+). */

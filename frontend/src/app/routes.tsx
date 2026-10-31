@@ -11,15 +11,13 @@ import { CreateOrgPage } from '../features/orgs/pages/CreateOrgPage';
 import { CreateProjectPage } from '../features/projects/CreateProjectPage';
 import { IssueDetailPage } from '../features/issues/IssueDetailPage';
 import { DesignPage } from './DesignPage';
-import { AuditPage } from '../features/audit/AuditPage';
 import { BacklogPage } from '../features/backlog/BacklogPage';
 import { BoardPage } from '../features/board/BoardPage';
 import { IssueListPage } from '../features/issues/IssueListPage';
 import { ProjectPage } from '../features/projects/ProjectPage';
 import { AcceptInvitationPage } from '../features/orgs/pages/AcceptInvitationPage';
 import { OrgHomePage } from '../features/orgs/pages/OrgHomePage';
-import { OrgMembersPage } from '../features/orgs/pages/OrgMembersPage';
-import { OrgSettingsPage } from '../features/orgs/pages/OrgSettingsPage';
+import { orgAdminChildRoutes } from '../features/admin/adminRoutes';
 
 import { AppShell } from './AppShell';
 import { OnlineStatusProvider } from './OnlineStatusProvider';
@@ -44,16 +42,19 @@ export const appShellChildRoutes: RouteObject[] = [
     children: [
       { path: 'account', element: <AccountPage /> },
       { path: 'orgs/new', element: <CreateOrgPage /> },
-      { path: 'o/:org', element: <OrgHomePage /> },
-      { path: 'o/:org/settings', element: <OrgSettingsPage /> },
-      { path: 'o/:org/settings/members', element: <OrgMembersPage /> },
-      { path: 'o/:org/settings/audit', element: <AuditPage /> },
-      { path: 'o/:org/projects/new', element: <CreateProjectPage /> },
-      { path: 'o/:org/p/:key', element: <ProjectPage /> },
-      { path: 'o/:org/p/:key/issues', element: <IssueListPage /> },
-      { path: 'o/:org/p/:key/board', element: <BoardPage /> },
-      { path: 'o/:org/p/:key/backlog', element: <BacklogPage /> },
-      { path: 'o/:org/issues/:issueKey', element: <IssueDetailPage /> },
+      {
+        path: 'o/:org',
+        children: [
+          { index: true, element: <OrgHomePage /> },
+          orgAdminChildRoutes,
+          { path: 'projects/new', element: <CreateProjectPage /> },
+          { path: 'p/:key', element: <ProjectPage /> },
+          { path: 'p/:key/issues', element: <IssueListPage /> },
+          { path: 'p/:key/board', element: <BoardPage /> },
+          { path: 'p/:key/backlog', element: <BacklogPage /> },
+          { path: 'issues/:issueKey', element: <IssueDetailPage /> },
+        ],
+      },
     ],
   },
   { path: '*', element: <NotFoundPage /> },
