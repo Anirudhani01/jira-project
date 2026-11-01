@@ -30,7 +30,6 @@ import {
 } from '../storyPoints/storyPointsIssueUx';
 import { isPolicyReady, useIssueStoryPointsPolicy } from '../storyPoints/useIssueStoryPointsPolicy';
 
-import { activeCatalogEntries } from './catalogUtils';
 import {
   useCreateIssue,
   useIssueSearch,
@@ -97,22 +96,19 @@ export function CreateIssueDialog({
 
   const search = useIssueSearch(org, project, parentQuery);
 
-  const activeTypes = useMemo(() => activeCatalogEntries(types.data ?? []), [types.data]);
-  const activePriorities = useMemo(
-    () => activeCatalogEntries(priorities.data ?? []),
-    [priorities.data],
-  );
+  const issueTypes = types.data ?? [];
+  const issuePriorities = priorities.data ?? [];
 
   const effectiveType =
     typeId ??
-    (defaultKind ? activeTypes.find((t) => t.kind === defaultKind) : undefined)?.id ??
-    (activeTypes.find((t) => t.name === 'Task') ?? activeTypes[0])?.id ??
+    (defaultKind ? issueTypes.find((t) => t.kind === defaultKind) : undefined)?.id ??
+    (issueTypes.find((t) => t.name === 'Task') ?? issueTypes[0])?.id ??
     null;
   const effectivePriority =
     priorityId ??
-    (activePriorities.find((p) => p.name === 'Medium') ?? activePriorities[0])?.id ??
+    (issuePriorities.find((p) => p.name === 'Medium') ?? issuePriorities[0])?.id ??
     null;
-  const selectedType = activeTypes.find((t) => t.id === effectiveType);
+  const selectedType = issueTypes.find((t) => t.id === effectiveType);
   const needsParent = selectedType?.kind === 'subtask';
 
   const serverFieldError = (field: string) =>
@@ -124,9 +120,7 @@ export function CreateIssueDialog({
   const pointsError =
     clientErrors.points ??
     serverFieldError('story_points') ??
-    (create.error
-      ? storyPointsMutationFieldMessage(create.error)
-      : undefined);
+    (create.error ? storyPointsMutationFieldMessage(create.error) : undefined);
 
   const focusFields = useMemo(
     (): FocusableFieldRef[] => [
@@ -202,9 +196,7 @@ export function CreateIssueDialog({
           ...(parent ? { parent_id: parent.id } : {}),
           ...(labelIds.length ? { label_ids: labelIds } : {}),
           ...(fixVersionId ? { fix_version_id: fixVersionId } : {}),
-          ...(showStoryPointsField && points.trim() !== ''
-            ? { story_points: Number(points) }
-            : {}),
+          ...(showStoryPointsField && points.trim() !== '' ? { story_points: Number(points) } : {}),
         },
       },
       {
@@ -252,7 +244,7 @@ export function CreateIssueDialog({
           <FormError>{formFailure}</FormError>
           <Combobox
             label="Type"
-            options={activeTypes.map((t) => ({
+            options={issueTypes.map((t) => ({
               value: t.id,
               label: t.name,
               icon: <TypeIcon kind={t.kind} name={t.name} />,
@@ -290,7 +282,7 @@ export function CreateIssueDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <Combobox
               label="Priority"
-              options={activePriorities.map((p) => ({
+              options={issuePriorities.map((p) => ({
                 value: p.id,
                 label: p.name,
                 icon: <PriorityIcon name={p.name} />,

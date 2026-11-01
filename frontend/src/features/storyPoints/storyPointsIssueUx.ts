@@ -7,9 +7,7 @@ export function storyPointsRangeMessage(max: number): string {
 }
 
 export type ParsedStoryPointsInput =
-  | { kind: 'empty' }
-  | { kind: 'value'; value: number }
-  | { kind: 'invalid' };
+  { kind: 'empty' } | { kind: 'value'; value: number } | { kind: 'invalid' };
 
 /** Empty input means no estimate; otherwise a whole number. */
 export function parseStoryPointsInput(text: string): ParsedStoryPointsInput {
@@ -21,10 +19,7 @@ export function parseStoryPointsInput(text: string): ParsedStoryPointsInput {
   return { kind: 'value', value };
 }
 
-export function clientStoryPointsInputError(
-  text: string,
-  effectiveMax: number,
-): string | null {
+export function clientStoryPointsInputError(text: string, effectiveMax: number): string | null {
   const parsed = parseStoryPointsInput(text);
   if (parsed.kind === 'invalid') {
     return storyPointsRangeMessage(effectiveMax);
@@ -107,16 +102,12 @@ export function storyPointsMutationFieldMessage(error: unknown): string | null {
   }
   if (api.code === 'story_points_disabled') {
     return (
-      storyPointsFieldMessage(api) ??
-      api.detail ??
-      'Story points are not enabled for this project.'
+      storyPointsFieldMessage(api) ?? api.detail ?? 'Story points are not enabled for this project.'
     );
   }
   if (api.code === 'story_points_exceeds_max') {
     return (
-      storyPointsFieldMessage(api) ??
-      api.detail ??
-      'Story points exceed the effective maximum.'
+      storyPointsFieldMessage(api) ?? api.detail ?? 'Story points exceed the effective maximum.'
     );
   }
   return null;

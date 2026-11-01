@@ -9,15 +9,17 @@ import { json, mockApi, problem } from '../../test/api';
 import { validPoints } from './CreateIssueDialog';
 import { StoryPointsField } from './StoryPointsField';
 
-const policyState = vi.hoisted((): {
-  status: 'ready' | 'conflict' | 'loading';
-  effectiveEnabled: boolean;
-  effectiveMax: number;
-} => ({
-  status: 'ready',
-  effectiveEnabled: true,
-  effectiveMax: 100,
-}));
+const policyState = vi.hoisted(
+  (): {
+    status: 'ready' | 'conflict' | 'loading';
+    effectiveEnabled: boolean;
+    effectiveMax: number;
+  } => ({
+    status: 'ready',
+    effectiveEnabled: true,
+    effectiveMax: 100,
+  }),
+);
 
 vi.mock('../storyPoints/useIssueStoryPointsPolicy', () => ({
   useIssueStoryPointsPolicy: () => ({

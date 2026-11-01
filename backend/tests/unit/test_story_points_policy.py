@@ -28,16 +28,12 @@ def test_no_op_skips_validation_when_disabled() -> None:
 
 def test_clear_always_allowed_even_when_disabled_or_in_conflict() -> None:
     validate_story_points_mutation(_policy(enabled=False), None, 5)
-    validate_story_points_mutation(
-        _policy(conflicts=("story_points_max_override",)), None, 8
-    )
+    validate_story_points_mutation(_policy(conflicts=("story_points_max_override",)), None, 8)
 
 
 def test_conflict_rejects_non_null_change() -> None:
     with pytest.raises(AppError) as exc:
-        validate_story_points_mutation(
-            _policy(conflicts=("story_points_max_override",)), 8, 5
-        )
+        validate_story_points_mutation(_policy(conflicts=("story_points_max_override",)), 8, 5)
     assert exc.value.status == 409
     assert exc.value.code == "project_settings_conflict"
 

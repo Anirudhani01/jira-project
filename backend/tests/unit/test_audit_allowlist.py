@@ -6,6 +6,4 @@ def test_org_settings_updated_metadata_allowlist() -> None:
 
 
 def test_project_settings_updated_metadata_allowlist() -> None:
-    assert ACTION_METADATA_ALLOWLIST["project.settings.updated"] == frozenset(
-        {"project", "fields"}
-    )
+    assert ACTION_METADATA_ALLOWLIST["project.settings.updated"] == frozenset({"project", "fields"})

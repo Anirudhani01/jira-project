@@ -1,5 +1,5 @@
 import { MoreHorizontal, Pencil } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 
 import { NotFoundPage } from '../../app/pages/NotFoundPage';
@@ -48,7 +48,6 @@ import {
   useUpdateIssue,
   type IssueChanges,
 } from './api';
-import { selectableCatalogEntries } from './catalogUtils';
 import {
   IssueListAssigneeMenu,
   IssueListPriorityMenu,
@@ -175,14 +174,8 @@ function IssueView({
   const online = useAppOnline();
   const types = useIssueTypes(org);
   const priorities = usePriorities(org);
-  const selectableTypes = useMemo(
-    () => selectableCatalogEntries(types.data ?? [], issue.type.id),
-    [types.data, issue.type.id],
-  );
-  const selectablePriorities = useMemo(
-    () => selectableCatalogEntries(priorities.data ?? [], issue.priority.id),
-    [priorities.data, issue.priority.id],
-  );
+  const selectableTypes = types.data ?? [];
+  const selectablePriorities = priorities.data ?? [];
   const members = useProjectMembers(org, issue.project_key);
   const storyPointsPolicy = useIssueStoryPointsPolicy(org, issue.project_key);
   const labels = useLabels(org, issue.project_key);

@@ -57,7 +57,9 @@ export function StoryPointsConflictPanel({
       role="alert"
       className="space-y-3 rounded-lg border border-warning/50 bg-[color-mix(in_srgb,var(--admin-warning,var(--color-warning))_8%,transparent)] p-4"
     >
-      <h3 className="text-sm font-semibold text-fg">Project overrides conflict with organization settings</h3>
+      <h3 className="text-sm font-semibold text-fg">
+        Project overrides conflict with organization settings
+      </h3>
       <p className="text-sm text-fg-muted">
         {conflict.detail ??
           'Project overrides no longer match organization settings. Update or reset the conflicting override fields.'}

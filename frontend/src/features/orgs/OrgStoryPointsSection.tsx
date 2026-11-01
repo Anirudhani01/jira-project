@@ -38,15 +38,7 @@ function ReadOnlyStoryPoints({ enabled, max }: { enabled: boolean; max: number }
   );
 }
 
-function StoryPointsForm({
-  slug,
-  enabled,
-  max,
-}: {
-  slug: string;
-  enabled: boolean;
-  max: number;
-}) {
+function StoryPointsForm({ slug, enabled, max }: { slug: string; enabled: boolean; max: number }) {
   const update = useUpdateOrgSettings(slug);
   const form = useForm<OrgStoryPointsFormValues>({
     resolver: zodResolver(orgStoryPointsFormSchema),
@@ -147,13 +139,7 @@ function StoryPointsForm({
   );
 }
 
-export function OrgStoryPointsSection({
-  slug,
-  canManage,
-}: {
-  slug: string;
-  canManage: boolean;
-}) {
+export function OrgStoryPointsSection({ slug, canManage }: { slug: string; canManage: boolean }) {
   const settings = useOrgSettings(slug);
 
   if (settings.isPending) {
@@ -166,16 +152,8 @@ export function OrgStoryPointsSection({
   const { story_points_enabled, story_points_max } = settings.data;
 
   if (!canManage) {
-    return (
-      <ReadOnlyStoryPoints enabled={story_points_enabled} max={story_points_max} />
-    );
+    return <ReadOnlyStoryPoints enabled={story_points_enabled} max={story_points_max} />;
   }
 
-  return (
-    <StoryPointsForm
-      slug={slug}
-      enabled={story_points_enabled}
-      max={story_points_max}
-    />
-  );
+  return <StoryPointsForm slug={slug} enabled={story_points_enabled} max={story_points_max} />;
 }

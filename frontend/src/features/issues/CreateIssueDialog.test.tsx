@@ -57,15 +57,17 @@ vi.mock('../projects/api', () => ({
   useProjectMembers: () => ({ data: [] }),
 }));
 
-const policyState = vi.hoisted((): {
-  status: 'ready' | 'conflict' | 'loading';
-  effectiveEnabled: boolean;
-  effectiveMax: number;
-} => ({
-  status: 'ready',
-  effectiveEnabled: true,
-  effectiveMax: 100,
-}));
+const policyState = vi.hoisted(
+  (): {
+    status: 'ready' | 'conflict' | 'loading';
+    effectiveEnabled: boolean;
+    effectiveMax: number;
+  } => ({
+    status: 'ready',
+    effectiveEnabled: true,
+    effectiveMax: 100,
+  }),
+);
 
 vi.mock('../storyPoints/useIssueStoryPointsPolicy', () => ({
   useIssueStoryPointsPolicy: () => ({

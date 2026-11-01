@@ -11,7 +11,11 @@ import { FormError, SubmitButton } from '../../components/ui/Form';
 import { Field } from '../../components/ui/Input';
 import { ErrorState, LoadingState } from '../../components/ui/States';
 import { ApiError } from '../../lib/api/errors';
-import type { OrgSettings, ProjectSettings, UpdateProjectSettingsRequest } from '../../lib/api/types';
+import type {
+  OrgSettings,
+  ProjectSettings,
+  UpdateProjectSettingsRequest,
+} from '../../lib/api/types';
 import { describeError } from '../../lib/forms';
 import { permissionDeniedInlineMessage } from '../../lib/ux/permissionDenied';
 import { cn } from '../../lib/cn';
@@ -107,9 +111,7 @@ function EffectiveSummary({ settings }: { settings: ProjectSettings }) {
 }
 
 function ProvenanceBadge({ source }: { source: 'organization' | 'project' }) {
-  return (
-    <Badge tone={source === 'project' ? 'info' : 'neutral'}>{provenanceLabel(source)}</Badge>
-  );
+  return <Badge tone={source === 'project' ? 'info' : 'neutral'}>{provenanceLabel(source)}</Badge>;
 }
 
 function ReadOnlyEstimates({
@@ -224,9 +226,7 @@ function EstimatesForm({
   const failure =
     failureRaw && !(failureRaw instanceof ApiError && failureRaw.status === 422)
       ? (permissionDeniedInlineMessage(failureRaw, 'project-settings') ??
-        (isProjectSettingsConflict(failureRaw)
-          ? null
-          : describeError(failureRaw)))
+        (isProjectSettingsConflict(failureRaw) ? null : describeError(failureRaw)))
       : null;
 
   const adminGeneral = `/o/${encodeURIComponent(orgSlug)}/admin/general#org-settings-story-points`;
@@ -290,10 +290,7 @@ function EstimatesForm({
           only. Inherit or set Disabled to align with organization policy.
         </p>
       ) : null}
-      <Field
-        label="Maximum story points"
-        error={form.formState.errors.maxCustom?.message ?? null}
-      >
+      <Field label="Maximum story points" error={form.formState.errors.maxCustom?.message ?? null}>
         {(field) => (
           <div className="space-y-2">
             <select

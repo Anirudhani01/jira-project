@@ -25,9 +25,7 @@ class ResolvedStoryPointsSettings:
     provenance: StoryPointsProvenance
 
 
-def effective_story_points_enabled(
-    org_enabled: bool, enabled_override: bool | None
-) -> bool:
+def effective_story_points_enabled(org_enabled: bool, enabled_override: bool | None) -> bool:
     inherit_enabled = True if enabled_override is None else enabled_override
     return org_enabled and inherit_enabled
 
@@ -43,9 +41,7 @@ def resolve_story_points_settings(
     enabled_override: bool | None,
     max_override: int | None,
 ) -> ResolvedStoryPointsSettings:
-    organization = StoryPointsLayer(
-        story_points_enabled=org_enabled, story_points_max=org_max
-    )
+    organization = StoryPointsLayer(story_points_enabled=org_enabled, story_points_max=org_max)
     effective = StoryPointsLayer(
         story_points_enabled=effective_story_points_enabled(org_enabled, enabled_override),
         story_points_max=effective_story_points_max(org_max, max_override),

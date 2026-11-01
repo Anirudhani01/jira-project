@@ -116,9 +116,7 @@ async def get_project(access: ViewProject, services: Services) -> ProjectRespons
 
 
 @router.get("/{project_key}/settings", response_model=ProjectSettingsResponse)
-async def get_project_settings(
-    access: ViewProject, services: Services
-) -> ProjectSettingsResponse:
+async def get_project_settings(access: ViewProject, services: Services) -> ProjectSettingsResponse:
     return await settings_service.get_project_settings(services, access)
 
 

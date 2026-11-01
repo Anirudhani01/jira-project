@@ -51,6 +51,7 @@ ALLOWED_TABLES = frozenset(
         "projects",
         "project_issue_counters",
         "project_memberships",
+        "project_settings",
         "boards",
         "board_columns",
         "board_column_statuses",

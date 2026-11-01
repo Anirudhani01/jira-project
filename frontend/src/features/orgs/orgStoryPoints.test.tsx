@@ -55,8 +55,7 @@ describe('Org story points (General settings)', () => {
       'GET /auth/session': () => json(SESSION),
       'GET /orgs/acme': () => json(ORG_OWNER),
       ...SHELL,
-      'PATCH /orgs/acme/settings': () =>
-        json({ ...ORG_SETTINGS, story_points_enabled: false }),
+      'PATCH /orgs/acme/settings': () => json({ ...ORG_SETTINGS, story_points_enabled: false }),
     });
     renderApp('/o/acme/admin/general');
     const user = userEvent.setup();

@@ -98,9 +98,7 @@ async def test_settings_conflict_blocks_non_null_but_allows_clear_and_other_fiel
     issue_id = uuid.UUID(base["id"])
     assert await story_points_in_db(issue_id) == 5
     assert await activity_count(issue_id) == 0
-    summary = await patch(
-        ctx.http, ctx.slug, base["key"], {"summary": "Still conflicted"}, '"v1"'
-    )
+    summary = await patch(ctx.http, ctx.slug, base["key"], {"summary": "Still conflicted"}, '"v1"')
     assert summary.status_code == 200
     cleared = await patch(ctx.http, ctx.slug, base["key"], {"story_points": None}, '"v2"')
     assert cleared.status_code == 200

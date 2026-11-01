@@ -14,8 +14,7 @@ def project_settings_conflict(fields: list[str]) -> AppError:
         "Project overrides no longer match organization settings. "
         "Update or reset the conflicting override fields.",
         errors=[
-            {"field": field, "message": "conflicts with organization settings"}
-            for field in fields
+            {"field": field, "message": "conflicts with organization settings"} for field in fields
         ],
     )
 

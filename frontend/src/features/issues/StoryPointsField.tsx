@@ -140,11 +140,11 @@ export function StoryPointsField({
         </Button>
       </div>
       {policy.status === 'conflict' ? (
-        <p className="text-xs text-fg-muted">You can clear the estimate; other changes may be blocked.</p>
+        <p className="text-xs text-fg-muted">
+          You can clear the estimate; other changes may be blocked.
+        </p>
       ) : null}
-      {readyPolicy && !readyPolicy.effectiveEnabled ? (
-        <StoryPointsDisabledHint />
-      ) : null}
+      {readyPolicy && !readyPolicy.effectiveEnabled ? <StoryPointsDisabledHint /> : null}
       {error ? (
         <p role="alert" className="text-xs text-danger">
           {error}

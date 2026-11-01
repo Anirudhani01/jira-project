@@ -129,9 +129,7 @@ async def get_project_settings(
         _,
     ):
         org = await orgs_repository.get_organization_settings(session)
-        overrides = await settings_repository.get_project_settings_overrides(
-            session, project.id
-        )
+        overrides = await settings_repository.get_project_settings_overrides(session, project.id)
         _ensure_no_stored_conflicts(
             org_enabled=org.story_points_enabled,
             org_max=org.story_points_max,
@@ -161,9 +159,7 @@ async def update_project_settings(
         else _SENTINEL
     )
     max_patch: MaxPatch = (
-        body.story_points_max_override
-        if "story_points_max_override" in fields_set
-        else _SENTINEL
+        body.story_points_max_override if "story_points_max_override" in fields_set else _SENTINEL
     )
 
     async with project_transaction(services, access, Permission.PROJECT_MANAGE) as (
@@ -208,9 +204,7 @@ async def update_project_settings(
             else enabled_patch
         )
         new_max = (
-            current_overrides.story_points_max_override
-            if max_patch is _SENTINEL
-            else max_patch
+            current_overrides.story_points_max_override if max_patch is _SENTINEL else max_patch
         )
         _validate_patch_values(
             org_enabled=org.story_points_enabled,

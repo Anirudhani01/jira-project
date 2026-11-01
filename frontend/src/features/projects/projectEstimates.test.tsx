@@ -167,8 +167,7 @@ describe('Project Estimates tab', () => {
   it('disables project enable override when organization disabled', async () => {
     mockApi({
       ...shell({
-        'GET /orgs/acme/settings': () =>
-          json({ ...ORG_SETTINGS, story_points_enabled: false }),
+        'GET /orgs/acme/settings': () => json({ ...ORG_SETTINGS, story_points_enabled: false }),
         'GET /orgs/acme/projects/WEB/settings': () =>
           json({
             organization: { story_points_enabled: false, story_points_max: 100 },
@@ -182,9 +181,7 @@ describe('Project Estimates tab', () => {
     renderApp('/o/acme/p/WEB?tab=estimates');
     const enabled = await screen.findByLabelText('Enable story points');
     expect(enabled.querySelector('option[value="enabled"]')).toBeDisabled();
-    expect(
-      screen.getByText(/Story points are disabled for the organization/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Story points are disabled for the organization/i)).toBeInTheDocument();
   });
 
   it('viewer sees read-only configuration', async () => {

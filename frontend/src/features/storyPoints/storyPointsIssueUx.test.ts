@@ -75,8 +75,6 @@ describe('storyPointsMutationFieldMessage', () => {
       title: 'Validation',
       fieldErrors: [{ field: 'body.story_points', message: 'Not enabled.' }],
     });
-    expect(storyPointsMutationFieldMessage(disabled)).toBe(
-      'Not enabled.',
-    );
+    expect(storyPointsMutationFieldMessage(disabled)).toBe('Not enabled.');
   });
 });

@@ -51,8 +51,7 @@ def upgrade() -> None:
             ondelete="RESTRICT",
         ),
         sa.CheckConstraint(
-            "story_points_max_override IS NULL OR "
-            "story_points_max_override BETWEEN 1 AND 100",
+            "story_points_max_override IS NULL OR story_points_max_override BETWEEN 1 AND 100",
             name="ck_project_settings_story_points_max_override_range",
         ),
     )

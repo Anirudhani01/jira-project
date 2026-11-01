@@ -157,9 +157,7 @@ async def test_project_max_cannot_exceed_organization_max(tenant: Tenant) -> Non
         json={"story_points_max": 21},
         headers={"X-CSRF-Token": await csrf(tenant.http)},
     )
-    response = await patch_settings(
-        tenant.http, tenant.slug, {"story_points_max_override": 50}
-    )
+    response = await patch_settings(tenant.http, tenant.slug, {"story_points_max_override": 50})
     assert response.status_code == 422
     assert response.json()["code"] == "validation_error"
 
@@ -234,9 +232,7 @@ async def test_org_max_decrease_conflicts_until_override_reset(tenant: Tenant) -
     fields = {e["field"] for e in conflict.json()["errors"]}
     assert "story_points_max_override" in fields
 
-    fixed = await patch_settings(
-        tenant.http, tenant.slug, {"story_points_max_override": None}
-    )
+    fixed = await patch_settings(tenant.http, tenant.slug, {"story_points_max_override": None})
     assert fixed.status_code == 200
     assert fixed.json()["effective"]["story_points_max"] == 21
     assert (await tenant.http.get(settings_path(tenant.slug))).status_code == 200
@@ -256,9 +252,7 @@ async def test_conflict_recovery_via_corrected_max_override(tenant: Tenant) -> N
     assert conflict.status_code == 409
     assert conflict.json()["code"] == "project_settings_conflict"
 
-    corrected = await patch_settings(
-        tenant.http, tenant.slug, {"story_points_max_override": 8}
-    )
+    corrected = await patch_settings(tenant.http, tenant.slug, {"story_points_max_override": 8})
     assert corrected.status_code == 200
     assert corrected.json()["effective"]["story_points_max"] == 8
     assert (await tenant.http.get(settings_path(tenant.slug))).status_code == 200
@@ -303,9 +297,7 @@ async def test_failed_settings_patch_does_not_persist_or_audit(tenant: Tenant) -
 
     await create_project(tenant.http, tenant.slug, key="MOB")
     assert (
-        await patch_settings(
-            tenant.http, tenant.slug, {"story_points_max_override": 5}, key="MOB"
-        )
+        await patch_settings(tenant.http, tenant.slug, {"story_points_max_override": 5}, key="MOB")
     ).status_code == 200
     mob_id = await project_id_for(tenant.org_id, "MOB")
     audits = await settings_updated_audit_count(tenant.org_id)
@@ -327,9 +319,7 @@ async def test_failed_settings_patch_does_not_persist_or_audit(tenant: Tenant) -
 async def test_org_disable_conflicts_with_stored_re_enable_override(tenant: Tenant) -> None:
     await create_project(tenant.http, tenant.slug)
     assert (
-        await patch_settings(
-            tenant.http, tenant.slug, {"story_points_enabled_override": True}
-        )
+        await patch_settings(tenant.http, tenant.slug, {"story_points_enabled_override": True})
     ).status_code == 200
     org_patch = await tenant.http.patch(
         org_settings_path(tenant.slug),
@@ -340,12 +330,8 @@ async def test_org_disable_conflicts_with_stored_re_enable_override(tenant: Tena
     conflict = await tenant.http.get(settings_path(tenant.slug))
     assert conflict.status_code == 409
     assert conflict.json()["code"] == "project_settings_conflict"
-    assert "story_points_enabled_override" in {
-        e["field"] for e in conflict.json()["errors"]
-    }
-    fixed = await patch_settings(
-        tenant.http, tenant.slug, {"story_points_enabled_override": None}
-    )
+    assert "story_points_enabled_override" in {e["field"] for e in conflict.json()["errors"]}
+    fixed = await patch_settings(tenant.http, tenant.slug, {"story_points_enabled_override": None})
     assert fixed.status_code == 200
     assert fixed.json()["effective"]["story_points_enabled"] is False
     assert (await tenant.http.get(settings_path(tenant.slug))).status_code == 200
