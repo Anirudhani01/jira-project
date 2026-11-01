@@ -98,11 +98,7 @@ def _validate_patch_values(
             "story_points_enabled_override",
             "Story Points are disabled for the organization.",
         )
-    if (
-        max_override is not _SENTINEL
-        and isinstance(max_override, int)
-        and max_override > org_max
-    ):
+    if max_override is not _SENTINEL and isinstance(max_override, int) and max_override > org_max:
         raise validation_error(
             "story_points_max_override",
             f"Cannot exceed the organization maximum ({org_max}).",
