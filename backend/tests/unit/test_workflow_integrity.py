@@ -7,13 +7,11 @@ from app.modules.projects.workflow_integrity import (
 )
 
 
-class _Orig:
+class _Orig(Exception):
     def __init__(self, *, constraint_name: str | None = None, detail: str = "") -> None:
+        super().__init__(detail or constraint_name or "")
         self.constraint_name = constraint_name
         self.detail = detail
-
-    def __str__(self) -> str:
-        return self.detail or self.constraint_name or ""
 
 
 def test_detects_status_name_unique_constraint() -> None:

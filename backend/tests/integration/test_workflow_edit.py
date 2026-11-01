@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 from contextlib import AsyncExitStack
-from typing import Any
+from typing import Any, cast
 
 import httpx
 import pytest
@@ -55,7 +55,7 @@ def _body_from_workflow(wf: dict[str, Any], **overrides: object) -> dict[str, An
 async def _get_workflow(client: httpx.AsyncClient, slug: str, key: str = "WEB") -> dict[str, Any]:
     response = await client.get(f"/api/v1/orgs/{slug}/projects/{key}/workflow")
     assert response.status_code == 200
-    return response.json()
+    return cast(dict[str, Any], response.json())
 
 
 async def _put_workflow(
@@ -426,12 +426,12 @@ async def test_concurrent_puts_adding_same_new_status_name(project_ctx: Ctx) -> 
 async def test_unrelated_integrity_error_is_not_status_name_taken(
     project_ctx: Ctx, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    class _Orig:
+    class _Orig(Exception):
         constraint_name = "fk_workflow_transitions_org_id_workflow_statuses"
         detail = "foreign key violation"
 
     async def fail_upsert(*args: object, **kwargs: object) -> None:
-        raise IntegrityError("INSERT", {}, _Orig())
+        raise IntegrityError("INSERT", {}, _Orig("foreign key violation"))
 
     monkeypatch.setattr(projects_repository, "upsert_workflow_statuses", fail_upsert)
     wf = await _get_workflow(project_ctx.http, project_ctx.slug)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 from app.modules.projects.schemas import (
     ReplaceWorkflowRequest,
@@ -201,41 +201,43 @@ def diff_graph(
         out.initial_from = current.initial_status_id
         out.initial_to = desired.initial_status_id
     removing = removed_status_ids(current, desired)
-    for status_id, spec in desired.statuses.items():
+    for status_id, status_spec in desired.statuses.items():
         if status_id not in current.statuses:
-            out.statuses_created.append((status_id, spec.name))
+            out.statuses_created.append((status_id, status_spec.name))
             continue
         old = current.statuses[status_id]
         fields: list[str] = []
-        if old.name != spec.name:
+        if old.name != status_spec.name:
             fields.append("name")
-        if old.category != spec.category:
+        if old.category != status_spec.category:
             fields.append("category")
-        if old.position != spec.position:
+        if old.position != status_spec.position:
             fields.append("position")
         if fields:
             out.statuses_updated.append((status_id, fields))
     for status_id in removing:
         replacement = remaps.get(status_id)
         out.statuses_deleted.append((status_id, replacement, issue_counts.get(status_id, 0)))
-    for transition_id, spec in desired.transitions.items():
+    for transition_id, transition_spec in desired.transitions.items():
         if transition_id not in current.transitions:
-            out.transitions_created.append((transition_id, spec.name))
+            out.transitions_created.append((transition_id, transition_spec.name))
     for transition_id in set(current.transitions) - set(desired.transitions):
         out.transitions_deleted.append(transition_id)
     return out
 
 
 def graph_from_view(view: dict[str, Any], revision: int) -> WorkflowGraphState:
+    status_rows = cast(list[Any], view["statuses"])
+    transition_rows = cast(list[Any], view["transitions"])
     statuses = {
         s.id: StatusSpec(id=s.id, name=s.name, category=s.category, position=s.position)
-        for s in view["statuses"]  # type: ignore[attr-defined]
+        for s in status_rows
     }
     transitions = {
         t.id: TransitionSpec(
             id=t.id, name=t.name, from_status_id=t.from_status_id, to_status_id=t.to_status_id
         )
-        for t in view["transitions"]  # type: ignore[attr-defined]
+        for t in transition_rows
     }
     return WorkflowGraphState(
         name=view["name"],

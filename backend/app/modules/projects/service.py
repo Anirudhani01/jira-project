@@ -10,8 +10,10 @@
 """
 
 import uuid
+from typing import Any, cast
 
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.authz.deps import OrgAccess, not_found, org_transaction
 from app.authz.permissions import Permission
@@ -20,12 +22,14 @@ from app.core.errors import AppError
 from app.modules.audit import service as audit
 from app.modules.boards import repository as boards_repo
 from app.modules.boards.column_mapping import validate_column_mapping
+from app.modules.boards.schemas import ColumnInput
 from app.modules.identity.deps import IdentityServices
 from app.modules.orgs import repository as orgs
 from app.modules.projects import repository, workflow_edit
 from app.modules.projects.models import Project
 from app.modules.projects.repository import NewProject, ProjectMemberRow
 from app.modules.projects.schemas import ReplaceWorkflowRequest
+from app.modules.projects.workflow_edit import AuditDiff
 from app.modules.projects.workflow_errors import (
     status_in_use,
     status_name_taken,
@@ -177,15 +181,16 @@ async def workflow(services: IdentityServices, access: ProjectAccess) -> dict[st
 
 
 async def _record_workflow_audit(
-    session,
-    diff,
+    session: AsyncSession,
+    diff: AuditDiff,
     *,
     client: ClientInfo,
     actor_id: uuid.UUID,
     project: Project,
     column_count: int | None = None,
 ) -> None:
-    target = {"target_type": "project", "target_id": str(project.id)}
+    target_type = "project"
+    target_id = str(project.id)
     meta_base = {"project": project.key}
     if diff.metadata_fields:
         await audit.record(
@@ -193,8 +198,9 @@ async def _record_workflow_audit(
             "workflow.metadata.updated",
             client,
             actor_user_id=actor_id,
+            target_type=target_type,
+            target_id=target_id,
             metadata={**meta_base, "fields": ",".join(diff.metadata_fields)},
-            **target,
         )
     if diff.initial_from is not None and diff.initial_to is not None:
         await audit.record(
@@ -202,12 +208,13 @@ async def _record_workflow_audit(
             "workflow.initial_status.changed",
             client,
             actor_user_id=actor_id,
+            target_type=target_type,
+            target_id=target_id,
             metadata={
                 **meta_base,
                 "from_status_id": str(diff.initial_from),
                 "to_status_id": str(diff.initial_to),
             },
-            **target,
         )
     for status_id, name in diff.statuses_created:
         await audit.record(
@@ -215,8 +222,9 @@ async def _record_workflow_audit(
             "workflow.status.created",
             client,
             actor_user_id=actor_id,
+            target_type=target_type,
+            target_id=target_id,
             metadata={**meta_base, "status_id": str(status_id), "name": name},
-            **target,
         )
     for status_id, fields in diff.statuses_updated:
         await audit.record(
@@ -224,8 +232,9 @@ async def _record_workflow_audit(
             "workflow.status.updated",
             client,
             actor_user_id=actor_id,
+            target_type=target_type,
+            target_id=target_id,
             metadata={**meta_base, "status_id": str(status_id), "fields": ",".join(fields)},
-            **target,
         )
     for status_id, replacement, count in diff.statuses_deleted:
         await audit.record(
@@ -233,13 +242,14 @@ async def _record_workflow_audit(
             "workflow.status.deleted",
             client,
             actor_user_id=actor_id,
+            target_type=target_type,
+            target_id=target_id,
             metadata={
                 **meta_base,
                 "status_id": str(status_id),
                 "replacement_status_id": str(replacement) if replacement else "",
                 "issues_remapped": count,
             },
-            **target,
         )
     for transition_id, name in diff.transitions_created:
         await audit.record(
@@ -247,8 +257,9 @@ async def _record_workflow_audit(
             "workflow.transition.created",
             client,
             actor_user_id=actor_id,
+            target_type=target_type,
+            target_id=target_id,
             metadata={**meta_base, "transition_id": str(transition_id), "name": name},
-            **target,
         )
     for transition_id in diff.transitions_deleted:
         await audit.record(
@@ -256,8 +267,9 @@ async def _record_workflow_audit(
             "workflow.transition.deleted",
             client,
             actor_user_id=actor_id,
+            target_type=target_type,
+            target_id=target_id,
             metadata={**meta_base, "transition_id": str(transition_id)},
-            **target,
         )
     if diff.board_mapping_changed and column_count is not None:
         await audit.record(
@@ -265,8 +277,9 @@ async def _record_workflow_audit(
             "workflow.board_mapping.updated",
             client,
             actor_user_id=actor_id,
+            target_type=target_type,
+            target_id=target_id,
             metadata={**meta_base, "columns": column_count},
-            **target,
         )
 
 
@@ -298,21 +311,23 @@ async def replace_workflow(
         workflow_edit.validate_remaps(removing, desired, issue_counts, remaps)
 
         def _column_canonical_from_view(
-            columns: list[dict[str, object]],
-        ) -> list[dict[str, object]]:
+            columns: list[dict[str, Any]],
+        ) -> list[dict[str, Any]]:
             return sorted(
                 [
                     {
                         "name": column["name"],
                         "position": column["position"],
-                        "status_ids": sorted(str(s) for s in column["status_ids"]),
+                        "status_ids": sorted(str(s) for s in cast(list[Any], column["status_ids"])),
                     }
                     for column in columns
                 ],
-                key=lambda row: row["position"],
+                key=lambda row: int(cast(int, row["position"])),
             )
 
-        def _column_canonical_from_body(columns) -> list[dict[str, object]]:
+        def _column_canonical_from_body(
+            columns: list[ColumnInput],
+        ) -> list[dict[str, Any]]:
             return sorted(
                 [
                     {
@@ -322,10 +337,10 @@ async def replace_workflow(
                     }
                     for index, column in enumerate(columns)
                 ],
-                key=lambda row: row["position"],
+                key=lambda row: int(cast(int, row["position"])),
             )
 
-        current_columns = _column_canonical_from_view(view["columns"])  # type: ignore[arg-type]
+        current_columns = _column_canonical_from_view(cast(list[dict[str, Any]], view["columns"]))
         desired_columns = _column_canonical_from_body(body.columns)
         columns_changed = current_columns != desired_columns
         if (

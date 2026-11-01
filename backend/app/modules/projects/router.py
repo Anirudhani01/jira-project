@@ -2,7 +2,7 @@
 
 import re
 import uuid
-from typing import Annotated
+from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Header, Query, Request, Response, status
 
@@ -155,21 +155,25 @@ async def unarchive_project(
 
 
 def _workflow_response(view: dict[str, object]) -> WorkflowResponse:
+    data = cast(dict[str, Any], view)
+    status_rows = cast(list[Any], data["statuses"])
+    transition_rows = cast(list[Any], data["transitions"])
+    column_rows = cast(list[dict[str, Any]], data["columns"])
     return WorkflowResponse(
-        name=view["name"],  # type: ignore[arg-type]
-        initial_status_id=view["initial_status_id"],  # type: ignore[arg-type]
-        revision=view["revision"],  # type: ignore[arg-type]
+        name=data["name"],
+        initial_status_id=data["initial_status_id"],
+        revision=data["revision"],
         statuses=[
             StatusResponse(id=s.id, name=s.name, category=s.category, position=s.position)
-            for s in view["statuses"]  # type: ignore[attr-defined]
+            for s in status_rows
         ],
         transitions=[
             TransitionResponse(
                 id=t.id, name=t.name, from_status_id=t.from_status_id, to_status_id=t.to_status_id
             )
-            for t in view["transitions"]  # type: ignore[attr-defined]
+            for t in transition_rows
         ],
-        columns=[ColumnResponse(**c) for c in view["columns"]],  # type: ignore[arg-type]
+        columns=[ColumnResponse(**c) for c in column_rows],
     )
 
 
