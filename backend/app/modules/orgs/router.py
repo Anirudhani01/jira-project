@@ -15,6 +15,12 @@ from app.authz.permissions import Permission
 from app.core.errors import AppError
 from app.modules.identity.deps import CsrfProtected, CurrentSession, Services, client_info
 from app.modules.identity.schemas import AcceptedResponse
+from app.modules.org_auth_activity import service as org_auth_activity
+from app.modules.org_auth_activity.schemas import (
+    AuthenticationActivityItem,
+    AuthenticationActivityListResponse,
+)
+from app.modules.org_auth_activity.service import AuthActivityFilter
 from app.modules.orgs import members, service
 from app.modules.orgs.repository import AuditFilter, OrgRecord
 from app.modules.orgs.schemas import (
@@ -174,6 +180,53 @@ async def list_audit_events(
                 created_at=e.created_at,
             )
             for e in events
+        ],
+        next_cursor=next_cursor,
+    )
+
+
+@router.get(
+    "/orgs/{org_slug}/authentication-activity",
+    response_model=AuthenticationActivityListResponse,
+)
+async def list_authentication_activity(
+    access: ViewAudit,
+    services: Services,
+    *,
+    member: uuid.UUID | None = None,
+    event_type: Annotated[str | None, Query(max_length=64)] = None,
+    occurred_from: Annotated[datetime | None, Query(alias="from")] = None,
+    occurred_to: Annotated[datetime | None, Query(alias="to")] = None,
+    cursor: Annotated[str | None, Query(max_length=256)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> AuthenticationActivityListResponse:
+    """Owners and admins only. Reads org authentication projections (not platform events)."""
+    rows, next_cursor = await org_auth_activity.list_authentication_activity(
+        services,
+        access,
+        AuthActivityFilter(
+            member_user_id=member,
+            event_type=event_type,
+            occurred_from=occurred_from,
+            occurred_to=occurred_to,
+        ),
+        limit=limit,
+        cursor=cursor,
+    )
+    return AuthenticationActivityListResponse(
+        items=[
+            AuthenticationActivityItem(
+                id=row.id,
+                user_id=row.user_id,
+                member_display_name=row.member_display_name,
+                member_status=row.member_status,
+                event_type=row.event_type,
+                outcome=row.outcome,
+                reason=row.reason,
+                metadata=row.metadata,
+                occurred_at=row.occurred_at,
+            )
+            for row in rows
         ],
         next_cursor=next_cursor,
     )

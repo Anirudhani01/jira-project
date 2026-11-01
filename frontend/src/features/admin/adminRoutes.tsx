@@ -1,6 +1,7 @@
 import type { RouteObject } from 'react-router';
 
 import { AuditPage } from '../audit/AuditPage';
+import { AuthenticationActivityPage } from '../authActivity/AuthenticationActivityPage';
 import { OrgMembersPage } from '../orgs/pages/OrgMembersPage';
 import { OrgSettingsPage } from '../orgs/pages/OrgSettingsPage';
 
@@ -24,6 +25,7 @@ export const orgAdminChildRoutes: RouteObject = {
     },
     { path: 'admin/catalogs', element: <AdminCatalogsPage /> },
     { path: 'admin/audit', element: <AuditPage /> },
+    { path: 'admin/security/activity', element: <AuthenticationActivityPage /> },
     { path: 'admin/workflow', element: <AdminWorkflowHubPage /> },
     { path: 'admin/system/notifications', element: <AdminSystemNotificationsPage /> },
     { path: 'admin/system/email', element: <AdminSystemEmailPage /> },

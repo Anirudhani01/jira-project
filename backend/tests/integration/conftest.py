@@ -5,6 +5,8 @@ REQUIRE_INTEGRATION=1 (set by `make test` and CI), in which case missing
 configuration is an error so CI can never silently skip them.
 """
 
+pytest_plugins = ["tests.integration.migration_support"]
+
 import os
 import subprocess
 import sys
@@ -44,8 +46,12 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         item.add_marker(skip)
 
 
-def run_alembic(*args: str) -> subprocess.CompletedProcess[str]:
-    env = {**os.environ, "MIGRATION_DATABASE_URL": os.environ["TEST_MIGRATION_DATABASE_URL"]}
+def run_alembic(
+    *args: str,
+    migration_database_url: str | None = None,
+) -> subprocess.CompletedProcess[str]:
+    url = migration_database_url or os.environ["TEST_MIGRATION_DATABASE_URL"]
+    env = {**os.environ, "MIGRATION_DATABASE_URL": url}
     return subprocess.run(
         [sys.executable, "-m", "alembic", *args],
         cwd=BACKEND,

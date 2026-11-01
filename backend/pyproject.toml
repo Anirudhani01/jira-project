@@ -42,7 +42,9 @@ ignore = ["PLR0913", "PLR2004"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S603", "PLR0915"]
-"migrations/**" = ["N999", "S608"]  # SQL built from module constants only
+"tests/**/test_org_auth*.py" = ["E501", "S608"]  # long SQL fixtures; fixed auth type lists
+"tests/integration/conftest.py" = ["E402"]  # pytest_plugins must load before plugin imports
+"migrations/**" = ["N999", "S608", "PLR0915"]  # SQL built from module constants only
 
 [tool.mypy]
 python_version = "3.13"

@@ -143,6 +143,19 @@ Every inaccessible organization (unknown, not a member, removed) answers the sam
   RLS and a job's bound org); no access to org configuration or audit tables.
 - `platform_security_reader` — NOLOGIN role with read access to
   `security.platform_security_events`; runtime roles can only insert there.
+- `org_auth_operator` — NOLOGIN role for A3.2 break-glass operator actions on org auth
+  projection failures. Created by the same init script on **first** Postgres start
+  (`infra/postgres/init/01-roles.sh` via `docker-entrypoint-initdb.d` in
+  `infra/docker-compose.yml`). Migration `0018` requires this role to exist before upgrade;
+  it does not `CREATE ROLE` (same pattern as `app_retention`).
+
+**Break-glass operator access (not for `app_rw` / `app_worker` / API logins):** provision
+`org_auth_operator` with init/IaC, then grant membership to a **dedicated** human break-glass
+login only when needed, e.g. `GRANT org_auth_operator TO break_glass_admin` (superuser).
+To reset a permanent projection failure: connect as that login, `SET ROLE org_auth_operator`,
+then `SELECT security.operator_reset_org_auth_projection_failure(<platform_event_id>, '<reason>');`.
+Revoke membership when the incident is closed. Never grant `org_auth_operator` to application
+runtime roles.
 
 The API checks its own role at startup and refuses to run in staging/prod with an unsafe
 role (superuser, BYPASSRLS, object owner, …). See

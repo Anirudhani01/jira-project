@@ -24,6 +24,8 @@ if config.config_file_name is not None:
 import_all_models()
 target_metadata = Base.metadata
 MANAGED_SCHEMAS = frozenset({"public", "security"})
+# A3.2 projection support tables: created in migration 0018 only (not SQLAlchemy ORM).
+MIGRATION_ONLY_SECURITY_PREFIX = "org_auth_"
 
 MIGRATION_LOCK_TIMEOUT = "5s"
 
@@ -41,6 +43,20 @@ def _include_name(name: str | None, type_: str, _parent_names: object) -> bool:
     return True
 
 
+def _include_object(
+    object_: object,
+    name: str | None,
+    type_: str,
+    _reflected: bool,
+    _compare_to: object,
+) -> bool:
+    if type_ in ("table", "index") and name and name.startswith(MIGRATION_ONLY_SECURITY_PREFIX):
+        schema = getattr(object_, "schema", None)
+        if schema == "security" or (type_ == "index" and name.startswith("ix_org_auth_")):
+            return False
+    return True
+
+
 def run_migrations_offline() -> None:
     context.configure(
         url=_migration_url(),
@@ -48,6 +64,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         transaction_per_migration=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=_include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -61,6 +78,7 @@ def _run_migrations(connection: Connection) -> None:
         compare_type=True,
         include_schemas=True,
         include_name=_include_name,
+        include_object=_include_object,
     )
     with context.begin_transaction():
         context.run_migrations()

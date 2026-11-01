@@ -35,24 +35,68 @@ async def count(table: str, org: uuid.UUID | None = None, where: str = "true") -
     return int(row.n)
 
 
+async def row_exists(table: str, row_id: int | uuid.UUID) -> bool:
+    [row] = await superuser_sql(
+        f"SELECT EXISTS(SELECT 1 FROM {table} WHERE id = :id) AS present",  # noqa: S608
+        id=row_id,
+    )
+    return bool(row.present)
+
+
+async def idempotency_key_exists(org: uuid.UUID, user_id: uuid.UUID, key: str) -> bool:
+    [row] = await superuser_sql(
+        "SELECT EXISTS("
+        "SELECT 1 FROM idempotency_keys WHERE org_id = :o AND user_id = :u AND key = :k"
+        ") AS present",
+        o=org,
+        u=user_id,
+        k=key,
+    )
+    return bool(row.present)
+
+
 async def test_purge_deletes_only_rows_past_retention(ctx: Ctx, retention: AsyncEngine) -> None:
     org = ctx.tenant.org_id
-    for days, action in ((400, "old"), (1, "fresh")):
-        await superuser_sql(
-            "INSERT INTO audit_events (org_id, action, outcome, created_at) "
-            "VALUES (:o, :a, 'success', now() - make_interval(days => :days))",
-            o=org,
-            a=f"test.{action}",
-            days=days,
-        )
-    await superuser_sql(
-        "INSERT INTO security.platform_security_events (event_type, outcome, occurred_at) VALUES "
-        "('test.old', 'success', now() - interval '13 months'), "
-        "('test.fresh', 'success', now())"
+    user_id = ctx.tenant.user_id
+    tag = uuid.uuid4().hex
+    old_key = f"retention-{tag}-old"
+    new_key = f"retention-{tag}-new"
+
+    [audit_old] = await superuser_sql(
+        "INSERT INTO audit_events (org_id, action, outcome, created_at) "
+        "VALUES (:o, :a, 'success', now() - make_interval(days => 400)) RETURNING id",
+        o=org,
+        a=f"test.retention.{tag}.old",
+    )
+    [audit_fresh] = await superuser_sql(
+        "INSERT INTO audit_events (org_id, action, outcome, created_at) "
+        "VALUES (:o, :a, 'success', now() - make_interval(days => 1)) RETURNING id",
+        o=org,
+        a=f"test.retention.{tag}.fresh",
+    )
+    [platform_old] = await superuser_sql(
+        "INSERT INTO security.platform_security_events (event_type, outcome, occurred_at) "
+        "VALUES (:t, 'success', now() - interval '13 months') RETURNING id",
+        t=f"test.retention.{tag}.old",
+    )
+    [platform_fresh] = await superuser_sql(
+        "INSERT INTO security.platform_security_events (event_type, outcome, occurred_at) "
+        "VALUES (:t, 'success', now()) RETURNING id",
+        t=f"test.retention.{tag}.fresh",
     )
     a, _, _, b_id = await team(ctx)
     issue = await created_by(a, ctx, b_id)
     await new_comment(ctx.http, ctx.slug, issue["key"])
+    assigned_rows = await superuser_sql(
+        "SELECT id FROM notifications WHERE org_id = :o AND type = 'issue_assigned'",
+        o=org,
+    )
+    commented_rows = await superuser_sql(
+        "SELECT id FROM notifications WHERE org_id = :o AND type = 'issue_commented'",
+        o=org,
+    )
+    assigned_ids = [row.id for row in assigned_rows]
+    commented_ids = [row.id for row in commented_rows]
     await superuser_sql(
         "UPDATE notifications SET created_at = now() - interval '91 days' "
         "WHERE org_id = :o AND type = 'issue_assigned'",
@@ -61,24 +105,56 @@ async def test_purge_deletes_only_rows_past_retention(ctx: Ctx, retention: Async
     await superuser_sql(
         "INSERT INTO idempotency_keys (org_id, user_id, key, request_hash, created_at, expires_at) "
         "VALUES "
-        "(:o, :u, 'old-key', '\\x00', now() - interval '3 days', now() - interval '2 days'), "
-        "(:o, :u, 'new-key', '\\x00', now(), now() + interval '1 day')",
+        "(:o, :u, :old, '\\x00', now() - interval '3 days', now() - interval '2 days'), "
+        "(:o, :u, :new, '\\x00', now(), now() + interval '1 day')",
         o=org,
-        u=ctx.tenant.user_id,
+        u=user_id,
+        old=old_key,
+        new=new_key,
     )
 
-    totals = await run_purge(retention)
+    audit_old_id = int(audit_old.id)
+    audit_fresh_id = int(audit_fresh.id)
+    platform_old_id = int(platform_old.id)
+    platform_fresh_id = int(platform_fresh.id)
 
-    assert totals is not None
-    assert totals["audit_events"] >= 1
-    assert await count("audit_events", org, "action = 'test.old'") == 0
-    assert await count("audit_events", org, "action = 'test.fresh'") == 1
-    assert await count("security.platform_security_events", where="event_type = 'test.old'") == 0
-    assert await count("security.platform_security_events", where="event_type = 'test.fresh'") == 1
-    assert await count("notifications", org, "type = 'issue_assigned'") == 0
-    assert await count("notifications", org, "type = 'issue_commented'") >= 1
-    assert await count("idempotency_keys", org, "key = 'old-key'") == 0
-    assert await count("idempotency_keys", org, "key = 'new-key'") == 1
+    try:
+        totals = await run_purge(retention)
+
+        assert totals is not None
+        assert totals["audit_events"] >= 1
+        assert not await row_exists("audit_events", audit_old_id)
+        assert await row_exists("audit_events", audit_fresh_id)
+        assert not await row_exists("security.platform_security_events", platform_old_id)
+        assert await row_exists("security.platform_security_events", platform_fresh_id)
+        for notification_id in assigned_ids:
+            assert not await row_exists("notifications", notification_id)
+        assert commented_ids
+        for notification_id in commented_ids:
+            assert await row_exists("notifications", notification_id)
+        assert not await idempotency_key_exists(org, user_id, old_key)
+        assert await idempotency_key_exists(org, user_id, new_key)
+    finally:
+        await superuser_sql(
+            "DELETE FROM audit_events WHERE id = ANY(:ids)",
+            ids=[audit_fresh_id],
+        )
+        await superuser_sql(
+            "DELETE FROM security.platform_security_events WHERE id = ANY(:ids)",
+            ids=[platform_fresh_id],
+        )
+        if commented_ids:
+            await superuser_sql(
+                "DELETE FROM notifications WHERE id = ANY(:ids) AND org_id = :o",
+                ids=commented_ids,
+                o=org,
+            )
+        await superuser_sql(
+            "DELETE FROM idempotency_keys WHERE org_id = :o AND user_id = :u AND key = :k",
+            o=org,
+            u=user_id,
+            k=new_key,
+        )
 
 
 async def test_purge_batches_through_a_large_backlog(ctx: Ctx, retention: AsyncEngine) -> None:
@@ -128,4 +204,8 @@ def test_every_purge_rule_targets_a_known_table() -> None:
         "notifications",
         "audit_events",
         "security.platform_security_events",
+        "org_authentication_events",
+        "security.org_auth_projection_failures",
+        "security.org_auth_operator_actions",
+        "security.org_auth_missing_source_inconsistencies",
     }

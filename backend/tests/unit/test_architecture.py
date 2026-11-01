@@ -39,6 +39,8 @@ ALLOWED_TABLES = frozenset(
         "issue_types",
         "priorities",
         "audit_events",
+        "org_authentication_events",
+        # A3.2 (security schema; no ORM — see ORG_AUTH_SECURITY_TABLES)
         # M4
         "org_invitations",
         # M5
@@ -69,6 +71,15 @@ ALLOWED_TABLES = frozenset(
     }
 )
 
+# Created in migrations under schema ``security`` without a SQLAlchemy model.
+ORG_AUTH_SECURITY_TABLES = frozenset(
+    {
+        "org_auth_projection_failures",
+        "org_auth_operator_actions",
+        "org_auth_missing_source_inconsistencies",
+    }
+)
+
 
 def test_only_authorized_milestone_tables_exist() -> None:
     from app.db.base import Base, import_all_models  # noqa: PLC0415
@@ -78,7 +89,7 @@ def test_only_authorized_milestone_tables_exist() -> None:
     created = set()
     for path in (BACKEND / "migrations" / "versions").glob("*.py"):
         created |= set(re.findall(r'op\.create_table\(\s*"([a-z_]+)"', path.read_text("utf-8")))
-    assert created == ALLOWED_TABLES
+    assert created == ALLOWED_TABLES | ORG_AUTH_SECURITY_TABLES
 
 
 IDENTITY_PACKAGE = BACKEND / "app" / "modules" / "identity"

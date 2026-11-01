@@ -77,10 +77,13 @@ migrate: ## Apply migrations to the dev database (as app_owner)
 seed-demo: infra-up ## Demo org/issues for local UI (API on :8000; see app/scripts/seed_demo.py)
 	$(UV) run python -m app.scripts.seed_demo
 
-migrate-roundtrip: ## Upgrade -> downgrade base -> upgrade on the test database
-	$(UV) run env MIGRATION_DATABASE_URL="$(TEST_MIGRATION_DATABASE_URL)" alembic upgrade head
-	$(UV) run env MIGRATION_DATABASE_URL="$(TEST_MIGRATION_DATABASE_URL)" alembic downgrade base
-	$(UV) run env MIGRATION_DATABASE_URL="$(TEST_MIGRATION_DATABASE_URL)" alembic upgrade head
+# Never run downgrade base on jira_test (integration tests may leave probe objects in security).
+MIGRATION_ROUNDTRIP_DATABASE_URL ?= $(if $(TEST_MIGRATION_ROUNDTRIP_DATABASE_URL),$(TEST_MIGRATION_ROUNDTRIP_DATABASE_URL),$(subst jira_test,jira_migration,$(TEST_MIGRATION_DATABASE_URL)))
+
+migrate-roundtrip: ## Upgrade -> downgrade base -> upgrade on the isolated migration database
+	$(UV) run env MIGRATION_DATABASE_URL="$(MIGRATION_ROUNDTRIP_DATABASE_URL)" alembic upgrade head
+	$(UV) run env MIGRATION_DATABASE_URL="$(MIGRATION_ROUNDTRIP_DATABASE_URL)" alembic downgrade base
+	$(UV) run env MIGRATION_DATABASE_URL="$(MIGRATION_ROUNDTRIP_DATABASE_URL)" alembic upgrade head
 
 # -------------------------------------------------------------------------- quality
 .PHONY: lint backend-lint frontend-lint typecheck backend-typecheck frontend-typecheck fmt
