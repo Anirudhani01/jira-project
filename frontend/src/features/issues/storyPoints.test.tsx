@@ -9,6 +9,25 @@ import { json, mockApi, problem } from '../../test/api';
 import { validPoints } from './CreateIssueDialog';
 import { StoryPointsField } from './StoryPointsField';
 
+const policyState = vi.hoisted((): {
+  status: 'ready' | 'conflict' | 'loading';
+  effectiveEnabled: boolean;
+  effectiveMax: number;
+} => ({
+  status: 'ready',
+  effectiveEnabled: true,
+  effectiveMax: 100,
+}));
+
+vi.mock('../storyPoints/useIssueStoryPointsPolicy', () => ({
+  useIssueStoryPointsPolicy: () => ({
+    status: policyState.status,
+    effectiveEnabled: policyState.effectiveEnabled,
+    effectiveMax: policyState.effectiveMax,
+  }),
+  isPolicyReady: (policy: { status: string }) => policy.status === 'ready',
+}));
+
 function issue(points: number | null): Issue {
   return {
     id: 'i1',
@@ -51,6 +70,9 @@ describe('validPoints', () => {
 describe('StoryPointsField', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    policyState.status = 'ready';
+    policyState.effectiveEnabled = true;
+    policyState.effectiveMax = 100;
   });
 
   it('shows the estimate (or None) and is read-only without edit permission', () => {
@@ -91,14 +113,41 @@ describe('StoryPointsField', () => {
   });
 
   it('rejects invalid input locally and sends nothing', async () => {
+    policyState.effectiveMax = 8;
     const calls = mockApi({});
     mount(null);
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /Story points: None/ }));
     await user.type(screen.getByRole('spinbutton', { name: 'Story points' }), '250');
     await user.click(screen.getByRole('button', { name: 'Save' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('whole number from 0 to 100');
+    expect(await screen.findByRole('alert')).toHaveTextContent('whole number from 0 to 8');
     expect(calls.filter((c) => c.method === 'PATCH')).toHaveLength(0);
+  });
+
+  it('shows historical estimate when disabled and allows clear', async () => {
+    policyState.effectiveEnabled = false;
+    const calls = mockApi({ 'PATCH /orgs/acme/issues/WEB-1': () => json(issue(null)) });
+    mount(50);
+    expect(screen.getByText('50')).toBeInTheDocument();
+    expect(screen.getByText(/not enabled for this project/i)).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /Story points: 50/ }));
+    await user.clear(screen.getByRole('spinbutton', { name: 'Story points' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ story_points: null });
+    });
+  });
+
+  it('blocks raising estimate when policy max is lower than historical value', async () => {
+    policyState.effectiveMax = 8;
+    mount(50);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /Story points: 50/ }));
+    await user.clear(screen.getByRole('spinbutton', { name: 'Story points' }));
+    await user.type(screen.getByRole('spinbutton', { name: 'Story points' }), '51');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('0 to 8');
   });
 
   it('cancels with Escape without saving', async () => {

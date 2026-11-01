@@ -13,6 +13,7 @@ import type { Org } from '../../../lib/api/types';
 import { applyServerErrors, describeError } from '../../../lib/forms';
 import { useOrgFormatters } from '../useOrgFormatters';
 import { OrgRegionalPreferencesSection } from '../OrgRegionalPreferencesSection';
+import { OrgStoryPointsSection } from '../OrgStoryPointsSection';
 import { useOrg, useRenameOrg } from '../api';
 
 const schema = z.object({
@@ -197,6 +198,24 @@ function OrgSettingsContent({ org }: { org: Org }) {
         <Button variant="secondary" size="sm" asChild>
           <Link to={`${adminBase}/members`}>Open Members</Link>
         </Button>
+      </section>
+
+      <section
+        className="admin-card space-y-4 rounded-xl border p-5 sm:p-6"
+        aria-labelledby="org-settings-story-points"
+      >
+        <h2
+          id="org-settings-story-points"
+          className="text-lg font-semibold text-[var(--admin-text)]"
+        >
+          Story points
+        </h2>
+        <p className="text-sm leading-relaxed text-[var(--admin-muted)]">
+          Organization defaults apply to every project unless a project sets an explicit override.
+          These settings are authoritative: changing them can invalidate project overrides until
+          project admins resolve conflicts on each project&apos;s Estimates tab.
+        </p>
+        <OrgStoryPointsSection slug={org.slug} canManage={canManage} />
       </section>
 
       <section

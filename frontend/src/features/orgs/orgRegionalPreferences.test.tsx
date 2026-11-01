@@ -21,6 +21,8 @@ const ORG_MEMBER = { ...ORG_OWNER, role: 'member', permissions: ['org.view'] };
 const ORG_SETTINGS = {
   timezone: 'UTC',
   locale: 'en-US',
+  story_points_enabled: true,
+  story_points_max: 100,
   updated_at: '2026-10-27T00:00:00Z',
 };
 const SHELL = {
@@ -181,6 +183,8 @@ describe('Org regional preferences (General settings)', () => {
         json({
           timezone: 'Asia/Tokyo',
           locale: 'ja-JP',
+          story_points_enabled: true,
+          story_points_max: 100,
           updated_at: '2026-10-27T00:00:00Z',
         }),
     });
@@ -196,6 +200,8 @@ describe('Org regional preferences (General settings)', () => {
         json({
           timezone: 'UTC',
           locale: 'en-u-ca-gregory',
+          story_points_enabled: true,
+          story_points_max: 100,
           updated_at: '2026-10-27T00:00:00Z',
         }),
     });

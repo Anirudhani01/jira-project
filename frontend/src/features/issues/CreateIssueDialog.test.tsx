@@ -38,12 +38,12 @@ vi.mock('./api', () => ({
   }),
   useIssueTypes: () => ({
     data: [
-      { id: 't1', name: 'Task', kind: 'standard' },
-      { id: 't2', name: 'Sub-task', kind: 'subtask' },
+      { id: 't1', name: 'Task', kind: 'standard', is_active: true },
+      { id: 't2', name: 'Sub-task', kind: 'subtask', is_active: true },
     ],
   }),
   usePriorities: () => ({
-    data: [{ id: 'p1', name: 'Medium' }],
+    data: [{ id: 'p1', name: 'Medium', is_active: true }],
   }),
   useLabels: () => ({ data: [] }),
   useIssueSearch: () => ({ data: searchState.hits, isFetching: false }),
@@ -55,6 +55,25 @@ vi.mock('../backlog/planApi', () => ({
 
 vi.mock('../projects/api', () => ({
   useProjectMembers: () => ({ data: [] }),
+}));
+
+const policyState = vi.hoisted((): {
+  status: 'ready' | 'conflict' | 'loading';
+  effectiveEnabled: boolean;
+  effectiveMax: number;
+} => ({
+  status: 'ready',
+  effectiveEnabled: true,
+  effectiveMax: 100,
+}));
+
+vi.mock('../storyPoints/useIssueStoryPointsPolicy', () => ({
+  useIssueStoryPointsPolicy: () => ({
+    status: policyState.status,
+    effectiveEnabled: policyState.effectiveEnabled,
+    effectiveMax: policyState.effectiveMax,
+  }),
+  isPolicyReady: (policy: { status: string }) => policy.status === 'ready',
 }));
 
 describe('CreateIssueDialog', () => {
@@ -209,5 +228,41 @@ describe('CreateIssueDialog', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
     createIssueState.mutate.mockReset();
+  });
+
+  it('hides story points when policy disables estimates', () => {
+    policyState.effectiveEnabled = false;
+    try {
+      mountDialog();
+      expect(screen.queryByLabelText(/Story points/i)).toBeNull();
+    } finally {
+      policyState.effectiveEnabled = true;
+    }
+  });
+
+  it('shows conflict banner and hides story points field', () => {
+    policyState.status = 'conflict';
+    try {
+      mountDialog();
+      expect(screen.getByText(/conflict with organization settings/i)).toBeInTheDocument();
+      expect(screen.queryByLabelText(/Story points/i)).toBeNull();
+    } finally {
+      policyState.status = 'ready';
+    }
+  });
+
+  it('validates against effective max before create', async () => {
+    policyState.effectiveMax = 8;
+    try {
+      mountDialog();
+      const user = userEvent.setup();
+      await user.type(screen.getByLabelText('Summary'), 'Sized');
+      await user.type(screen.getByLabelText(/Story points/i), '9');
+      await user.click(screen.getByRole('button', { name: 'Create' }));
+      expect(await screen.findByText(/0 to 8/)).toBeInTheDocument();
+      expect(createIssueState.mutate).not.toHaveBeenCalled();
+    } finally {
+      policyState.effectiveMax = 100;
+    }
   });
 });

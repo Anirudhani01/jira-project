@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { apiFetch } from '../../lib/api/client';
+import { projectsKey } from '../projects/api';
 import type {
   CreateOrgRequest,
   Invitation,
@@ -85,6 +86,7 @@ export function useUpdateOrgSettings(slug: string) {
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: orgSettingsKey(slug) });
+      await queryClient.invalidateQueries({ queryKey: projectsKey(slug) });
     },
   });
 }

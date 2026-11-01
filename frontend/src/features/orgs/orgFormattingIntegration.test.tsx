@@ -20,6 +20,8 @@ const ORG_OWNER = {
 const ORG_SETTINGS = {
   timezone: 'UTC',
   locale: 'en-US',
+  story_points_enabled: true,
+  story_points_max: 100,
   updated_at: '2026-10-27T00:00:00Z',
 };
 
