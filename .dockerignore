@@ -1,0 +1,17 @@
+.git
+.env
+.env.*
+!.env.example
+.antideploy-secrets.env
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.venv
+**/node_modules
+frontend/dist
+frontend/coverage
+docs/ui-redesign/evidence
+**/*.png
+test-results
+playwright-report
