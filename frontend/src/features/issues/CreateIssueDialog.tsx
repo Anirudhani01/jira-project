@@ -21,6 +21,14 @@ import { mutationErrorMessage } from '../../lib/ux/permissionDenied';
 import { useSlowPending } from '../../lib/ux/useSlowPending';
 import { useVersions } from '../backlog/planApi';
 import { useProjectMembers } from '../projects/api';
+import { StoryPointsConflictBanner } from '../storyPoints/StoryPointsPolicyHint';
+import {
+  clientStoryPointsInputError,
+  parseStoryPointsInput,
+  storyPointsMutationFieldMessage,
+  STORY_POINTS_INPUT_INVALID,
+} from '../storyPoints/storyPointsIssueUx';
+import { isPolicyReady, useIssueStoryPointsPolicy } from '../storyPoints/useIssueStoryPointsPolicy';
 
 import {
   useCreateIssue,
@@ -33,12 +41,12 @@ import {
 
 type ClientErrors = { summary?: string; parent?: string; points?: string };
 
-export const POINTS_ERROR = 'Use a whole number from 0 to 100.';
+export const POINTS_ERROR = STORY_POINTS_INPUT_INVALID;
 
-/** Empty means "no estimate"; otherwise a whole number 0-100. */
+/** Empty means "no estimate"; otherwise a whole number 0-100 (legacy tests). */
 export function validPoints(value: string): boolean {
-  const text = value.trim();
-  return text === '' || (/^\d{1,3}$/.test(text) && Number(text) <= 100);
+  const parsed = parseStoryPointsInput(value);
+  return parsed.kind !== 'invalid';
 }
 
 /** Create-issue modal. One Idempotency-Key per submission attempt: resubmitting after a lost
@@ -66,6 +74,8 @@ export function CreateIssueDialog({
   const labels = useLabels(org, project);
   const versions = useVersions(org, project, false);
   const create = useCreateIssue(org, project);
+  const policy = useIssueStoryPointsPolicy(org, project);
+  const readyPolicy = isPolicyReady(policy) ? policy : null;
 
   const [summary, setSummary] = useState('');
   const [description, setDescription] = useState('');
@@ -86,16 +96,19 @@ export function CreateIssueDialog({
 
   const search = useIssueSearch(org, project, parentQuery);
 
+  const issueTypes = types.data ?? [];
+  const issuePriorities = priorities.data ?? [];
+
   const effectiveType =
     typeId ??
-    (defaultKind ? types.data?.find((t) => t.kind === defaultKind) : undefined)?.id ??
-    (types.data?.find((t) => t.name === 'Task') ?? types.data?.[0])?.id ??
+    (defaultKind ? issueTypes.find((t) => t.kind === defaultKind) : undefined)?.id ??
+    (issueTypes.find((t) => t.name === 'Task') ?? issueTypes[0])?.id ??
     null;
   const effectivePriority =
     priorityId ??
-    (priorities.data?.find((p) => p.name === 'Medium') ?? priorities.data?.[0])?.id ??
+    (issuePriorities.find((p) => p.name === 'Medium') ?? issuePriorities[0])?.id ??
     null;
-  const selectedType = types.data?.find((t) => t.id === effectiveType);
+  const selectedType = issueTypes.find((t) => t.id === effectiveType);
   const needsParent = selectedType?.kind === 'subtask';
 
   const serverFieldError = (field: string) =>
@@ -104,7 +117,10 @@ export function CreateIssueDialog({
       : undefined;
   const summaryError = clientErrors.summary ?? serverFieldError('summary');
   const parentError = clientErrors.parent ?? serverFieldError('parent_id');
-  const pointsError = clientErrors.points ?? serverFieldError('story_points');
+  const pointsError =
+    clientErrors.points ??
+    serverFieldError('story_points') ??
+    (create.error ? storyPointsMutationFieldMessage(create.error) : undefined);
 
   const focusFields = useMemo(
     (): FocusableFieldRef[] => [
@@ -127,6 +143,11 @@ export function CreateIssueDialog({
       : null;
   const slow = useSlowPending(create.isPending);
 
+  const showStoryPointsField =
+    policy.status !== 'conflict' && readyPolicy?.effectiveEnabled === true;
+  const storyPointsPending = policy.status === 'loading';
+  const pointsMax = readyPolicy?.effectiveMax ?? 100;
+
   const parentOptions: ComboOption[] = useMemo(() => {
     const hits = [...(search.data ?? [])];
     if (parent && !hits.some((h) => h.key === parent.key)) hits.unshift(parent);
@@ -148,7 +169,15 @@ export function CreateIssueDialog({
     const nextClient: ClientErrors = {};
     if (!summary.trim()) nextClient.summary = 'Enter a summary.';
     if (needsParent && !parent) nextClient.parent = 'Choose a parent issue for a sub-task.';
-    if (!validPoints(points)) nextClient.points = POINTS_ERROR;
+    if (policy.status === 'conflict' && points.trim() !== '') {
+      nextClient.points =
+        'Project estimate settings conflict with organization policy. Resolve on the Estimates tab first.';
+    } else if (showStoryPointsField && points.trim() !== '') {
+      const inputError = clientStoryPointsInputError(points, pointsMax);
+      if (inputError) nextClient.points = inputError;
+    } else if (points.trim() !== '' && readyPolicy && !readyPolicy.effectiveEnabled) {
+      nextClient.points = 'Story points are not enabled for this project.';
+    }
     if (Object.keys(nextClient).length > 0) {
       setClientErrors(nextClient);
       setFocusGeneration((g) => g + 1);
@@ -167,7 +196,7 @@ export function CreateIssueDialog({
           ...(parent ? { parent_id: parent.id } : {}),
           ...(labelIds.length ? { label_ids: labelIds } : {}),
           ...(fixVersionId ? { fix_version_id: fixVersionId } : {}),
-          ...(points.trim() !== '' ? { story_points: Number(points) } : {}),
+          ...(showStoryPointsField && points.trim() !== '' ? { story_points: Number(points) } : {}),
         },
       },
       {
@@ -215,7 +244,7 @@ export function CreateIssueDialog({
           <FormError>{formFailure}</FormError>
           <Combobox
             label="Type"
-            options={(types.data ?? []).map((t) => ({
+            options={issueTypes.map((t) => ({
               value: t.id,
               label: t.name,
               icon: <TypeIcon kind={t.kind} name={t.name} />,
@@ -253,7 +282,7 @@ export function CreateIssueDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <Combobox
               label="Priority"
-              options={(priorities.data ?? []).map((p) => ({
+              options={issuePriorities.map((p) => ({
                 value: p.id,
                 label: p.name,
                 icon: <PriorityIcon name={p.name} />,
@@ -333,23 +362,35 @@ export function CreateIssueDialog({
               onChange={setFixVersionId}
             />
           ) : null}
-          <Field label="Story points (optional)" error={pointsError ?? null}>
-            {(props) => (
-              <Input
-                ref={pointsRef}
-                type="number"
-                inputMode="numeric"
-                min={0}
-                max={100}
-                step={1}
-                value={points}
-                onChange={(e) => {
-                  setPoints(e.target.value);
-                }}
-                {...props}
-              />
-            )}
-          </Field>
+          {policy.status === 'conflict' ? (
+            <StoryPointsConflictBanner org={org} projectKey={project} />
+          ) : null}
+          {showStoryPointsField ? (
+            <Field
+              label="Story points (optional)"
+              hint={`Whole numbers 0–${String(pointsMax)} for this project.`}
+              error={pointsError ?? null}
+            >
+              {(props) => (
+                <Input
+                  ref={pointsRef}
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={pointsMax}
+                  step={1}
+                  disabled={storyPointsPending}
+                  value={points}
+                  onChange={(e) => {
+                    setPoints(e.target.value);
+                  }}
+                  {...props}
+                />
+              )}
+            </Field>
+          ) : storyPointsPending ? (
+            <p className="text-sm text-fg-muted">Loading estimate policy…</p>
+          ) : null}
           {!online ? (
             <p role="status" className="rounded-md bg-warning-soft px-3 py-2 text-sm text-warning">
               You are offline. Your input is kept; reconnect to create the issue.

@@ -35,6 +35,8 @@ import { IssueActivitySection } from './IssueActivitySection';
 import { IssueChildrenSection } from './IssueChildrenSection';
 import { IssueDescriptionSection } from './IssueDescriptionSection';
 import { useProject, useProjectMembers } from '../projects/api';
+import { StoryPointsConflictBanner } from '../storyPoints/StoryPointsPolicyHint';
+import { useIssueStoryPointsPolicy } from '../storyPoints/useIssueStoryPointsPolicy';
 
 import {
   useChildren,
@@ -172,7 +174,10 @@ function IssueView({
   const online = useAppOnline();
   const types = useIssueTypes(org);
   const priorities = usePriorities(org);
+  const selectableTypes = types.data ?? [];
+  const selectablePriorities = priorities.data ?? [];
   const members = useProjectMembers(org, issue.project_key);
+  const storyPointsPolicy = useIssueStoryPointsPolicy(org, issue.project_key);
   const labels = useLabels(org, issue.project_key);
   const children = useChildren(org, issue.key);
   const update = useUpdateIssue(org, issue.key);
@@ -509,6 +514,9 @@ function IssueView({
         </div>
 
         <aside className="min-w-0 space-y-4 lg:sticky lg:top-2">
+          {storyPointsPolicy.status === 'conflict' ? (
+            <StoryPointsConflictBanner org={org} projectKey={issue.project_key} />
+          ) : null}
           <Card className="space-y-4 p-4">
             <div className="[&_button]:flex [&_button]:w-full [&_button]:justify-between">
               <SidebarField label="Status">
@@ -523,7 +531,7 @@ function IssueView({
               <IssueListTypeMenu
                 org={org}
                 issue={issue}
-                types={types.data ?? []}
+                types={selectableTypes}
                 canEdit={canEdit}
               />
             </SidebarField>
@@ -531,7 +539,7 @@ function IssueView({
               <IssueListPriorityMenu
                 org={org}
                 issue={issue}
-                priorities={priorities.data ?? []}
+                priorities={selectablePriorities}
                 canEdit={canEdit}
                 containedMenu={presentation === 'modal'}
               />

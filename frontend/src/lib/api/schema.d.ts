@@ -916,6 +916,24 @@ export interface paths {
         patch: operations["update_member_api_v1_orgs__org_slug__projects__project_key__members__user_id__patch"];
         trace?: never;
     };
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Project Settings */
+        get: operations["get_project_settings_api_v1_orgs__org_slug__projects__project_key__settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Project Settings */
+        patch: operations["update_project_settings_api_v1_orgs__org_slug__projects__project_key__settings_patch"];
+        trace?: never;
+    };
     "/api/v1/orgs/{org_slug}/projects/{project_key}/sprints": {
         parameters: {
             query?: never;
@@ -1923,6 +1941,10 @@ export interface components {
         OrgSettingsResponse: {
             /** Locale */
             locale: string;
+            /** Story Points Enabled */
+            story_points_enabled: boolean;
+            /** Story Points Max */
+            story_points_max: number;
             /** Timezone */
             timezone: string;
             /**
@@ -2033,6 +2055,15 @@ export interface components {
             name: string;
             /** Permissions */
             permissions: string[];
+        };
+        /** ProjectSettingsResponse */
+        ProjectSettingsResponse: {
+            effective: components["schemas"]["StoryPointsValues"];
+            organization: components["schemas"]["StoryPointsValues"];
+            overrides: components["schemas"]["StoryPointsOverrides"];
+            provenance: components["schemas"]["StoryPointsProvenanceResponse"];
+            /** Updated At */
+            updated_at: string | null;
         };
         /** ProjectSummary */
         ProjectSummary: {
@@ -2306,6 +2337,33 @@ export interface components {
             /** Position */
             position: number;
         };
+        /** StoryPointsOverrides */
+        StoryPointsOverrides: {
+            /** Story Points Enabled */
+            story_points_enabled: boolean | null;
+            /** Story Points Max */
+            story_points_max: number | null;
+        };
+        /** StoryPointsProvenanceResponse */
+        StoryPointsProvenanceResponse: {
+            /**
+             * Story Points Enabled
+             * @enum {string}
+             */
+            story_points_enabled: "organization" | "project";
+            /**
+             * Story Points Max
+             * @enum {string}
+             */
+            story_points_max: "organization" | "project";
+        };
+        /** StoryPointsValues */
+        StoryPointsValues: {
+            /** Story Points Enabled */
+            story_points_enabled: boolean;
+            /** Story Points Max */
+            story_points_max: number;
+        };
         /** TransitionInput */
         TransitionInput: {
             /** From Status Id */
@@ -2419,6 +2477,10 @@ export interface components {
         UpdateOrgSettingsRequest: {
             /** Locale */
             locale?: string | null;
+            /** Story Points Enabled */
+            story_points_enabled?: boolean | null;
+            /** Story Points Max */
+            story_points_max?: number | null;
             /** Timezone */
             timezone?: string | null;
         };
@@ -2443,6 +2505,13 @@ export interface components {
             readonly key?: unknown;
             /** Name */
             name?: string | null;
+        };
+        /** UpdateProjectSettingsRequest */
+        UpdateProjectSettingsRequest: {
+            /** Story Points Enabled Override */
+            story_points_enabled_override?: boolean | null;
+            /** Story Points Max Override */
+            story_points_max_override?: number | null;
         };
         /** UpdateSprintRequest */
         UpdateSprintRequest: {
@@ -4576,6 +4645,74 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_project_settings_api_v1_orgs__org_slug__projects__project_key__settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_project_settings_api_v1_orgs__org_slug__projects__project_key__settings_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProjectSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectSettingsResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

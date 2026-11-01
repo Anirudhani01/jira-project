@@ -23,9 +23,10 @@ import {
 } from './api';
 import { BoardColumnsEditor } from './BoardColumnsEditor';
 import { ProjectMembersSection } from './ProjectMembersSection';
+import { ProjectEstimatesSection } from './ProjectEstimatesSection';
 import { ProjectWorkflowSection } from './ProjectWorkflowSection';
 
-const TABS = ['details', 'members', 'columns', 'workflow', 'danger'] as const;
+const TABS = ['details', 'estimates', 'members', 'columns', 'workflow', 'danger'] as const;
 type Tab = (typeof TABS)[number];
 
 /** Project settings as tabs: details, members, board columns, workflow, danger zone. */
@@ -102,6 +103,7 @@ export function ProjectPage() {
       >
         <TabsList aria-label="Project settings" className="overflow-x-auto">
           <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="estimates">Estimates</TabsTrigger>
           <TabsTrigger value="members">Members</TabsTrigger>
           <TabsTrigger value="columns">Board columns</TabsTrigger>
           <TabsTrigger value="workflow">Workflow</TabsTrigger>
@@ -122,6 +124,15 @@ export function ProjectPage() {
               <dd className="text-fg">{p.description ?? 'No description'}</dd>
             </dl>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="estimates" className="pt-4">
+          <ProjectEstimatesSection
+            orgSlug={org}
+            projectKey={p.key}
+            canManage={canManage}
+            archived={p.archived}
+          />
         </TabsContent>
 
         <TabsContent value="members" className="pt-4">

@@ -4,8 +4,10 @@ import { apiFetch } from '../../lib/api/client';
 import type {
   Project,
   ProjectMember,
+  ProjectSettings,
   ProjectSummary,
   ReplaceWorkflowRequest,
+  UpdateProjectSettingsRequest,
   Workflow,
 } from '../../lib/api/types';
 
@@ -49,6 +51,32 @@ export function useProjectMembers(org: string, key: string) {
     queryKey: [...projectKey(org, key), 'members'],
     queryFn: () =>
       apiFetch<{ items: ProjectMember[] }>(`${projectPath(org, key)}/members`).then((r) => r.items),
+  });
+}
+
+export const projectSettingsKey = (org: string, key: string) =>
+  [...projectKey(org, key), 'settings'] as const;
+
+export function useProjectSettings(org: string, key: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: projectSettingsKey(org, key),
+    enabled: (options?.enabled ?? true) && org.length > 0 && key.length > 0,
+    queryFn: () => apiFetch<ProjectSettings>(`${projectPath(org, key)}/settings`),
+  });
+}
+
+export function useUpdateProjectSettings(org: string, key: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdateProjectSettingsRequest) =>
+      apiFetch<ProjectSettings>(`${projectPath(org, key)}/settings`, {
+        method: 'PATCH',
+        json: body,
+      }),
+    onSuccess: async (data) => {
+      queryClient.setQueryData(projectSettingsKey(org, key), data);
+      await queryClient.invalidateQueries({ queryKey: projectSettingsKey(org, key) });
+    },
   });
 }
 

@@ -123,7 +123,11 @@ async def update_org(
 async def get_org_settings(access: ViewOrg, services: Services) -> OrgSettingsResponse:
     record = await service.get_org_settings(services, access)
     return OrgSettingsResponse(
-        timezone=record.timezone, locale=record.locale, updated_at=record.updated_at
+        timezone=record.timezone,
+        locale=record.locale,
+        story_points_enabled=record.story_points_enabled,
+        story_points_max=record.story_points_max,
+        updated_at=record.updated_at,
     )
 
 
@@ -140,7 +144,11 @@ async def update_org_settings(
 ) -> OrgSettingsResponse:
     record = await service.update_org_settings(services, access, body, client=client_info(request))
     return OrgSettingsResponse(
-        timezone=record.timezone, locale=record.locale, updated_at=record.updated_at
+        timezone=record.timezone,
+        locale=record.locale,
+        story_points_enabled=record.story_points_enabled,
+        story_points_max=record.story_points_max,
+        updated_at=record.updated_at,
     )
 
 

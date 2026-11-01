@@ -10,6 +10,8 @@ import { useOrgFormatters } from './useOrgFormatters';
 const ORG_SETTINGS = {
   timezone: 'Asia/Tokyo',
   locale: 'ja-JP',
+  story_points_enabled: true,
+  story_points_max: 100,
   updated_at: '2026-10-27T00:00:00Z',
 };
 
@@ -86,7 +88,13 @@ describe('OrgFormatProvider', () => {
   it('refreshes formatters when settings cache updates after preferences save', async () => {
     mockApi({
       'GET /orgs/acme/settings': () =>
-        json({ timezone: 'UTC', locale: 'en-US', updated_at: '2026-10-27T00:00:00Z' }),
+        json({
+          timezone: 'UTC',
+          locale: 'en-US',
+          story_points_enabled: true,
+          story_points_max: 100,
+          updated_at: '2026-10-27T00:00:00Z',
+        }),
     });
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: 60_000 } },

@@ -11,7 +11,7 @@ from app.authz.permissions import Permission
 from app.authz.projects import ProjectAccess, require_project
 from app.core.errors import AppError
 from app.modules.identity.deps import CsrfProtected, Services, client_info
-from app.modules.projects import service
+from app.modules.projects import service, settings_service
 from app.modules.projects.models import Project
 from app.modules.projects.schemas import (
     AddProjectMemberRequest,
@@ -28,6 +28,10 @@ from app.modules.projects.schemas import (
     UpdateProjectMemberRequest,
     UpdateProjectRequest,
     WorkflowResponse,
+)
+from app.modules.projects.settings_schemas import (
+    ProjectSettingsResponse,
+    UpdateProjectSettingsRequest,
 )
 from app.modules.projects.workflow_errors import precondition_required, workflow_revision_conflict
 
@@ -109,6 +113,27 @@ async def create_project(
 async def get_project(access: ViewProject, services: Services) -> ProjectResponse:
     project, current = await service.get_project(services, access)
     return _project(project, current)
+
+
+@router.get("/{project_key}/settings", response_model=ProjectSettingsResponse)
+async def get_project_settings(access: ViewProject, services: Services) -> ProjectSettingsResponse:
+    return await settings_service.get_project_settings(services, access)
+
+
+@router.patch(
+    "/{project_key}/settings",
+    response_model=ProjectSettingsResponse,
+    dependencies=[CsrfProtected],
+)
+async def update_project_settings(
+    body: UpdateProjectSettingsRequest,
+    request: Request,
+    access: ManageProject,
+    services: Services,
+) -> ProjectSettingsResponse:
+    return await settings_service.update_project_settings(
+        services, access, body, client=client_info(request)
+    )
 
 
 @router.patch("/{project_key}", response_model=ProjectResponse, dependencies=[CsrfProtected])

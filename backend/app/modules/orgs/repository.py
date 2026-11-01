@@ -120,14 +120,24 @@ async def create_org_with_owner(
     await session.execute(
         insert(IssueType),
         [
-            {"org_id": org_id, "name": type_name, "kind": kind, "position": index}
+            {
+                "org_id": org_id,
+                "name": type_name,
+                "kind": kind,
+                "position": index,
+            }
             for index, (type_name, kind) in enumerate(ISSUE_TYPES)
         ],
     )
     await session.execute(
         insert(Priority),
         [
-            {"org_id": org_id, "name": priority, "sort_order": index, "color": color}
+            {
+                "org_id": org_id,
+                "name": priority,
+                "sort_order": index,
+                "color": color,
+            }
             for index, (priority, color) in enumerate(PRIORITIES)
         ],
     )
@@ -169,6 +179,8 @@ async def rename_org(session: AsyncSession, name: str) -> bool:
 class OrgSettingsRecord:
     timezone: str
     locale: str
+    story_points_enabled: bool
+    story_points_max: int
     updated_at: datetime
 
 
@@ -179,11 +191,19 @@ async def get_organization_settings(session: AsyncSession) -> OrgSettingsRecord:
             select(
                 OrganizationSettings.timezone,
                 OrganizationSettings.locale,
+                OrganizationSettings.story_points_enabled,
+                OrganizationSettings.story_points_max,
                 OrganizationSettings.updated_at,
             ).where(OrganizationSettings.org_id == context.org_id)
         )
     ).one()
-    return OrgSettingsRecord(timezone=row.timezone, locale=row.locale, updated_at=row.updated_at)
+    return OrgSettingsRecord(
+        timezone=row.timezone,
+        locale=row.locale,
+        story_points_enabled=row.story_points_enabled,
+        story_points_max=row.story_points_max,
+        updated_at=row.updated_at,
+    )
 
 
 async def update_organization_settings(
@@ -191,6 +211,8 @@ async def update_organization_settings(
     *,
     timezone: str | None,
     locale: str | None,
+    story_points_enabled: bool | None,
+    story_points_max: int | None,
 ) -> tuple[OrgSettingsRecord, list[str]]:
     """Apply a partial update; return the row and sorted changed field names (empty if no-op)."""
     current = await get_organization_settings(session)
@@ -202,6 +224,12 @@ async def update_organization_settings(
     if locale is not None and locale != current.locale:
         changed.append("locale")
         values["locale"] = locale
+    if story_points_enabled is not None and story_points_enabled != current.story_points_enabled:
+        changed.append("story_points_enabled")
+        values["story_points_enabled"] = story_points_enabled
+    if story_points_max is not None and story_points_max != current.story_points_max:
+        changed.append("story_points_max")
+        values["story_points_max"] = story_points_max
     if not changed:
         return current, []
     context = require_org_context(session)

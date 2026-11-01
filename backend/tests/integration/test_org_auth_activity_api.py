@@ -11,6 +11,10 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from tests.integration.auth_support import auth_client, flush_test_redis, superuser_sql
+from tests.integration.org_auth_projection_support import (
+    random_synthetic_platform_event_id,
+    synthetic_platform_event_id,
+)
 from tests.integration.tenancy_support import Tenant, add_member, make_tenant, verified_user
 
 pytestmark = pytest.mark.integration
@@ -45,7 +49,9 @@ async def insert_activity_row(
     occurred_at: datetime = BASE_TIME,
     platform_event_id: int | None = None,
 ) -> int:
-    pid = platform_event_id if platform_event_id is not None else uuid.uuid4().int % 900_000_000
+    pid = (
+        platform_event_id if platform_event_id is not None else random_synthetic_platform_event_id()
+    )
     md = json.dumps(metadata or {"sessions_evicted": 1, "ip": "10.0.0.1"})
     [row] = await superuser_sql(
         "INSERT INTO org_authentication_events "
@@ -122,14 +128,14 @@ async def test_member_event_type_and_date_filters(tenant: Tenant) -> None:
         user_id=tenant.user_id,
         event_type="auth.login.succeeded",
         occurred_at=BASE_TIME,
-        platform_event_id=1001,
+        platform_event_id=synthetic_platform_event_id(1001),
     )
     await insert_activity_row(
         org_id=tenant.org_id,
         user_id=other_id,
         event_type="auth.logout",
         occurred_at=BASE_TIME + timedelta(hours=1),
-        platform_event_id=1002,
+        platform_event_id=synthetic_platform_event_id(1002),
     )
     path = activity_path(tenant.slug)
     by_member = (await tenant.http.get(path, params={"member": str(tenant.user_id)})).json()[
@@ -158,7 +164,7 @@ async def test_cursor_pagination_and_limit_cap(tenant: Tenant) -> None:
             org_id=tenant.org_id,
             user_id=tenant.user_id,
             occurred_at=BASE_TIME + timedelta(minutes=index),
-            platform_event_id=2000 + index,
+            platform_event_id=synthetic_platform_event_id(2000 + index),
         )
     path = activity_path(tenant.slug)
     pages: list[dict[str, object]] = []
@@ -205,7 +211,7 @@ async def test_from_is_inclusive_and_to_is_exclusive(tenant: Tenant) -> None:
             org_id=tenant.org_id,
             user_id=tenant.user_id,
             occurred_at=at,
-            platform_event_id=4000 + index,
+            platform_event_id=synthetic_platform_event_id(4000 + index),
         )
     window = (
         await tenant.http.get(
@@ -229,7 +235,7 @@ async def test_default_page_size_is_fifty(tenant: Tenant) -> None:
             org_id=tenant.org_id,
             user_id=tenant.user_id,
             occurred_at=BASE_TIME + timedelta(seconds=index),
-            platform_event_id=5000 + index,
+            platform_event_id=synthetic_platform_event_id(5000 + index),
         )
     first = (await tenant.http.get(activity_path(tenant.slug))).json()
     assert len(first["items"]) == 50
@@ -341,13 +347,13 @@ async def test_multi_org_users_only_see_their_org_projection_rows(
     await insert_activity_row(
         org_id=a.org_id,
         user_id=shared_user,
-        platform_event_id=3001,
+        platform_event_id=synthetic_platform_event_id(3001),
         occurred_at=BASE_TIME,
     )
     await insert_activity_row(
         org_id=b.org_id,
         user_id=shared_user,
-        platform_event_id=3002,
+        platform_event_id=synthetic_platform_event_id(3002),
         occurred_at=BASE_TIME + timedelta(minutes=1),
     )
     a_items = (await a.http.get(activity_path(a.slug))).json()["items"]
