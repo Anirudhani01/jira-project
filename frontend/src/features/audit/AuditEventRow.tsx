@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Badge } from '../../components/ui/Badge';
 import type { AuditEvent, Member } from '../../lib/api/types';
 
+import { useOrgFormatters } from '../orgs/useOrgFormatters';
+
 import { formatAuditActor } from './auditActorLabel';
 
 export function AuditEventRow({
@@ -15,6 +17,7 @@ export function AuditEventRow({
   memberById: Map<string, Member>;
   membersLoaded: boolean;
 }) {
+  const orgFormat = useOrgFormatters();
   const [open, setOpen] = useState(false);
   const entries = Object.entries(event.metadata);
   const targetText = event.target_type
@@ -25,7 +28,7 @@ export function AuditEventRow({
     <>
       <tr className="border-b border-[var(--admin-border)] align-top">
         <td className="py-2 pr-3 whitespace-nowrap text-[var(--admin-muted)]">
-          {new Date(event.created_at).toLocaleString()}
+          <time dateTime={event.created_at}>{orgFormat.formatDateTime(event.created_at)}</time>
         </td>
         <td className="pr-3 text-[var(--admin-text)]">
           {formatAuditActor(event.actor_user_id, memberById, membersLoaded)}

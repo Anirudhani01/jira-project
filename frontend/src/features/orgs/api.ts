@@ -7,7 +7,9 @@ import type {
   JoinedOrg,
   Member,
   Org,
+  OrgSettings,
   OrgSummary,
+  UpdateOrgSettingsRequest,
 } from '../../lib/api/types';
 import { sessionKey } from '../auth/api';
 
@@ -59,6 +61,30 @@ export function useRenameOrg(slug: string) {
     onSuccess: async (org) => {
       queryClient.setQueryData(orgKey(slug), org);
       await queryClient.invalidateQueries({ queryKey: sessionKey });
+    },
+  });
+}
+
+export const orgSettingsKey = (slug: string) => ['org', slug.toLowerCase(), 'settings'] as const;
+
+export function useOrgSettings(slug: string) {
+  return useQuery({
+    queryKey: orgSettingsKey(slug),
+    enabled: Boolean(slug),
+    queryFn: () => apiFetch<OrgSettings>(`/orgs/${encodeURIComponent(slug)}/settings`),
+  });
+}
+
+export function useUpdateOrgSettings(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdateOrgSettingsRequest) =>
+      apiFetch<OrgSettings>(`/orgs/${encodeURIComponent(slug)}/settings`, {
+        method: 'PATCH',
+        json: body,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: orgSettingsKey(slug) });
     },
   });
 }

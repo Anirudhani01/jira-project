@@ -126,6 +126,31 @@ class Priority(Base):
 INVITATION_TTL_DAYS = 7
 
 
+class OrganizationSettings(Base):
+    """Per-organization display preferences (A5): timezone and locale.
+
+    One row per org; inserted in the org-creation transaction and backfilled for existing
+    orgs. Protected by FORCED RLS (migration 0019).
+    """
+
+    __tablename__ = "organization_settings"
+    __table_args__ = ({"implicit_returning": False},)
+
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("organizations.id", ondelete="RESTRICT"),
+        primary_key=True,
+    )
+    timezone: Mapped[str] = mapped_column(String(64), server_default=text("'UTC'"))
+    locale: Mapped[str] = mapped_column(String(255), server_default=text("'en-US'"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+
 class OrgInvitation(Base):
     """Pending/accepted/revoked invitations (M4). Only the token's SHA-256 hash is stored;
     the worker mints the token when it sends the email."""

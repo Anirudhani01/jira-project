@@ -35,6 +35,7 @@ ALLOWED_TABLES = frozenset(
         "outbox",
         # M3
         "organizations",
+        "organization_settings",  # A5 org timezone/locale
         "org_memberships",
         "issue_types",
         "priorities",

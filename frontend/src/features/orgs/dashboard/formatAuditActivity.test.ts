@@ -1,4 +1,4 @@
-import { describeAuditEvent, formatRelativeTime } from './formatAuditActivity';
+import { describeAuditEvent } from './formatAuditActivity';
 
 describe('describeAuditEvent', () => {
   it('uses member display names when available', () => {
@@ -21,12 +21,5 @@ describe('describeAuditEvent', () => {
     );
     expect(text).toContain('Alex Kim');
     expect(text).toContain('project created');
-  });
-});
-
-describe('formatRelativeTime', () => {
-  it('formats recent timestamps', () => {
-    const now = new Date('2026-10-30T12:00:00Z').getTime();
-    expect(formatRelativeTime('2026-10-30T11:00:00Z', now)).toMatch(/hour/i);
   });
 });

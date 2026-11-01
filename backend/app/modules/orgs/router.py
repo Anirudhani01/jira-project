@@ -44,6 +44,7 @@ from app.modules.orgs.schemas import (
     UpdateMemberRequest,
     UpdateOrgRequest,
 )
+from app.modules.orgs.settings_schemas import OrgSettingsResponse, UpdateOrgSettingsRequest
 
 router = APIRouter(prefix="/api/v1", tags=["orgs"])
 
@@ -116,6 +117,31 @@ async def update_org(
             services, access, name=body.name, client=client_info(request)
         )
     return _org_response(org, current)
+
+
+@router.get("/orgs/{org_slug}/settings", response_model=OrgSettingsResponse)
+async def get_org_settings(access: ViewOrg, services: Services) -> OrgSettingsResponse:
+    record = await service.get_org_settings(services, access)
+    return OrgSettingsResponse(
+        timezone=record.timezone, locale=record.locale, updated_at=record.updated_at
+    )
+
+
+@router.patch(
+    "/orgs/{org_slug}/settings",
+    response_model=OrgSettingsResponse,
+    dependencies=[CsrfProtected],
+)
+async def update_org_settings(
+    body: UpdateOrgSettingsRequest,
+    request: Request,
+    access: ManageOrg,
+    services: Services,
+) -> OrgSettingsResponse:
+    record = await service.update_org_settings(services, access, body, client=client_info(request))
+    return OrgSettingsResponse(
+        timezone=record.timezone, locale=record.locale, updated_at=record.updated_at
+    )
 
 
 @router.get("/orgs/{org_slug}/issue-types", response_model=IssueTypeListResponse)

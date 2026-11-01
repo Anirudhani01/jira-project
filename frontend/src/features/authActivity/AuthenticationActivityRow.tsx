@@ -9,6 +9,8 @@ import {
   authActivityRowLabel,
   authActivitySafeMetadata,
 } from './authActivityDetails';
+import { useOrgFormatters } from '../orgs/useOrgFormatters';
+
 import { authActivityEventTone, formatAuthActivityEventType } from './authActivityEventTypes';
 
 function EventBadge({ eventType }: { eventType: string }) {
@@ -82,8 +84,9 @@ function ExpandableDetails({
 }
 
 export function AuthenticationActivityTableRow({ item }: { item: AuthenticationActivityItem }) {
+  const orgFormat = useOrgFormatters();
   const [open, setOpen] = useState(false);
-  const timestamp = new Date(item.occurred_at).toLocaleString();
+  const timestamp = orgFormat.formatDateTime(item.occurred_at);
 
   return (
     <tr className="border-b border-[var(--admin-border)] align-top">
@@ -111,8 +114,9 @@ export function AuthenticationActivityTableRow({ item }: { item: AuthenticationA
 
 /** Compact card layout for narrow viewports. */
 export function AuthenticationActivityMobileCard({ item }: { item: AuthenticationActivityItem }) {
+  const orgFormat = useOrgFormatters();
   const [open, setOpen] = useState(false);
-  const timestamp = new Date(item.occurred_at).toLocaleString();
+  const timestamp = orgFormat.formatDateTime(item.occurred_at);
 
   return (
     <article
@@ -121,7 +125,10 @@ export function AuthenticationActivityMobileCard({ item }: { item: Authenticatio
     >
       <div className="flex items-start justify-between gap-2">
         <MemberCell item={item} />
-        <time className="shrink-0 text-xs whitespace-nowrap text-[var(--admin-muted)]">
+        <time
+          className="shrink-0 text-xs whitespace-nowrap text-[var(--admin-muted)]"
+          dateTime={item.occurred_at}
+        >
           {timestamp}
         </time>
       </div>

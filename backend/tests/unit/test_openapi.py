@@ -32,6 +32,7 @@ M2_PATHS = {
 M3_PATHS = {
     "/api/v1/orgs",
     "/api/v1/orgs/{org_slug}",
+    "/api/v1/orgs/{org_slug}/settings",
     "/api/v1/orgs/{org_slug}/issue-types",
     "/api/v1/orgs/{org_slug}/priorities",
     "/api/v1/orgs/{org_slug}/audit-events",

@@ -31,6 +31,7 @@ from tests.integration.auth_support import (
 # Tables holding tenant data in M3 (``organizations`` is the tenant root, keyed by id).
 TENANT_TABLES = (
     "org_memberships",
+    "organization_settings",
     "issue_types",
     "priorities",
     "audit_events",

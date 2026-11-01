@@ -64,7 +64,9 @@ async def org_state(slug: str) -> dict[str, int]:
         "(SELECT count(*) FROM priorities p JOIN organizations o ON o.id = p.org_id "
         " WHERE o.slug = :s) AS priorities, "
         "(SELECT count(*) FROM audit_events a JOIN organizations o ON o.id = a.org_id "
-        " WHERE o.slug = :s) AS audits",
+        " WHERE o.slug = :s) AS audits, "
+        "(SELECT count(*) FROM organization_settings s JOIN organizations o ON o.id = s.org_id "
+        " WHERE o.slug = :s) AS settings",
         s=slug,
     )
     return dict(row._mapping)
@@ -85,7 +87,15 @@ async def test_creation_writes_org_owner_seeds_and_audit_atomically(
         "types": 5,
         "priorities": 5,
         "audits": 1,
+        "settings": 1,
     }
+    [settings] = await superuser_sql(
+        "SELECT timezone, locale FROM organization_settings s "
+        "JOIN organizations o ON o.id = s.org_id WHERE o.slug = :s",
+        s=slug,
+    )
+    assert settings.timezone == "UTC"
+    assert settings.locale == "en-US"
     [owner] = await superuser_sql(
         "SELECT m.role, m.can_create_projects, m.user_id = o.created_by AS is_creator, "
         "a.action, a.metadata::text AS md FROM org_memberships m "
@@ -140,6 +150,7 @@ async def test_any_failure_rolls_back_the_whole_creation(
         "types": 0,
         "priorities": 0,
         "audits": 0,
+        "settings": 0,
     }
 
 
@@ -166,6 +177,7 @@ async def test_org_without_owner_is_rejected_at_commit_by_the_runtime_role(
         "types": 0,
         "priorities": 0,
         "audits": 0,
+        "settings": 0,
     }
 
 

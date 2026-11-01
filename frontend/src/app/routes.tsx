@@ -17,6 +17,7 @@ import { IssueListPage } from '../features/issues/IssueListPage';
 import { ProjectPage } from '../features/projects/ProjectPage';
 import { AcceptInvitationPage } from '../features/orgs/pages/AcceptInvitationPage';
 import { OrgHomePage } from '../features/orgs/pages/OrgHomePage';
+import { OrgWorkspaceLayout } from '../features/orgs/OrgWorkspaceLayout';
 import { orgAdminChildRoutes } from '../features/admin/adminRoutes';
 
 import { AppShell } from './AppShell';
@@ -44,6 +45,7 @@ export const appShellChildRoutes: RouteObject[] = [
       { path: 'orgs/new', element: <CreateOrgPage /> },
       {
         path: 'o/:org',
+        element: <OrgWorkspaceLayout />,
         children: [
           { index: true, element: <OrgHomePage /> },
           orgAdminChildRoutes,
