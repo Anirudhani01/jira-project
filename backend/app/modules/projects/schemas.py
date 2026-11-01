@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
 
+from app.modules.boards.schemas import ColumnInput
 from app.modules.projects.models import KEY_PATTERN
 
 _KEY = re.compile(KEY_PATTERN)
@@ -67,6 +68,39 @@ class ProjectResponse(BaseModel):
     created_at: datetime
 
 
+StatusCategory = Literal["todo", "in_progress", "done"]
+StatusName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+TransitionName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+
+
+class StatusInput(_Request):
+    id: uuid.UUID | None = None
+    name: StatusName
+    category: StatusCategory
+    position: int = Field(ge=0, le=1000)
+
+
+class TransitionInput(_Request):
+    id: uuid.UUID | None = None
+    name: TransitionName
+    from_status_id: uuid.UUID | None = None
+    to_status_id: uuid.UUID
+
+
+class StatusRemapInput(_Request):
+    from_status_id: uuid.UUID
+    to_status_id: uuid.UUID
+
+
+class ReplaceWorkflowRequest(_Request):
+    name: ProjectName
+    initial_status_id: uuid.UUID
+    statuses: list[StatusInput] = Field(min_length=1, max_length=50)
+    transitions: list[TransitionInput] = Field(max_length=200)
+    columns: list[ColumnInput] = Field(min_length=1, max_length=20)
+    status_remaps: list[StatusRemapInput] = Field(default_factory=list, max_length=50)
+
+
 class StatusResponse(BaseModel):
     id: uuid.UUID
     name: str
@@ -90,6 +124,7 @@ class ColumnResponse(BaseModel):
 class WorkflowResponse(BaseModel):
     name: str
     initial_status_id: uuid.UUID
+    revision: int
     statuses: list[StatusResponse]
     transitions: list[TransitionResponse]
     columns: list[ColumnResponse]

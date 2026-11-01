@@ -20,6 +20,7 @@
     "gen:api": "openapi-typescript ../backend/openapi.json -o src/lib/api/schema.d.ts",
     "check:api": "openapi-typescript ../backend/openapi.json -o ../.tmp/schema.d.ts && diff -u src/lib/api/schema.d.ts ../.tmp/schema.d.ts",
     "e2e": "playwright test",
+    "e2e:workflow-a4b": "playwright test e2e/project-settings.spec.ts e2e/workflow-edit.spec.ts e2e/admin-workflow.spec.ts",
     "e2e:journeys": "playwright test --project=mvp-journeys",
     "e2e:journeys:smoke": "playwright test --project=mvp-journeys --grep @mvp-smoke"
   },

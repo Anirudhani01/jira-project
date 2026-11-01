@@ -29,8 +29,11 @@ function LazyProjectWorkflow({ org, project }: { org: string; project: ProjectSu
   return (
     <div className="border-t border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-4 sm:px-5">
       <ProjectWorkflowSection
+        org={org}
         workflow={workflow}
         project={{ key: project.key, name: project.name }}
+        canEdit={false}
+        archived={project.archived}
         onRetry={() => void workflow.refetch()}
       />
     </div>

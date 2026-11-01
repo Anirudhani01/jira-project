@@ -341,6 +341,7 @@ async def create_issue(
                 await _validate_fix_version(session, project, body.fix_version_id)
             if body.label_ids:
                 await _validate_labels(session, project.id, body.label_ids)
+            await repository.lock_workflow_row(session, project.workflow_id)
             status_id = await repository.initial_status(session, project.workflow_id)
             issue_id = uuid.uuid4()
             seq = await repository.allocate_seq(session, project.id)
@@ -869,6 +870,7 @@ async def apply_transition(
         issue = await _load(session, project, ref)
         if issue.version != expected_version:
             raise version_conflict()
+        await repository.lock_workflow_row(session, project.workflow_id)
         transition = await repository.find_transition(
             session, project.workflow_id, body.transition_id
         )

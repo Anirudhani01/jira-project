@@ -79,6 +79,11 @@ async def find_priority(session: AsyncSession, priority_id: uuid.UUID) -> Priori
     ).scalar_one_or_none()
 
 
+async def lock_workflow_row(session: AsyncSession, workflow_id: uuid.UUID) -> None:
+    require_org_context(session)
+    await session.execute(select(Workflow.id).where(Workflow.id == workflow_id).with_for_update())
+
+
 async def initial_status(session: AsyncSession, workflow_id: uuid.UUID) -> uuid.UUID:
     require_org_context(session)
     return (

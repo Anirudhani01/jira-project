@@ -1,9 +1,10 @@
 """Project HTTP API (M5). All routes are org-scoped and permission-tagged."""
 
+import re
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Query, Request, Response, status
+from fastapi import APIRouter, Header, Query, Request, Response, status
 
 from app.authz.deps import OrgAccess, require
 from app.authz.permissions import Permission
@@ -24,9 +25,13 @@ from app.modules.projects.schemas import (
     StatusResponse,
     TransitionResponse,
     UpdateProjectMemberRequest,
+    ReplaceWorkflowRequest,
     UpdateProjectRequest,
     WorkflowResponse,
 )
+from app.modules.projects.workflow_errors import precondition_required, workflow_revision_conflict
+
+WORKFLOW_ETAG = re.compile(r'^"w(\d+)"$')
 
 router = APIRouter(prefix="/api/v1/orgs/{org_slug}/projects", tags=["projects"])
 
@@ -149,13 +154,11 @@ async def unarchive_project(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/{project_key}/workflow", response_model=WorkflowResponse)
-async def get_workflow(access: ViewProject, services: Services) -> WorkflowResponse:
-    """Read-only in the MVP: statuses, transitions and the board's default columns."""
-    view = await service.workflow(services, access)
+def _workflow_response(view: dict[str, object]) -> WorkflowResponse:
     return WorkflowResponse(
-        name=view["name"],
-        initial_status_id=view["initial_status_id"],
+        name=view["name"],  # type: ignore[arg-type]
+        initial_status_id=view["initial_status_id"],  # type: ignore[arg-type]
+        revision=view["revision"],  # type: ignore[arg-type]
         statuses=[
             StatusResponse(id=s.id, name=s.name, category=s.category, position=s.position)
             for s in view["statuses"]  # type: ignore[attr-defined]
@@ -166,8 +169,43 @@ async def get_workflow(access: ViewProject, services: Services) -> WorkflowRespo
             )
             for t in view["transitions"]  # type: ignore[attr-defined]
         ],
-        columns=[ColumnResponse(**c) for c in view["columns"]],  # type: ignore[attr-defined]
+        columns=[ColumnResponse(**c) for c in view["columns"]],  # type: ignore[arg-type]
     )
+
+
+@router.get("/{project_key}/workflow", response_model=WorkflowResponse)
+async def get_workflow(access: ViewProject, services: Services) -> WorkflowResponse:
+    """Statuses, transitions, board column mapping and workflow revision."""
+    view = await service.workflow(services, access)
+    return _workflow_response(view)
+
+
+@router.put(
+    "/{project_key}/workflow",
+    response_model=WorkflowResponse,
+    dependencies=[CsrfProtected],
+)
+async def put_workflow(
+    body: ReplaceWorkflowRequest,
+    request: Request,
+    access: ManageProject,
+    services: Services,
+    if_match: Annotated[str | None, Header()] = None,
+) -> WorkflowResponse:
+    if if_match is None:
+        raise precondition_required()
+    match = WORKFLOW_ETAG.fullmatch(if_match.strip())
+    if match is None:
+        raise workflow_revision_conflict()
+    view = await service.replace_workflow(
+        services,
+        access,
+        body,
+        expected_revision=int(match.group(1)),
+        client=client_info(request),
+    )
+    return _workflow_response(view)
+
 
 
 @router.get("/{project_key}/members", response_model=ProjectMemberListResponse)

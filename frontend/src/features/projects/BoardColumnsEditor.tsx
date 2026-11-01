@@ -17,6 +17,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from 'lucide-react';
 import { useId, useMemo, useState, type ReactNode } from 'react';
+import { Link } from 'react-router';
 
 import { useAppOnline } from '../../app/OnlineStatusProvider';
 import { Badge } from '../../components/ui/Badge';
@@ -106,12 +107,15 @@ export function BoardColumnsEditor({
   board,
   workflow,
   canManage,
+  readOnlyReason,
 }: {
   org: string;
   project: string;
   board: Board;
   workflow: Workflow;
   canManage: boolean;
+  /** When set, column editing is disabled and Save is hidden. */
+  readOnlyReason?: 'workflow-tab' | 'permission';
 }) {
   const initial = useMemo(() => fromBoard(board), [board]);
   const [draft, setDraft] = useState<ColumnDraft[]>(initial);
@@ -139,8 +143,9 @@ export function BoardColumnsEditor({
     draft,
     statuses.map((s) => s.id),
   );
+  const editingDisabled = !canManage || readOnlyReason !== undefined;
   const dirty = !sameDrafts(draft, initial);
-  const disabled = !canManage || !online || save.isPending;
+  const disabled = editingDisabled || !online || save.isPending;
   const failure = save.error
     ? (permissionDeniedInlineMessage(save.error, 'project-settings') ?? describeError(save.error))
     : null;
@@ -173,7 +178,19 @@ export function BoardColumnsEditor({
           column holds. Every status belongs to exactly one column.
         </p>
       </div>
-      {!canManage ? (
+      {readOnlyReason === 'workflow-tab' ? (
+        <p className="text-sm text-fg-muted">
+          Edit workflow, statuses, transitions, and column mapping on the{' '}
+          <Link
+            to={`/o/${encodeURIComponent(org)}/p/${encodeURIComponent(project)}?tab=workflow`}
+            className="font-medium text-accent hover:underline"
+          >
+            Workflow
+          </Link>{' '}
+          tab.
+        </p>
+      ) : null}
+      {readOnlyReason === 'permission' || (!canManage && !readOnlyReason) ? (
         <p className="text-sm text-fg-muted">You need permission to change the board columns.</p>
       ) : null}
       {!online ? (
@@ -354,32 +371,38 @@ export function BoardColumnsEditor({
       <FormError>{failure}</FormError>
 
       <div className="flex flex-wrap gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={disabled || draft.length >= MAX_COLUMNS}
-          onClick={() => {
-            setDraft((rows) => [...rows, { uid: nextUid(), name: '', wip: '', statusIds: [] }]);
-          }}
-        >
-          <Plus className="size-4" aria-hidden="true" />
-          Add column
-        </Button>
-        <Button variant="primary" size="sm" disabled={disabled || !dirty} onClick={onSave}>
-          {save.isPending ? 'Saving…' : 'Save columns'}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={!dirty || save.isPending}
-          onClick={() => {
-            setDraft(initial);
-            setSubmitted(false);
-            save.reset();
-          }}
-        >
-          Discard changes
-        </Button>
+        {!readOnlyReason && canManage ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={disabled || draft.length >= MAX_COLUMNS}
+            onClick={() => {
+              setDraft((rows) => [...rows, { uid: nextUid(), name: '', wip: '', statusIds: [] }]);
+            }}
+          >
+            <Plus className="size-4" aria-hidden="true" />
+            Add column
+          </Button>
+        ) : null}
+        {!readOnlyReason && canManage ? (
+          <>
+            <Button variant="primary" size="sm" disabled={disabled || !dirty} onClick={onSave}>
+              {save.isPending ? 'Saving…' : 'Save columns'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!dirty || save.isPending}
+              onClick={() => {
+                setDraft(initial);
+                setSubmitted(false);
+                save.reset();
+              }}
+            >
+              Discard changes
+            </Button>
+          </>
+        ) : null}
       </div>
     </Card>
   );

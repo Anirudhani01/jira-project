@@ -167,8 +167,13 @@ e2e-pr8: node-version-check ## Axe + light/dark screenshots for issue list (requ
 	$(PNPM) exec playwright test e2e/issue-list.spec.ts
 
 .PHONY: e2e-pr10-settings
-e2e-pr10-settings: node-version-check ## Axe + light/dark screenshots for project settings (requires make dev)
+e2e-pr10-settings: node-version-check ## Project settings axe/screenshots (mock API; Playwright starts Vite on :5193)
 	$(PNPM) exec playwright test e2e/project-settings.spec.ts
+
+.PHONY: e2e-workflow-a4b
+e2e-workflow-a4b: node-version-check ## A4b workflow editor mocked E2E (Playwright webServer on :5193, not :5173)
+	$(PNPM) exec playwright test \
+		e2e/project-settings.spec.ts e2e/workflow-edit.spec.ts e2e/admin-workflow.spec.ts
 
 .PHONY: e2e-ux-states
 e2e-ux-states: node-version-check ## Global UX M6 suite only (requires API :8000, worker, Vite :5173)

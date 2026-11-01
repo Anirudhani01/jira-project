@@ -26,6 +26,7 @@ const COL_DONE = '55555555-5555-5555-5555-555555555552';
 /** Workflow payload aligned with `WorkflowResponse` (integration tests use the same shape). */
 export const A4A_WORKFLOW = {
   name: 'Default workflow',
+  revision: 1,
   initial_status_id: STATUS_TODO,
   statuses: [
     { id: STATUS_TODO, name: 'To Do', category: 'todo', position: 0 },
@@ -97,6 +98,8 @@ export type A4aMockTelemetry = {
   hubArchivedProjectListGets: number;
   workflowGets: string[];
   boardColumnPutBodies: unknown[];
+  workflowPutBodies: unknown[];
+  workflowPutHeaders: string[];
 };
 
 export type A4aMockContext = {
@@ -132,12 +135,19 @@ export function createA4aMockContext(
       },
     ],
     archivedProjects: [],
-    projectPermissions: ['project.view', 'board.manage', 'project.members.manage'],
+    projectPermissions: [
+      'project.view',
+      'project.manage',
+      'board.manage',
+      'project.members.manage',
+    ],
     telemetry: {
       shellActiveProjectListGets: 0,
       hubArchivedProjectListGets: 0,
       workflowGets: [],
       boardColumnPutBodies: [],
+      workflowPutBodies: [],
+      workflowPutHeaders: [],
       ...overrides.telemetry,
     },
     ...overrides,
@@ -158,7 +168,18 @@ function notFound() {
  * Single Playwright router for A4a UI tests. Unhandled API paths return 404 problem JSON
  * so requests never reach a live backend (which would trigger Session expired UX).
  */
-export async function installA4aMockRouter(page: Page, ctx: A4aMockContext): Promise<void> {
+export type WorkflowPutInterceptor = (args: {
+  req: import('@playwright/test').Request;
+  fulfill: (status: number, body: unknown) => Promise<void>;
+  body: unknown;
+  attempt: number;
+}) => Promise<'handled' | 'fallthrough'>;
+
+export async function installA4aMockRouter(
+  page: Page,
+  ctx: A4aMockContext,
+  options?: { workflowPut?: WorkflowPutInterceptor },
+): Promise<void> {
   await page.route('**/api/v1/**', async (route) => {
     const req = route.request();
     const url = new URL(req.url());
@@ -273,6 +294,19 @@ export async function installA4aMockRouter(page: Page, ctx: A4aMockContext): Pro
       return;
     }
 
+    if (method === 'PUT' && apiPath === `${projectPrefix}/workflow`) {
+      const body = req.postDataJSON();
+      ctx.telemetry.workflowPutBodies.push(body);
+      ctx.telemetry.workflowPutHeaders.push(req.headers()['if-match'] ?? '');
+      if (options?.workflowPut) {
+        const attempt = ctx.telemetry.workflowPutBodies.length;
+        const result = await options.workflowPut({ req, fulfill, body, attempt });
+        if (result === 'handled') return;
+      }
+      await fulfill(200, { ...A4A_WORKFLOW, revision: 2, ...(body as { name?: string }) });
+      return;
+    }
+
     await fulfill(404, notFound());
   });
 }
@@ -282,6 +316,8 @@ export function resetA4aTelemetry(ctx: A4aMockContext): void {
   ctx.telemetry.hubArchivedProjectListGets = 0;
   ctx.telemetry.workflowGets = [];
   ctx.telemetry.boardColumnPutBodies = [];
+  ctx.telemetry.workflowPutBodies = [];
+  ctx.telemetry.workflowPutHeaders = [];
 }
 
 export { COL_TODO, COL_DONE, STATUS_TODO, STATUS_DONE };

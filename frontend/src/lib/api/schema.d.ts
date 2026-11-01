@@ -995,10 +995,11 @@ export interface paths {
         };
         /**
          * Get Workflow
-         * @description Read-only in the MVP: statuses, transitions and the board's default columns.
+         * @description Statuses, transitions, board column mapping and workflow revision.
          */
         get: operations["get_workflow_api_v1_orgs__org_slug__projects__project_key__workflow_get"];
-        put?: never;
+        /** Put Workflow */
+        put: operations["put_workflow_api_v1_orgs__org_slug__projects__project_key__workflow_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2102,6 +2103,24 @@ export interface components {
             /** Columns */
             columns: components["schemas"]["ColumnInput"][];
         };
+        /** ReplaceWorkflowRequest */
+        ReplaceWorkflowRequest: {
+            /** Columns */
+            columns: components["schemas"]["ColumnInput"][];
+            /**
+             * Initial Status Id
+             * Format: uuid
+             */
+            initial_status_id: string;
+            /** Name */
+            name: string;
+            /** Status Remaps */
+            status_remaps?: components["schemas"]["StatusRemapInput"][];
+            /** Statuses */
+            statuses: components["schemas"]["StatusInput"][];
+            /** Transitions */
+            transitions: components["schemas"]["TransitionInput"][];
+        };
         /** SessionInfo */
         SessionInfo: {
             /**
@@ -2234,6 +2253,20 @@ export interface components {
              */
             start_at: string;
         };
+        /** StatusInput */
+        StatusInput: {
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "todo" | "in_progress" | "done";
+            /** Id */
+            id?: string | null;
+            /** Name */
+            name: string;
+            /** Position */
+            position: number;
+        };
         /** StatusRef */
         StatusRef: {
             /** Category */
@@ -2245,6 +2278,19 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+        };
+        /** StatusRemapInput */
+        StatusRemapInput: {
+            /**
+             * From Status Id
+             * Format: uuid
+             */
+            from_status_id: string;
+            /**
+             * To Status Id
+             * Format: uuid
+             */
+            to_status_id: string;
         };
         /** StatusResponse */
         StatusResponse: {
@@ -2259,6 +2305,20 @@ export interface components {
             name: string;
             /** Position */
             position: number;
+        };
+        /** TransitionInput */
+        TransitionInput: {
+            /** From Status Id */
+            from_status_id?: string | null;
+            /** Id */
+            id?: string | null;
+            /** Name */
+            name: string;
+            /**
+             * To Status Id
+             * Format: uuid
+             */
+            to_status_id: string;
         };
         /** TransitionListResponse */
         TransitionListResponse: {
@@ -2506,6 +2566,8 @@ export interface components {
             initial_status_id: string;
             /** Name */
             name: string;
+            /** Revision */
+            revision: number;
             /** Statuses */
             statuses: components["schemas"]["StatusResponse"][];
             /** Transitions */
@@ -4741,6 +4803,44 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_workflow_api_v1_orgs__org_slug__projects__project_key__workflow_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceWorkflowRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

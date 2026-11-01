@@ -36,7 +36,7 @@ test.describe('Admin Workflow Hub (A4a)', () => {
       .click();
 
     await expect(page.getByRole('heading', { name: 'Default workflow' })).toBeVisible();
-    await expect(page.getByText('Read-only', { exact: true })).toBeVisible();
+    await expect(page.getByText('View only', { exact: true })).toBeVisible();
     const statusTable = page.getByRole('table', { name: 'Workflow statuses' });
     await expect(statusTable).toContainText('To Do');
     await expect(statusTable).toContainText('Initial');
@@ -51,6 +51,7 @@ test.describe('Admin Workflow Hub (A4a)', () => {
     ctx.role = 'member';
     ctx.permissions = A4A_MEMBER_PERMISSIONS;
     ctx.displayName = 'Member User';
+    ctx.projectPermissions = ['project.view'];
     ctx.activeProjects = [];
     ctx.archivedProjects = [];
 
@@ -66,6 +67,6 @@ test.describe('Admin Workflow Hub (A4a)', () => {
     await page.goto(`/o/${A4A_ORG_SLUG}/p/${A4A_PROJECT_KEY}?tab=workflow`);
     await expect(page.getByRole('heading', { name: 'Default workflow' })).toBeVisible();
     await expect(page.getByRole('table', { name: 'Workflow statuses' })).toBeVisible();
-    await expect(page.getByText('Read-only', { exact: true })).toBeVisible();
+    await expect(page.getByText('View only', { exact: true })).toBeVisible();
   });
 });

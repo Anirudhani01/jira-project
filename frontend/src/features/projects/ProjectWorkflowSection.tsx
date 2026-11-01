@@ -12,42 +12,22 @@ import {
 } from '../../components/ui/DataGrid';
 import { StatusLozenge } from '../../components/ui/IssueIcons';
 import { ErrorState } from '../../components/ui/States';
-import type { Workflow } from '../../lib/api/types';
+import type { Board, Workflow } from '../../lib/api/types';
 
+import { ProjectWorkflowEditor } from './ProjectWorkflowEditor';
 import { formatWorkflowStatusCategory, resolveWorkflowStatusName } from './workflowDisplay';
 
-export function ProjectWorkflowSection({
-  workflow,
+function WorkflowReadOnlyTables({
+  data,
   project,
-  onRetry,
 }: {
-  workflow: {
-    isPending: boolean;
-    isError: boolean;
-    error: unknown;
-    data: Workflow | undefined;
-  };
+  data: Workflow;
   project?: { key: string; name: string };
-  onRetry?: () => void;
 }) {
-  if (workflow.isPending) {
-    return (
-      <Card className="space-y-4 p-5 sm:p-6">
-        <Skeleton className="h-6 w-32" aria-hidden />
-        <Skeleton className="h-8 w-full max-w-md" aria-hidden />
-        <Skeleton className="h-24 w-full" aria-hidden />
-      </Card>
-    );
-  }
-  if (workflow.isError) {
-    return <ErrorState error={workflow.error} {...(onRetry ? { onRetry } : {})} />;
-  }
-
-  const data = workflow.data;
-  const statusName = new Map((data?.statuses ?? []).map((s) => [s.id, s.name]));
-  const statusCategory = new Map((data?.statuses ?? []).map((s) => [s.id, s.category]));
-  const orderedStatuses = [...(data?.statuses ?? [])].sort((a, b) => a.position - b.position);
-  const transitions = data?.transitions ?? [];
+  const statusName = new Map(data.statuses.map((s) => [s.id, s.name]));
+  const statusCategory = new Map(data.statuses.map((s) => [s.id, s.category]));
+  const orderedStatuses = [...data.statuses].sort((a, b) => a.position - b.position);
+  const transitions = data.transitions;
 
   return (
     <Card className="space-y-5 p-5 sm:p-6" aria-labelledby="workflow-title">
@@ -55,15 +35,17 @@ export function ProjectWorkflowSection({
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 id="workflow-title" className="text-lg font-semibold text-fg">
-              {data?.name ?? 'Workflow'}
+              {data.name}
             </h2>
-            <Badge tone="neutral">Read-only</Badge>
+            <Badge tone="neutral">View only</Badge>
           </div>
           {project ? (
             <p className="text-sm text-fg-muted">
               Project <span className="font-mono text-fg">{project.key}</span>
               <span className="text-fg-muted"> · </span>
               {project.name}
+              <span className="text-fg-muted"> · </span>
+              revision w{data.revision}
             </p>
           ) : null}
           <p className="text-sm text-fg-muted">
@@ -92,7 +74,7 @@ export function ProjectWorkflowSection({
                       <DataGridDividedCell>
                         <span className="inline-flex flex-wrap items-center gap-2">
                           <StatusLozenge name={s.name} category={s.category} />
-                          {data?.initial_status_id === s.id ? (
+                          {data.initial_status_id === s.id ? (
                             <Badge tone="neutral">Initial</Badge>
                           ) : null}
                         </span>
@@ -147,7 +129,7 @@ export function ProjectWorkflowSection({
         <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-muted">
           Board columns
         </h3>
-        {(data?.columns ?? []).length === 0 ? (
+        {data.columns.length === 0 ? (
           <p className="text-sm text-fg-muted">No columns configured.</p>
         ) : (
           <DataGrid>
@@ -158,7 +140,7 @@ export function ProjectWorkflowSection({
                   <DataGridDividedHeadCell>Statuses</DataGridDividedHeadCell>
                 </DataGridHead>
                 <DataGridBody>
-                  {(data?.columns ?? []).map((column) => (
+                  {data.columns.map((column) => (
                     <DataGridRow key={column.position}>
                       <DataGridDividedCell>
                         <span className="font-medium text-fg">{column.name}</span>
@@ -189,4 +171,69 @@ export function ProjectWorkflowSection({
       </div>
     </Card>
   );
+}
+
+export function ProjectWorkflowSection({
+  workflow,
+  board,
+  project,
+  canEdit,
+  archived,
+  org,
+  onRetry,
+}: {
+  workflow: {
+    isPending: boolean;
+    isError: boolean;
+    error: unknown;
+    data: Workflow | undefined;
+    refetch: () => Promise<unknown>;
+  };
+  board?: {
+    isPending: boolean;
+    isError: boolean;
+    data: Board | undefined;
+    refetch: () => Promise<unknown>;
+  };
+  project?: { key: string; name: string };
+  canEdit: boolean;
+  archived: boolean;
+  org: string;
+  onRetry?: () => void;
+}) {
+  if (workflow.isPending || (canEdit && board?.isPending)) {
+    return (
+      <Card className="space-y-4 p-5 sm:p-6">
+        <Skeleton className="h-6 w-32" aria-hidden />
+        <Skeleton className="h-8 w-full max-w-md" aria-hidden />
+        <Skeleton className="h-24 w-full" aria-hidden />
+      </Card>
+    );
+  }
+  if (workflow.isError || (canEdit && board?.isError)) {
+    return (
+      <ErrorState
+        error={workflow.error ?? board?.isError}
+        {...(onRetry ? { onRetry } : {})}
+      />
+    );
+  }
+
+  const data = workflow.data;
+  if (!data) return null;
+
+  if (canEdit && !archived && board?.data && project) {
+    return (
+      <ProjectWorkflowEditor
+        org={org}
+        projectKey={project.key}
+        projectName={project.name}
+        workflow={data}
+        board={board.data}
+        archived={archived}
+      />
+    );
+  }
+
+  return <WorkflowReadOnlyTables data={data} {...(project ? { project } : {})} />;
 }

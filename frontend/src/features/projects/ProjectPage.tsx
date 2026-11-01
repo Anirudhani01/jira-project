@@ -155,13 +155,25 @@ export function ProjectPage() {
               project={p.key}
               board={board.data}
               workflow={workflow.data}
-              canManage={p.permissions.includes('board.manage')}
+              canManage={false}
+              readOnlyReason={canManage ? 'workflow-tab' : 'permission'}
             />
           )}
         </TabsContent>
 
         <TabsContent value="workflow" className="pt-4">
-          <ProjectWorkflowSection workflow={workflow} project={{ key: p.key, name: p.name }} />
+          <ProjectWorkflowSection
+            org={org}
+            workflow={workflow}
+            board={board}
+            project={{ key: p.key, name: p.name }}
+            canEdit={canManage && !p.archived}
+            archived={p.archived}
+            onRetry={() => {
+              void workflow.refetch();
+              void board.refetch();
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="danger" className="pt-4">

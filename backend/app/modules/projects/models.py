@@ -64,6 +64,7 @@ class Workflow(Base):
     org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     name: Mapped[str] = mapped_column(String(100))
     initial_status_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    revision: Mapped[int] = mapped_column(Integer, server_default=text("1"))
 
 
 class WorkflowStatus(Base):
