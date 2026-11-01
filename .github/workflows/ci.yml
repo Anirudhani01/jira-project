@@ -142,11 +142,64 @@ jobs:
         if: always()
         run: make down
 
+  e2e-workflow-a4b:
+    name: Playwright workflow A4b (mocked)
+    needs: changes
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main' ||
+      (github.event_name == 'pull_request' && needs.changes.outputs.code == 'true') ||
+      (github.event_name == 'pull_request' && needs.changes.outputs.documentation != 'true')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      # Omit E2E_BASE_URL so Playwright starts Vite on :5193 (see playwright.config.ts).
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up pnpm (version from frontend/package.json packageManager)
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        run: make frontend-install
+
+      - name: Install Playwright Chromium
+        working-directory: frontend
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Run mocked workflow E2E (make e2e-workflow-a4b)
+        run: make e2e-workflow-a4b
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-workflow-a4b-${{ github.run_id }}
+          path: |
+            frontend/test-results/
+            frontend/playwright-report/
+          retention-days: 14
+          if-no-files-found: ignore
+
   # Single PR conclusion job so branch protection can require "CI" without treating
   # skipped full-ci as a pending check when the docs-only path ran instead.
   ci-required:
     name: CI
-    needs: [changes, docs-only, ci]
+    needs: [changes, docs-only, ci, e2e-workflow-a4b]
     if: always() && !cancelled() && github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -160,15 +213,20 @@ jobs:
         env:
           CI_RESULT: ${{ needs.ci.result }}
           DOCS_RESULT: ${{ needs.docs-only.result }}
+          E2E_WORKFLOW_RESULT: ${{ needs.e2e-workflow-a4b.result }}
         run: |
           set -euo pipefail
           if [ "$CI_RESULT" = "success" ]; then
-            echo "Full CI passed."
+            if [ "$E2E_WORKFLOW_RESULT" != "success" ]; then
+              echo "make ci passed but workflow A4b E2E did not (result=$E2E_WORKFLOW_RESULT)." >&2
+              exit 1
+            fi
+            echo "Full CI and workflow A4b E2E passed."
             exit 0
           fi
           if [ "$DOCS_RESULT" = "success" ]; then
             echo "Documentation-only CI passed."
             exit 0
           fi
-          echo "CI did not pass (make ci=$CI_RESULT, docs-only=$DOCS_RESULT)." >&2
+          echo "CI did not pass (make ci=$CI_RESULT, docs-only=$DOCS_RESULT, e2e-workflow-a4b=$E2E_WORKFLOW_RESULT)." >&2
           exit 1

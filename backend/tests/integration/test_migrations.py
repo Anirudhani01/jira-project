@@ -11,8 +11,37 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from tests.integration.conftest import run_alembic
 from tests.integration.migration_support import OBJECTS_0018, OBJECTS_0019, roundtrip_owner_url
+from tests.integration.workflow_edit_privileges import (
+    assert_0019_baseline,
+    assert_0020_grants,
+    assert_snapshots_equal,
+    snapshot_workflow_graph_acl,
+)
 
-HEAD = "0019"
+REVISION_COLUMN = text(
+    """
+    SELECT column_name, column_default, is_nullable
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'workflows' AND column_name = 'revision'
+    """
+)
+WORKFLOW_EDIT_POLICIES = text(
+    """
+    SELECT polname FROM pg_policy pol
+    JOIN pg_class c ON c.oid = pol.polrelid
+    WHERE c.relname IN ('workflows', 'workflow_statuses', 'workflow_transitions')
+      AND pol.polname IN (
+        'workflows_update',
+        'workflow_statuses_update',
+        'workflow_statuses_delete',
+        'workflow_transitions_update',
+        'workflow_transitions_delete'
+      )
+    ORDER BY 1
+    """
+)
+
+HEAD = "0020"
 
 HELPERS = text(
     "SELECT count(*) FROM pg_proc WHERE proname IN ('app_current_org', 'app_current_user')"
@@ -41,6 +70,52 @@ async def _rows(engine: AsyncEngine, statement: object) -> list[tuple[object, ..
         return list((await conn.execute(statement)).all())  # type: ignore[call-overload]
 
 
+async def test_0020_grants_roundtrip_restores_0019_privileges_exactly(
+    migration_roundtrip_db: str,
+    migration_owner_engine: AsyncEngine,
+) -> None:
+    """Explicit REVOKE in 0020 downgrade must restore M5 ACLs; INSERT grants must survive."""
+    run_alembic("upgrade", "head", migration_database_url=migration_roundtrip_db)
+    run_alembic("downgrade", "0019", migration_database_url=migration_roundtrip_db)
+    baseline = await snapshot_workflow_graph_acl(migration_owner_engine)
+    assert_0019_baseline(baseline)
+
+    run_alembic("upgrade", "0020", migration_database_url=migration_roundtrip_db)
+    at_head = await snapshot_workflow_graph_acl(migration_owner_engine)
+    assert_0020_grants(at_head)
+
+    run_alembic("downgrade", "0019", migration_database_url=migration_roundtrip_db)
+    after_downgrade = await snapshot_workflow_graph_acl(migration_owner_engine)
+    assert_snapshots_equal(baseline, after_downgrade)
+
+    run_alembic("upgrade", "0020", migration_database_url=migration_roundtrip_db)
+    reupgrade = await snapshot_workflow_graph_acl(migration_owner_engine)
+    assert_0020_grants(reupgrade)
+
+
+async def test_upgrade_head_and_0020_downgrade_leaves_0019_intact(
+    migration_roundtrip_db: str,
+    migration_owner_engine: AsyncEngine,
+) -> None:
+    run_alembic("upgrade", "head", migration_database_url=migration_roundtrip_db)
+    assert await _scalar(migration_owner_engine, VERSION) == HEAD
+    policies = await _rows(migration_owner_engine, WORKFLOW_EDIT_POLICIES)
+    assert len(policies) == 5
+    [revision] = await _rows(migration_owner_engine, REVISION_COLUMN)
+    assert revision[0] == "revision"
+    assert revision[2] == "NO"
+
+    run_alembic("downgrade", "0019", migration_database_url=migration_roundtrip_db)
+    assert await _scalar(migration_owner_engine, VERSION) == "0019"
+    assert await _rows(migration_owner_engine, WORKFLOW_EDIT_POLICIES) == []
+    assert await _rows(migration_owner_engine, REVISION_COLUMN) == []
+    assert await _rows(migration_owner_engine, OBJECTS_0019) != []
+
+    run_alembic("upgrade", "0020", migration_database_url=migration_roundtrip_db)
+    assert await _scalar(migration_owner_engine, VERSION) == HEAD
+    assert len(await _rows(migration_owner_engine, WORKFLOW_EDIT_POLICIES)) == 5
+
+
 async def test_upgrade_head_and_0019_downgrade_leaves_0018_intact(
     migration_roundtrip_db: str,
     migration_owner_engine: AsyncEngine,
@@ -57,8 +132,11 @@ async def test_upgrade_head_and_0019_downgrade_leaves_0018_intact(
     assert await _rows(migration_owner_engine, OBJECTS_0018) != []
 
     run_alembic("upgrade", "0019", migration_database_url=migration_roundtrip_db)
-    assert await _scalar(migration_owner_engine, VERSION) == HEAD
+    assert await _scalar(migration_owner_engine, VERSION) == "0019"
     assert await _scalar(migration_owner_engine, PLATFORM_EVENTS) == 1
+
+    run_alembic("upgrade", "head", migration_database_url=migration_roundtrip_db)
+    assert await _scalar(migration_owner_engine, VERSION) == HEAD
 
 
 async def test_upgrade_head_and_0018_downgrade_leaves_pre0018_security_intact(

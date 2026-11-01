@@ -6,7 +6,7 @@ import { issuesKey } from '../issues/api';
 
 import { applyMove, type MovePlan } from './boardState';
 
-const boardKey = (org: string, project: string) =>
+export const boardKey = (org: string, project: string) =>
   ['org', org.toLowerCase(), 'board', project.toUpperCase()] as const;
 
 /** Freshness: refetch on focus plus 30 s polling (plan §5.1). */

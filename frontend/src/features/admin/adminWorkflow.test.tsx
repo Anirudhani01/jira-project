@@ -36,6 +36,7 @@ const UNKNOWN_FROM = '99999999-9999-9999-9999-999999999999';
 const UNKNOWN_TO = '88888888-8888-8888-8888-888888888888';
 const WORKFLOW = {
   name: 'Default workflow',
+  revision: 1,
   initial_status_id: S1,
   statuses: [
     { id: S1, name: 'To Do', category: 'todo', position: 0 },
@@ -146,7 +147,7 @@ describe('AdminWorkflowHubPage', () => {
     await user.click(
       await screen.findByRole('button', { name: /Expand workflow details for WEB/i }),
     );
-    expect(await screen.findByText('Read-only')).toBeInTheDocument();
+    expect(await screen.findByText('View only')).toBeInTheDocument();
     const panel = document.getElementById('admin-workflow-panel-WEB');
     if (!panel) throw new Error('Expected WEB workflow panel');
     expect(

@@ -48,6 +48,16 @@ ACTION_METADATA_ALLOWLIST: Final[dict[str, frozenset[str]]] = {
     "sprint.completed": frozenset({"project", "name", "moved"}),
     "board.columns.updated": frozenset({"project", "columns"}),
     "issue.deleted": frozenset({"key"}),
+    "workflow.metadata.updated": frozenset({"project", "fields"}),
+    "workflow.initial_status.changed": frozenset({"project", "from_status_id", "to_status_id"}),
+    "workflow.status.created": frozenset({"project", "status_id", "name"}),
+    "workflow.status.updated": frozenset({"project", "status_id", "fields"}),
+    "workflow.status.deleted": frozenset(
+        {"project", "status_id", "replacement_status_id", "issues_remapped"}
+    ),
+    "workflow.transition.created": frozenset({"project", "transition_id", "name"}),
+    "workflow.transition.deleted": frozenset({"project", "transition_id"}),
+    "workflow.board_mapping.updated": frozenset({"project", "columns"}),
 }
 
 

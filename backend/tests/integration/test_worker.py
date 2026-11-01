@@ -91,6 +91,10 @@ async def test_enqueue_rejects_unknown_topics_and_keys(
 # ------------------------------------------------------------------- retry/dead-letter
 async def test_failure_is_retried_with_backoff_and_records_only_the_error_type() -> None:
     job_id = await add_job()
+    [pending] = await superuser_sql(
+        "SELECT count(*) AS n FROM outbox WHERE processed_at IS NULL AND dead_at IS NULL"
+    )
+    assert int(pending.n) == 1
     calls: list[int] = []
     secret = RuntimeError("smtp said no for victim@example.com")
     await run_worker(handlers=recording(calls, secret))
@@ -101,7 +105,8 @@ async def test_failure_is_retried_with_backoff_and_records_only_the_error_type()
     assert row.processed_at is None  # type: ignore[attr-defined]
     assert row.dead_at is None  # type: ignore[attr-defined]
     assert row.locked_until is None  # type: ignore[attr-defined]
-    assert 60 <= row.delay <= 67  # type: ignore[attr-defined]
+    # Backoff is 60s + up to 10% jitter; allow clock skew between fail and this read.
+    assert 55 <= row.delay <= 72  # type: ignore[attr-defined]
     # Not due yet: a second run does not touch it.
     await run_worker(handlers=recording(calls, secret))
     assert calls == [job_id]

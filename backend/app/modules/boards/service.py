@@ -10,6 +10,7 @@ from app.authz.projects import ProjectAccess, project_transaction
 from app.core.errors import AppError
 from app.modules.audit import service as audit
 from app.modules.boards import repository
+from app.modules.boards.column_mapping import validate_column_mapping
 from app.modules.boards.schemas import (
     BoardColumn,
     BoardResponse,
@@ -111,22 +112,11 @@ async def replace_columns(
         if project.archived_at is not None:
             raise project_archived()
         board = await repository.find_board(session, project.id)
-        known = {column.id for column in await repository.list_columns(session, board.id)}
-        ids = [column.id for column in body.columns if column.id is not None]
-        if len(ids) != len(set(ids)) or not set(ids) <= known:
-            raise _invalid("Column ids must be unique columns of this board.")
-        mapped = [status for column in body.columns for status in column.status_ids]
         statuses = await repository.workflow_status_ids(session, project.workflow_id)
-        if len(mapped) != len(set(mapped)) or set(mapped) != statuses:
-            raise _invalid("Every workflow status must be mapped to exactly one column.")
-        await repository.replace_columns(
-            session,
-            board,
-            [
-                (column.id or uuid.uuid4(), column.name, column.wip_limit, column.status_ids)
-                for column in body.columns
-            ],
+        column_tuples = await validate_column_mapping(
+            session, project, board, body.columns, expected_status_ids=statuses
         )
+        await repository.replace_columns(session, board, column_tuples)
         await audit.record(
             session,
             "board.columns.updated",

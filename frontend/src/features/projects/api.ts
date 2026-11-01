@@ -1,7 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { apiFetch } from '../../lib/api/client';
-import type { Project, ProjectMember, ProjectSummary, Workflow } from '../../lib/api/types';
+import type {
+  Project,
+  ProjectMember,
+  ProjectSummary,
+  ReplaceWorkflowRequest,
+  Workflow,
+} from '../../lib/api/types';
+
+import { boardKey } from '../board/api';
 
 const base = (org: string) => `/orgs/${encodeURIComponent(org)}/projects`;
 const projectPath = (org: string, key: string) => `${base(org)}/${encodeURIComponent(key)}`;
@@ -87,6 +95,26 @@ export interface ColumnsRequest {
 }
 
 /** Replaces the board's columns; the board and the workflow view both change. */
+export type ReplaceWorkflowBody = ReplaceWorkflowRequest;
+
+export function useReplaceWorkflow(org: string, key: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ body, revision }: { body: ReplaceWorkflowRequest; revision: number }) =>
+      apiFetch<Workflow>(`${projectPath(org, key)}/workflow`, {
+        method: 'PUT',
+        json: body,
+        headers: { 'If-Match': `"w${String(revision)}"` },
+      }),
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: [...projectKey(org, key), 'workflow'] });
+      await queryClient.invalidateQueries({ queryKey: boardKey(org, key) });
+      await queryClient.invalidateQueries({ queryKey: ['org', org.toLowerCase()] });
+      queryClient.setQueryData([...projectKey(org, key), 'workflow'], data);
+    },
+  });
+}
+
 export function useReplaceBoardColumns(org: string, key: string) {
   const queryClient = useQueryClient();
   return useMutation({

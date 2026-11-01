@@ -30,6 +30,7 @@ const PROJECT = {
 const S1 = '44444444-4444-4444-4444-444444444441';
 const WORKFLOW = {
   name: 'Default workflow',
+  revision: 1,
   initial_status_id: S1,
   statuses: [{ id: S1, name: 'To Do', category: 'todo', position: 0 }],
   transitions: [
@@ -198,7 +199,7 @@ describe('ProjectPage', () => {
       await screen.findByRole('heading', { level: 1, name: 'WEB — Website' }),
     ).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Default workflow' })).toBeInTheDocument();
-    expect(screen.getByText('Read-only')).toBeInTheDocument();
+    expect(screen.getByText('View only')).toBeInTheDocument();
     const workflowCard = screen
       .getByRole('heading', { name: 'Default workflow' })
       .closest('[aria-labelledby="workflow-title"]');
@@ -265,6 +266,10 @@ describe('ProjectPage board columns tab', () => {
       { id: S1, name: 'To Do', category: 'todo', position: 0 },
       { id: S2, name: 'Done', category: 'done', position: 1 },
     ],
+    columns: [
+      { name: 'To Do', position: 0, status_ids: [S1] },
+      { name: 'Done', position: 1, status_ids: [S2] },
+    ],
   };
   const BOARD = {
     project_key: 'WEB',
@@ -295,7 +300,11 @@ describe('ProjectPage board columns tab', () => {
       },
     ],
   };
-  const MANAGER = { ...PROJECT, my_role: 'admin', permissions: ['project.view', 'board.manage'] };
+  const MANAGER = {
+    ...PROJECT,
+    my_role: 'admin',
+    permissions: ['project.view', 'project.manage'],
+  };
 
   function api(extra: Record<string, () => Response> = {}) {
     return mockApi({
@@ -308,48 +317,36 @@ describe('ProjectPage board columns tab', () => {
     });
   }
 
-  it('saves a renamed column and a new WIP limit', async () => {
-    const calls = api({ 'PUT /orgs/acme/projects/WEB/board/columns': () => json(BOARD) });
+  it('points managers to the workflow tab instead of saving columns here', async () => {
+    api();
     renderApp('/o/acme/p/WEB?tab=columns');
+    expect(await screen.findByRole('link', { name: 'Workflow' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save columns' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add column' })).toBeNull();
+    expect(screen.getByLabelText('Column 1 name')).toBeDisabled();
+  });
+
+  it('lets project managers save workflow changes from the workflow tab', async () => {
+    const calls = api({
+      'PUT /orgs/acme/projects/WEB/workflow': () => json({ ...TWO, revision: 2, name: 'Renamed' }),
+    });
+    renderApp('/o/acme/p/WEB?tab=workflow');
     const user = userEvent.setup();
-    const name = await screen.findByLabelText('Column 1 name');
+    const name = await screen.findByLabelText('Workflow name');
     await user.clear(name);
-    await user.type(name, 'Backlog');
-    await user.type(screen.getAllByLabelText('WIP limit')[0] as HTMLElement, '5');
-    await user.click(screen.getByRole('button', { name: 'Save columns' }));
+    await user.type(name, 'Renamed');
+    await user.click(screen.getByRole('button', { name: 'Save workflow' }));
     await waitFor(() => {
       expect(calls.some((c) => c.method === 'PUT')).toBe(true);
     });
-    expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({
-      columns: [
-        { id: C1, name: 'Backlog', wip_limit: 5, status_ids: [S1] },
-        { id: C2, name: 'Done', wip_limit: 3, status_ids: [S2] },
-      ],
-    });
+    expect(calls.find((c) => c.method === 'PUT')?.headers.get('If-Match')).toBe('"w1"');
+    expect((calls.find((c) => c.method === 'PUT')?.body as { name: string }).name).toBe('Renamed');
   });
 
-  it('blocks saving a new column that has no name', async () => {
-    const calls = api();
-    renderApp('/o/acme/p/WEB?tab=columns');
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Add column' }));
-    await user.click(screen.getByRole('button', { name: 'Save columns' }));
-    expect(await screen.findByText('Enter a column name.')).toBeInTheDocument();
-    expect(calls.some((c) => c.method === 'PUT')).toBe(false);
-  });
-
-  it('reorders columns with the move buttons', async () => {
-    api();
-    renderApp('/o/acme/p/WEB?tab=columns');
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Move Done up' }));
-    expect(screen.getByLabelText('Column 1 name')).toHaveValue('Done');
-  });
-
-  it('is read-only for people without board.manage', async () => {
+  it('is read-only for viewers on the columns tab', async () => {
     api({ 'GET /orgs/acme/projects/WEB': () => json(PROJECT) });
     renderApp('/o/acme/p/WEB?tab=columns');
     expect(await screen.findByLabelText('Column 1 name')).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Save columns' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Save columns' })).toBeNull();
   });
 });

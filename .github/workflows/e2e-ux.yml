@@ -1,5 +1,7 @@
 # Global UX M6 Playwright suite on main (path-scoped) + manual dispatch.
 # First run on default branch requires merge; workflow_dispatch cannot validate a file absent from main.
+# Full-stack UX E2E only: requires Vite on :5173 and API on :8000 (see make e2e-ux-states).
+# Mocked workflow A4b specs run in CI job `e2e-workflow-a4b` (ci.yml) via `make e2e-workflow-a4b` on :5193.
 name: E2E UX states
 
 on:

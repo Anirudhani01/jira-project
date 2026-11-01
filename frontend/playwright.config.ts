@@ -1,8 +1,24 @@
 import { defineConfig, devices } from '@playwright/test';
 
-/** End-to-end journeys run against a live stack (`make e2e` starts it): the SPA on
- * localhost:5173 (same origin as APP_BASE_URL), the API behind its proxy, the outbox worker
- * and Mailpit (http://localhost:8025) for verification emails. */
+/**
+ * Mocked API specs (a4a fixtures) use a dedicated Vite port so tests never attach to an
+ * unrelated app on :5173 from another worktree or `make dev`.
+ *
+ * - Default: Playwright starts this worktree's Vite on PLAYWRIGHT_MOCK_PORT (5193).
+ * - Full stack (`make dev` + journeys): set E2E_BASE_URL=http://127.0.0.1:5173 explicitly.
+ */
+const PLAYWRIGHT_MOCK_PORT = process.env.PLAYWRIGHT_MOCK_PORT ?? '5193';
+const mockBaseURL = `http://127.0.0.1:${PLAYWRIGHT_MOCK_PORT}`;
+
+const rawExternalBaseURL = process.env.E2E_BASE_URL?.trim() ?? '';
+const externalBaseURL = rawExternalBaseURL ? rawExternalBaseURL.replace(/\/$/, '') : undefined;
+if (externalBaseURL && !/^https?:\/\//.test(externalBaseURL)) {
+  throw new Error(`E2E_BASE_URL must be an absolute http(s) URL, got: ${externalBaseURL}`);
+}
+
+const baseURL = externalBaseURL ?? mockBaseURL;
+const useManagedMockWebServer = externalBaseURL === undefined;
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 90_000,
@@ -11,9 +27,17 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: [['list']],
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173',
+    baseURL,
     trace: 'retain-on-failure',
   },
+  webServer: useManagedMockWebServer
+    ? {
+        command: `pnpm exec vite --host 127.0.0.1 --port ${PLAYWRIGHT_MOCK_PORT} --strictPort`,
+        url: mockBaseURL,
+        reuseExistingServer: false,
+        timeout: 120_000,
+      }
+    : undefined,
   projects: [
     {
       name: 'chromium',
