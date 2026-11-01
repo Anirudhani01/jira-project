@@ -5,7 +5,10 @@ from contextlib import AsyncExitStack
 
 import pytest
 
-from app.modules.orgs.settings_defaults import DEFAULT_STORY_POINTS_ENABLED, DEFAULT_STORY_POINTS_MAX
+from app.modules.orgs.settings_defaults import (
+    DEFAULT_STORY_POINTS_ENABLED,
+    DEFAULT_STORY_POINTS_MAX,
+)
 from tests.integration.auth_support import flush_test_redis, superuser_sql
 from tests.integration.tenancy_support import Tenant, make_tenant
 

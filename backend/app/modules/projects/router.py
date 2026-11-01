@@ -11,9 +11,8 @@ from app.authz.permissions import Permission
 from app.authz.projects import ProjectAccess, require_project
 from app.core.errors import AppError
 from app.modules.identity.deps import CsrfProtected, Services, client_info
-from app.modules.projects import service
+from app.modules.projects import service, settings_service
 from app.modules.projects.models import Project
-from app.modules.projects import settings_service
 from app.modules.projects.schemas import (
     AddProjectMemberRequest,
     ColumnResponse,
