@@ -78,7 +78,7 @@ jobs:
       - name: Start API, worker, and Vite (make dev equivalent)
         env:
           # Match CI: no checkout .env; Makefile must export the same vars as local `make dev`.
-          ENV_FILE: docs/local.env.example
+          ENV_FILE: docs/local-dev.env
         run: |
           set -euo pipefail
           mkdir -p .tmp
@@ -100,7 +100,7 @@ jobs:
           }
 
           # ux-states creates many fresh accounts from one runner IP; SIGNUP_PER_IP is 5/hour with
-          # RATE_LIMIT_ENABLED=true in docs/local.env.example. CLI assignment overrides include+export for Make
+          # RATE_LIMIT_ENABLED=true in docs/local-dev.env. CLI assignment overrides include+export for Make
           # and is exported to uvicorn/worker (same as local `make backend-dev RATE_LIMIT_ENABLED=false`).
           make RATE_LIMIT_ENABLED=false backend-dev >> .tmp/backend-dev.log 2>&1 &
           echo $! >> "$PID_FILE"

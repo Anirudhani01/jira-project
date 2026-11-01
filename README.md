@@ -43,7 +43,7 @@ Switch to the pinned Node version with `nvm use` or `fnm use` in the repository 
 ## Quick start
 
 ```bash
-cp docs/local.env.example .env   # optional: local-only placeholder values; edit if you like
+cp docs/local-dev.env .env   # optional: local-only placeholder values; edit if you like
 make install                # backend + frontend deps from lockfiles
 make dev                    # Postgres, Redis, Mailpit in Docker; migrations; API :8000, worker, web :5173
 ```
@@ -52,7 +52,7 @@ Open http://localhost:5173. Emails sent in development are captured by Mailpit (
 leaves your machine): http://localhost:8025. The Vite dev server proxies `/api` to the API. Interactive API
 docs (dev only): http://localhost:8000/api/docs.
 
-Without a `.env`, the Makefile falls back to `docs/local.env.example` (placeholder values
+Without a `.env`, the Makefile falls back to `docs/local-dev.env` (placeholder values
 only; the backend refuses to start with placeholders in staging/prod). Root `.env.example`
 lists production variable names for hosted deploys (Antideploy reads it for analysis).
 
