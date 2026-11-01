@@ -6,7 +6,7 @@ SHELL := /bin/bash
 MAKEFLAGS += --no-print-directory
 
 # Use .env when present, otherwise the committed placeholder file (local-only values).
-ENV_FILE ?= $(if $(wildcard .env),.env,.env.example)
+ENV_FILE ?= $(if $(wildcard .env),.env,docs/local.env.example)
 include $(ENV_FILE)
 export
 

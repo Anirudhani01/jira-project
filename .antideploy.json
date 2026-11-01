@@ -3,5 +3,5 @@
   "name": "jira-project",
   "url": "https://task-tracker.antideploy.app",
   "rootDirectory": "",
-  "deployNotes": "Monorepo: build from repository root so the root Dockerfile runs (nginx + FastAPI + Vite build). Do not set the Antideploy build directory to frontend/ or backend/ alone."
+  "deployNotes": "Monolith: build directory must be repository root. Root ./Dockerfile builds frontend+backend; ignore buildpack warnings about choosing Node vs Python. Ignore APP_* / POSTGRES_* / TEST_* in Set them — those are local-only (docs/local.env.example). Production secrets are already set in the dashboard."
 }

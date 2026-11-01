@@ -116,7 +116,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 def _env_example() -> dict[str, str]:
     values = {}
-    for line in (ROOT / ".env.example").read_text().splitlines():
+    for line in (ROOT / "docs/local.env.example").read_text().splitlines():
         if line and not line.startswith("#") and "=" in line:
             key, value = line.split("=", 1)
             values[key.lower()] = value
