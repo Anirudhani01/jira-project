@@ -131,9 +131,17 @@ async def update_org_settings(
     fields_set = body.model_fields_set
     timezone = body.timezone if "timezone" in fields_set else None
     locale = body.locale if "locale" in fields_set else None
+    story_points_enabled = (
+        body.story_points_enabled if "story_points_enabled" in fields_set else None
+    )
+    story_points_max = body.story_points_max if "story_points_max" in fields_set else None
     async with org_transaction(services, access, Permission.ORG_MANAGE) as (session, current):
         record, changed = await repository.update_organization_settings(
-            session, timezone=timezone, locale=locale
+            session,
+            timezone=timezone,
+            locale=locale,
+            story_points_enabled=story_points_enabled,
+            story_points_max=story_points_max,
         )
         if changed:
             await audit.record(

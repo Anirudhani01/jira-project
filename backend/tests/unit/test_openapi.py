@@ -48,6 +48,7 @@ M4_PATHS = {
 M5_PATHS = {
     "/api/v1/orgs/{org_slug}/projects",
     "/api/v1/orgs/{org_slug}/projects/{project_key}",
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/settings",
     "/api/v1/orgs/{org_slug}/projects/{project_key}/archive",
     "/api/v1/orgs/{org_slug}/projects/{project_key}/unarchive",
     "/api/v1/orgs/{org_slug}/projects/{project_key}/workflow",

@@ -49,6 +49,8 @@ async def test_member_get_succeeds(tenant: Tenant) -> None:
     body = response.json()
     assert body["timezone"] == "UTC"
     assert body["locale"] == "en-US"
+    assert body["story_points_enabled"] is True
+    assert body["story_points_max"] == 100
     assert "updated_at" in body
 
 
@@ -206,6 +208,38 @@ async def test_changed_patch_writes_one_audit_event(tenant: Tenant) -> None:
     assert response.status_code == 200
     actions = await audit_actions(tenant.org_id)
     assert actions[-1] == ("org.settings.updated", '{"fields": "timezone"}')
+
+
+async def test_owner_can_patch_story_points_settings(tenant: Tenant) -> None:
+    response = await tenant.http.patch(
+        path(tenant.slug),
+        json={"story_points_enabled": False, "story_points_max": 21},
+        headers=await tenant.headers(),
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["story_points_enabled"] is False
+    assert body["story_points_max"] == 21
+
+
+async def test_invalid_story_points_max_rejected(tenant: Tenant) -> None:
+    response = await tenant.http.patch(
+        path(tenant.slug),
+        json={"story_points_max": 0},
+        headers=await tenant.headers(),
+    )
+    assert response.status_code == 422
+
+
+async def test_story_points_change_writes_audit(tenant: Tenant) -> None:
+    response = await tenant.http.patch(
+        path(tenant.slug),
+        json={"story_points_max": 8},
+        headers=await tenant.headers(),
+    )
+    assert response.status_code == 200
+    actions = await audit_actions(tenant.org_id)
+    assert actions[-1] == ("org.settings.updated", '{"fields": "story_points_max"}')
 
 
 async def test_audit_and_update_roll_back_together(

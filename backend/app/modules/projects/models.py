@@ -5,11 +5,13 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKeyConstraint,
     Index,
     Integer,
+    SmallInteger,
     String,
     UniqueConstraint,
     text,
@@ -160,6 +162,37 @@ class Project(Base):
     workflow_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+
+class ProjectSettings(Base):
+    """Per-project planning overrides (B2). At most one row; NULL columns inherit from org."""
+
+    __tablename__ = "project_settings"
+    __table_args__ = (
+        CheckConstraint(
+            "story_points_max_override IS NULL OR story_points_max_override BETWEEN 1 AND 100",
+            name="story_points_max_override_range",
+        ),
+        _fk(
+            "fk_project_settings_org_id_projects",
+            ["org_id", "project_id"],
+            "projects",
+            ["org_id", "id"],
+            ondelete="RESTRICT",
+        ),
+        _NO_RETURNING,
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    story_points_enabled_override: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    story_points_max_override: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()")
     )

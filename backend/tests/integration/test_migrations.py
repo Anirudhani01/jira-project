@@ -41,7 +41,7 @@ WORKFLOW_EDIT_POLICIES = text(
     """
 )
 
-HEAD = "0020"
+HEAD = "0023"
 
 HELPERS = text(
     "SELECT count(*) FROM pg_proc WHERE proname IN ('app_current_org', 'app_current_user')"
@@ -112,7 +112,7 @@ async def test_upgrade_head_and_0020_downgrade_leaves_0019_intact(
     assert await _rows(migration_owner_engine, OBJECTS_0019) != []
 
     run_alembic("upgrade", "0020", migration_database_url=migration_roundtrip_db)
-    assert await _scalar(migration_owner_engine, VERSION) == HEAD
+    assert await _scalar(migration_owner_engine, VERSION) == "0020"
     assert len(await _rows(migration_owner_engine, WORKFLOW_EDIT_POLICIES)) == 5
 
 

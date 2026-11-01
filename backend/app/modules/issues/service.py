@@ -43,7 +43,7 @@ from app.modules.audit import service as audit
 from app.modules.identity.deps import IdentityServices
 from app.modules.identity.directory import visible_users
 from app.modules.issues import rank as ranking
-from app.modules.issues import repository
+from app.modules.issues import repository, story_points_policy
 from app.modules.issues.list_sort import decode_list_cursor, encode_list_cursor
 from app.modules.issues.models import Issue, Label
 from app.modules.issues.repository import IssueFilter, NewIssue
@@ -170,14 +170,18 @@ async def _issue_response(session: AsyncSession, issue_id: uuid.UUID) -> IssueRe
 
 
 # ---------------------------------------------------------------------- validation
-async def _type_kind(session: AsyncSession, type_id: uuid.UUID) -> tuple[dict[str, str], str]:
+async def _type_kind(
+    session: AsyncSession, type_id: uuid.UUID, *, for_selection: bool = True
+) -> tuple[dict[str, str], str]:
     issue_type = await repository.find_type(session, type_id)
     if issue_type is None:
         raise invalid_field("type_id", "invalid_type", "Unknown issue type.")
     return {"id": str(issue_type.id), "name": issue_type.name}, issue_type.kind
 
 
-async def _priority_ref(session: AsyncSession, priority_id: uuid.UUID) -> dict[str, str]:
+async def _priority_ref(
+    session: AsyncSession, priority_id: uuid.UUID, *, for_selection: bool = True
+) -> dict[str, str]:
     priority = await repository.find_priority(session, priority_id)
     if priority is None:
         raise invalid_field("priority_id", "invalid_priority", "Unknown priority.")
@@ -300,6 +304,15 @@ def request_hash(project_key: str, body: CreateIssueRequest) -> bytes:
     return hashlib.sha256(canonical.encode()).digest()
 
 
+async def _validate_new_story_points(
+    session: AsyncSession, project: Project, story_points: int | None
+) -> None:
+    if story_points is None:
+        return
+    policy = await story_points_policy.load_issue_story_points_policy(session, project.id)
+    story_points_policy.validate_story_points_mutation(policy, story_points, None)
+
+
 async def create_issue(
     services: IdentityServices,
     access: ProjectAccess,
@@ -343,6 +356,7 @@ async def create_issue(
                 await _validate_labels(session, project.id, body.label_ids)
             await repository.lock_workflow_row(session, project.workflow_id)
             status_id = await repository.initial_status(session, project.workflow_id)
+            await _validate_new_story_points(session, project, body.story_points)
             issue_id = uuid.uuid4()
             seq = await repository.allocate_seq(session, project.id)
             await repository.insert_issue(
@@ -493,7 +507,9 @@ async def _hierarchy_changes(
             "issue_has_children",
             "Remove or re-parent its children before changing the type.",
         )
-    new_type, kind = await _type_kind(session, new_type_id)  # type: ignore[arg-type]
+    new_type, kind = await _type_kind(
+        session, new_type_id, for_selection=type_changed  # type: ignore[arg-type]
+    )
     parent = await _validate_hierarchy(session, project.id, kind, new_parent_id, self_id=issue.id)
     changes: list[tuple[str, Any, str, Any, Any]] = []
     if type_changed:
@@ -563,16 +579,21 @@ async def _estimate_and_release_changes(
     fields: set[str],
 ) -> list[tuple[str, Any, str, Any, Any]]:
     changes: list[tuple[str, Any, str, Any, Any]] = []
-    if "story_points" in fields and body.story_points != issue.story_points:
-        changes.append(
-            (
-                "story_points",
-                body.story_points,
-                "story_points",
-                issue.story_points,
-                body.story_points,
-            )
+    if "story_points" in fields:
+        policy = await story_points_policy.load_issue_story_points_policy(session, project.id)
+        story_points_policy.validate_story_points_mutation(
+            policy, body.story_points, issue.story_points
         )
+        if body.story_points != issue.story_points:
+            changes.append(
+                (
+                    "story_points",
+                    body.story_points,
+                    "story_points",
+                    issue.story_points,
+                    body.story_points,
+                )
+            )
     if "fix_version_id" in fields and body.fix_version_id != issue.fix_version_id:
         changes.append(await _fix_version_change(session, project, issue, body))
     return changes
