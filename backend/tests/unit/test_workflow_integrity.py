@@ -7,7 +7,7 @@ from app.modules.projects.workflow_integrity import (
 )
 
 
-class _Orig(Exception):
+class _OrigError(Exception):
     def __init__(self, *, constraint_name: str | None = None, detail: str = "") -> None:
         super().__init__(detail or constraint_name or "")
         self.constraint_name = constraint_name
@@ -15,7 +15,7 @@ class _Orig(Exception):
 
 
 def test_detects_status_name_unique_constraint() -> None:
-    error = IntegrityError("", {}, _Orig(constraint_name=WORKFLOW_STATUS_NAME_UNIQUE))
+    error = IntegrityError("", {}, _OrigError(constraint_name=WORKFLOW_STATUS_NAME_UNIQUE))
     assert is_workflow_status_name_conflict(error)
 
 
@@ -23,7 +23,7 @@ def test_ignores_unrelated_integrity_errors() -> None:
     error = IntegrityError(
         "",
         {},
-        _Orig(
+        _OrigError(
             constraint_name="fk_workflow_transitions_org_id_workflow_statuses",
             detail="insert violates foreign key",
         ),
@@ -35,7 +35,7 @@ def test_extracts_duplicate_name_from_detail() -> None:
     error = IntegrityError(
         "",
         {},
-        _Orig(
+        _OrigError(
             detail="Key (workflow_id, name)=(x, QA) already exists.",
         ),
     )

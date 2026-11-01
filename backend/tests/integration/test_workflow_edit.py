@@ -426,12 +426,12 @@ async def test_concurrent_puts_adding_same_new_status_name(project_ctx: Ctx) -> 
 async def test_unrelated_integrity_error_is_not_status_name_taken(
     project_ctx: Ctx, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    class _Orig(Exception):
+    class _OrigError(Exception):
         constraint_name = "fk_workflow_transitions_org_id_workflow_statuses"
         detail = "foreign key violation"
 
     async def fail_upsert(*args: object, **kwargs: object) -> None:
-        raise IntegrityError("INSERT", {}, _Orig("foreign key violation"))
+        raise IntegrityError("INSERT", {}, _OrigError("foreign key violation"))
 
     monkeypatch.setattr(projects_repository, "upsert_workflow_statuses", fail_upsert)
     wf = await _get_workflow(project_ctx.http, project_ctx.slug)
