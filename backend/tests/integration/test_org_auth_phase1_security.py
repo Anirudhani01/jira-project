@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from tests.integration.auth_support import superuser_sql
 from tests.integration.conftest import integration_env_missing
+from tests.integration.org_auth_projection_support import synthetic_platform_event_id
 
 pytestmark = pytest.mark.integration
 
@@ -134,7 +135,7 @@ async def test_operator_reset_denied_without_set_role() -> None:
                 text(
                     "INSERT INTO security.org_auth_projection_failures "
                     "(platform_event_id, first_failed_at, last_failed_at, attempt_count, "
-                    "next_retry_at, permanent) VALUES (999001, now(), now(), 5, now(), true) "
+                    f"next_retry_at, permanent) VALUES ({synthetic_platform_event_id(999001)}, now(), now(), 5, now(), true) "
                     "ON CONFLICT (platform_event_id) DO UPDATE SET permanent = true, attempt_count = 5"
                 )
             )
@@ -143,13 +144,13 @@ async def test_operator_reset_denied_without_set_role() -> None:
                 await conn.execute(
                     text(
                         "SELECT security.operator_reset_org_auth_projection_failure("
-                        "999001, 'incident review')"
+                        f"{synthetic_platform_event_id(999001)}, 'incident review')"
                     )
                 )
             await conn.rollback()
             await conn.execute(
                 text(
-                    "DELETE FROM security.org_auth_projection_failures WHERE platform_event_id = 999001"
+                    f"DELETE FROM security.org_auth_projection_failures WHERE platform_event_id = {synthetic_platform_event_id(999001)}"
                 )
             )
             await conn.commit()
@@ -167,7 +168,7 @@ async def test_operator_cannot_bypass_reset_with_direct_table_dml() -> None:
                 text(
                     "INSERT INTO security.org_auth_projection_failures "
                     "(platform_event_id, first_failed_at, last_failed_at, attempt_count, "
-                    "next_retry_at, permanent) VALUES (999003, now(), now(), 5, now(), true) "
+                    f"next_retry_at, permanent) VALUES ({synthetic_platform_event_id(999003)}, now(), now(), 5, now(), true) "
                     "ON CONFLICT (platform_event_id) DO UPDATE SET permanent = true, attempt_count = 5"
                 )
             )
@@ -177,7 +178,7 @@ async def test_operator_cannot_bypass_reset_with_direct_table_dml() -> None:
                 await conn.execute(
                     text(
                         "UPDATE security.org_auth_projection_failures SET permanent = false "
-                        "WHERE platform_event_id = 999003"
+                        f"WHERE platform_event_id = {synthetic_platform_event_id(999003)}"
                     )
                 )
             await conn.rollback()
@@ -186,14 +187,14 @@ async def test_operator_cannot_bypass_reset_with_direct_table_dml() -> None:
                 await conn.execute(
                     text(
                         "INSERT INTO security.org_auth_operator_actions "
-                        "(platform_event_id, operator, reason) VALUES (999003, 'evil', 'forged')"
+                        f"(platform_event_id, operator, reason) VALUES ({synthetic_platform_event_id(999003)}, 'evil', 'forged')"
                     )
                 )
             await conn.rollback()
             await conn.execute(text("RESET ROLE"))
             await conn.execute(
                 text(
-                    "DELETE FROM security.org_auth_projection_failures WHERE platform_event_id = 999003"
+                    f"DELETE FROM security.org_auth_projection_failures WHERE platform_event_id = {synthetic_platform_event_id(999003)}"
                 )
             )
             await conn.commit()
@@ -213,7 +214,7 @@ async def test_operator_reset_succeeds_with_set_role_and_records_session_user() 
                 text(
                     "INSERT INTO security.org_auth_projection_failures "
                     "(platform_event_id, first_failed_at, last_failed_at, attempt_count, "
-                    "next_retry_at, permanent) VALUES (999002, now(), now(), 5, now(), true) "
+                    f"next_retry_at, permanent) VALUES ({synthetic_platform_event_id(999002)}, now(), now(), 5, now(), true) "
                     "ON CONFLICT (platform_event_id) DO UPDATE SET permanent = true, attempt_count = 5"
                 )
             )
@@ -221,14 +222,14 @@ async def test_operator_reset_succeeds_with_set_role_and_records_session_user() 
             await conn.execute(
                 text(
                     "SELECT security.operator_reset_org_auth_projection_failure("
-                    "999002, 'manual recovery after incident')"
+                    f"{synthetic_platform_event_id(999002)}, 'manual recovery after incident')"
                 )
             )
             row = (
                 await conn.execute(
                     text(
                         "SELECT operator, reason FROM security.org_auth_operator_actions "
-                        "WHERE platform_event_id = 999002"
+                        f"WHERE platform_event_id = {synthetic_platform_event_id(999002)}"
                     )
                 )
             ).one()
@@ -238,7 +239,7 @@ async def test_operator_reset_succeeds_with_set_role_and_records_session_user() 
                 await conn.execute(
                     text(
                         "SELECT permanent FROM security.org_auth_projection_failures "
-                        "WHERE platform_event_id = 999002"
+                        f"WHERE platform_event_id = {synthetic_platform_event_id(999002)}"
                     )
                 )
             ).scalar_one()
@@ -246,10 +247,10 @@ async def test_operator_reset_succeeds_with_set_role_and_records_session_user() 
     finally:
         await engine.dispose()
     await _superuser_exec(
-        "DELETE FROM security.org_auth_operator_actions WHERE platform_event_id = 999002"
+        f"DELETE FROM security.org_auth_operator_actions WHERE platform_event_id = {synthetic_platform_event_id(999002)}"
     )
     await _superuser_exec(
-        "DELETE FROM security.org_auth_projection_failures WHERE platform_event_id = 999002"
+        f"DELETE FROM security.org_auth_projection_failures WHERE platform_event_id = {synthetic_platform_event_id(999002)}"
     )
 
 
@@ -334,7 +335,7 @@ async def _cleanup_missing_source_fixture(
 
 
 async def test_detect_missing_source_flags_recent_orphan() -> None:
-    platform_event_id = 888001
+    platform_event_id = synthetic_platform_event_id(888001)
     org_id, user_id, projection_id = await _insert_missing_source_orphan(
         platform_event_id=platform_event_id,
         occurred_interval="1 day",
@@ -364,7 +365,7 @@ async def test_detect_missing_source_flags_recent_orphan() -> None:
 
 
 async def test_detect_missing_source_skips_retention_expired_projection() -> None:
-    platform_event_id = 888002
+    platform_event_id = synthetic_platform_event_id(888002)
     org_id, user_id, projection_id = await _insert_missing_source_orphan(
         platform_event_id=platform_event_id,
         occurred_interval="400 days",

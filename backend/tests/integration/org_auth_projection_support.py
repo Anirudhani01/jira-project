@@ -14,6 +14,18 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 EVENT_AT = datetime(2026, 6, 15, 12, 0, 0, tzinfo=UTC)
 AUTH_EVENT_TYPE = "auth.login.succeeded"
 
+# Rows inserted without a matching security.platform_security_events row must use ids above
+# the live serial range so integration tests that INSERT real platform events never collide.
+SYNTHETIC_PLATFORM_EVENT_ID_BASE = 900_000_000_000
+
+
+def synthetic_platform_event_id(offset: int) -> int:
+    return SYNTHETIC_PLATFORM_EVENT_ID_BASE + offset
+
+
+def random_synthetic_platform_event_id() -> int:
+    return synthetic_platform_event_id(uuid.uuid4().int % 1_000_000_000)
+
 
 @dataclass
 class OrgAuthFixture:
