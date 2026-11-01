@@ -88,6 +88,7 @@ class ColumnResponse(BaseModel):
 
 
 class WorkflowResponse(BaseModel):
+    name: str
     initial_status_id: uuid.UUID
     statuses: list[StatusResponse]
     transitions: list[TransitionResponse]

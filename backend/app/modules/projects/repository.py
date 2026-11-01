@@ -208,11 +208,13 @@ async def workflow_view(session: AsyncSession, project: Project) -> dict[str, An
             )
         ).scalars()
     )
-    initial = (
+    workflow_row = (
         await session.execute(
-            select(Workflow.initial_status_id).where(Workflow.id == project.workflow_id)
+            select(Workflow.name, Workflow.initial_status_id).where(
+                Workflow.id == project.workflow_id
+            )
         )
-    ).scalar_one()
+    ).one()
     columns = (
         await session.execute(
             select(
@@ -232,7 +234,8 @@ async def workflow_view(session: AsyncSession, project: Project) -> dict[str, An
         if column.status_id is not None:
             entry["status_ids"].append(column.status_id)
     return {
-        "initial_status_id": initial,
+        "name": workflow_row.name,
+        "initial_status_id": workflow_row.initial_status_id,
         "statuses": statuses,
         "transitions": transitions,
         "columns": list(grouped.values()),

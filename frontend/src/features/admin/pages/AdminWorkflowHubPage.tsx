@@ -4,12 +4,16 @@ import { Link, useParams } from 'react-router';
 
 import { Badge } from '../../../components/ui/Badge';
 import { EmptyState, Skeleton } from '../../../components/ui/Card';
-import { PageHeader } from '../../../components/ui/PageHeader';
 import { Button } from '../../../components/ui/Button';
 import { ErrorState } from '../../../components/ui/States';
 import type { ProjectSummary } from '../../../lib/api/types';
 import { useProjects, useWorkflow } from '../../projects/api';
 import { ProjectWorkflowSection } from '../../projects/ProjectWorkflowSection';
+
+import { AdminOrgManagePageFrame } from './AdminOrgManagePageFrame';
+
+const HUB_DESCRIPTION =
+  'Each project has its own workflow instance, cloned from the default workflow when the project was created. These are not shared organization-wide templates. Expand a row to inspect statuses, transitions, and board column mappings. Board column editing stays on each project’s Columns tab. Expanding projects loads workflow data with individual GET requests (no bulk API in this release).';
 
 function formatBoardType(boardType: string): string {
   return boardType === 'scrum' ? 'Scrum' : 'Kanban';
@@ -20,11 +24,15 @@ function projectPaths(org: string, key: string) {
   return { board: `${base}/board`, settings: base };
 }
 
-function LazyProjectWorkflow({ org, projectKey }: { org: string; projectKey: string }) {
-  const workflow = useWorkflow(org, projectKey, { enabled: true });
+function LazyProjectWorkflow({ org, project }: { org: string; project: ProjectSummary }) {
+  const workflow = useWorkflow(org, project.key, { enabled: true });
   return (
     <div className="border-t border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-4 sm:px-5">
-      <ProjectWorkflowSection workflow={workflow} onRetry={() => void workflow.refetch()} />
+      <ProjectWorkflowSection
+        workflow={workflow}
+        project={{ key: project.key, name: project.name }}
+        onRetry={() => void workflow.refetch()}
+      />
     </div>
   );
 }
@@ -90,15 +98,15 @@ function ProjectWorkflowRow({
       </div>
       {expanded ? (
         <div id={panelId}>
-          <LazyProjectWorkflow org={org} projectKey={project.key} />
+          <LazyProjectWorkflow org={org} project={project} />
         </div>
       ) : null}
     </li>
   );
 }
 
-/** Project-scoped workflow hub: list accessible projects and lazy-load workflow on expand. */
-export function AdminWorkflowHubPage() {
+/** Lists organization projects and lazy-loads read-only workflow details on expand. */
+function AuthorizedAdminWorkflowHub() {
   const { org: slug = '' } = useParams();
   const activeProjects = useProjects(slug);
   const archivedProjects = useProjects(slug, { archived: true });
@@ -125,60 +133,69 @@ export function AdminWorkflowHubPage() {
     });
   };
 
-  return (
-    <div className="admin-page space-y-6">
-      <PageHeader
-        titleId="admin-workflow-title"
-        title="Workflows"
-        description="Workflow and board configuration is project-specific. Open a project board or settings page, or expand a row to preview statuses and columns."
+  if (listPending) {
+    return (
+      <div className="space-y-3" role="status" aria-label="Loading projects">
+        <Skeleton className="h-24 w-full" aria-hidden />
+        <Skeleton className="h-24 w-full" aria-hidden />
+      </div>
+    );
+  }
+  if (listFailed) {
+    return (
+      <ErrorState
+        error={activeProjects.error}
+        onRetry={() => {
+          void activeProjects.refetch();
+          void archivedProjects.refetch();
+        }}
       />
+    );
+  }
 
-      {listPending ? (
-        <div className="space-y-3" role="status" aria-label="Loading projects">
-          <Skeleton className="h-24 w-full" aria-hidden />
-          <Skeleton className="h-24 w-full" aria-hidden />
-        </div>
-      ) : listFailed ? (
+  return (
+    <>
+      {listPartialError ? (
         <ErrorState
-          error={activeProjects.error}
+          error={activeProjects.error ?? archivedProjects.error}
           onRetry={() => {
-            void activeProjects.refetch();
-            void archivedProjects.refetch();
+            if (activeProjects.isError) void activeProjects.refetch();
+            if (archivedProjects.isError) void archivedProjects.refetch();
           }}
         />
+      ) : null}
+      {projects.length === 0 ? (
+        <EmptyState
+          title="No organization projects"
+          description="No projects exist in this organization yet."
+        />
       ) : (
-        <>
-          {listPartialError ? (
-            <ErrorState
-              error={activeProjects.error ?? archivedProjects.error}
-              onRetry={() => {
-                if (activeProjects.isError) void activeProjects.refetch();
-                if (archivedProjects.isError) void archivedProjects.refetch();
+        <ul className="space-y-3">
+          {projects.map((project) => (
+            <ProjectWorkflowRow
+              key={project.key}
+              org={slug}
+              project={project}
+              expanded={expandedKeys.has(project.key)}
+              onToggle={() => {
+                toggle(project.key);
               }}
             />
-          ) : null}
-          {projects.length === 0 ? (
-            <EmptyState
-              title="No accessible projects"
-              description="You do not have access to any projects in this organization yet, or none have been created."
-            />
-          ) : (
-            <ul className="space-y-3">
-              {projects.map((project) => (
-                <ProjectWorkflowRow
-                  key={project.key}
-                  org={slug}
-                  project={project}
-                  expanded={expandedKeys.has(project.key)}
-                  onToggle={() => {
-                    toggle(project.key);
-                  }}
-                />
-              ))}
-            </ul>
-          )}
-        </>
+          ))}
+        </ul>
       )}
-    </div>
+    </>
+  );
+}
+
+export function AdminWorkflowHubPage() {
+  return (
+    <AdminOrgManagePageFrame
+      titleId="admin-workflow-title"
+      title="Workflows"
+      description={HUB_DESCRIPTION}
+    >
+      <AuthorizedAdminWorkflowHub />
+    </AdminOrgManagePageFrame>
   );
 }

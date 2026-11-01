@@ -154,6 +154,7 @@ async def get_workflow(access: ViewProject, services: Services) -> WorkflowRespo
     """Read-only in the MVP: statuses, transitions and the board's default columns."""
     view = await service.workflow(services, access)
     return WorkflowResponse(
+        name=view["name"],
         initial_status_id=view["initial_status_id"],
         statuses=[
             StatusResponse(id=s.id, name=s.name, category=s.category, position=s.position)

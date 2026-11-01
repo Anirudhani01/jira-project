@@ -3698,6 +3698,10 @@
             "title": "Initial Status Id",
             "type": "string"
           },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
           "statuses": {
             "items": {
               "$ref": "#/components/schemas/StatusResponse"
@@ -3714,6 +3718,7 @@
           }
         },
         "required": [
+          "name",
           "initial_status_id",
           "statuses",
           "transitions",
