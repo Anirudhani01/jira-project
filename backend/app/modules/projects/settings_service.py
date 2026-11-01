@@ -1,5 +1,8 @@
 """Project settings use cases (B2)."""
 
+from datetime import datetime
+from typing import cast
+
 from app.authz.permissions import Permission
 from app.authz.projects import ProjectAccess, project_transaction
 from app.modules.audit import service as audit
@@ -37,7 +40,7 @@ def _response(
     org_max: int,
     enabled_override: bool | None,
     max_override: int | None,
-    updated_at: object,
+    updated_at: datetime | None,
 ) -> ProjectSettingsResponse:
     resolved = resolve_story_points_settings(
         org_enabled=org_enabled,
@@ -62,7 +65,7 @@ def _response(
             story_points_enabled=resolved.provenance.story_points_enabled,
             story_points_max=resolved.provenance.story_points_max,
         ),
-        updated_at=updated_at,  # type: ignore[arg-type]
+        updated_at=updated_at,
     )
 
 
@@ -95,7 +98,11 @@ def _validate_patch_values(
             "story_points_enabled_override",
             "Story Points are disabled for the organization.",
         )
-    if max_override is not _SENTINEL and max_override is not None and max_override > org_max:
+    if (
+        max_override is not _SENTINEL
+        and isinstance(max_override, int)
+        and max_override > org_max
+    ):
         raise validation_error(
             "story_points_max_override",
             f"Cannot exceed the organization maximum ({org_max}).",
@@ -198,14 +205,14 @@ async def update_project_settings(
                 updated_at=current_overrides.updated_at,
             )
 
-        new_enabled = (
-            current_overrides.story_points_enabled_override
-            if enabled_patch is _SENTINEL
-            else enabled_patch
-        )
-        new_max = (
-            current_overrides.story_points_max_override if max_patch is _SENTINEL else max_patch
-        )
+        if enabled_patch is _SENTINEL:
+            new_enabled = current_overrides.story_points_enabled_override
+        else:
+            new_enabled = cast(bool | None, enabled_patch)
+        if max_patch is _SENTINEL:
+            new_max = current_overrides.story_points_max_override
+        else:
+            new_max = cast(int | None, max_patch)
         _validate_patch_values(
             org_enabled=org.story_points_enabled,
             org_max=org.story_points_max,

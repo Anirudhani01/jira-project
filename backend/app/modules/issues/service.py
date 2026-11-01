@@ -507,11 +507,9 @@ async def _hierarchy_changes(
             "issue_has_children",
             "Remove or re-parent its children before changing the type.",
         )
-    new_type, kind = await _type_kind(
-        session,
-        new_type_id,
-        for_selection=type_changed,  # type: ignore[arg-type]
-    )
+    if not isinstance(new_type_id, uuid.UUID):
+        raise invalid_field("type_id", "invalid_type", "Unknown issue type.")
+    new_type, kind = await _type_kind(session, new_type_id, for_selection=type_changed)
     parent = await _validate_hierarchy(session, project.id, kind, new_parent_id, self_id=issue.id)
     changes: list[tuple[str, Any, str, Any, Any]] = []
     if type_changed:

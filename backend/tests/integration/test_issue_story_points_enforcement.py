@@ -36,7 +36,8 @@ async def story_points_in_db(issue_id: object) -> int | None:
         "SELECT story_points FROM issues WHERE id = :i",
         i=issue_id,
     )
-    return row.story_points
+    points = row.story_points
+    return None if points is None else int(points)
 
 
 async def activity_count(issue_id: object, field: str = "story_points") -> int:
