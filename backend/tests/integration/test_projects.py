@@ -112,16 +112,22 @@ async def test_owner_creates_kanban_project_with_seeded_configuration(tenant: Te
     assert await project_rows(tenant.org_id, "WEB") == SEEDED
     base = f"/api/v1/orgs/{tenant.slug}/projects/WEB"
     workflow = (await tenant.http.get(f"{base}/workflow")).json()
+    assert workflow["name"] == "Default workflow"
     assert [s["name"] for s in workflow["statuses"]] == [
         "To Do",
         "In Progress",
         "In Review",
         "Done",
     ]
+    assert [s["position"] for s in workflow["statuses"]] == [0, 1, 2, 3]
     assert workflow["initial_status_id"] == workflow["statuses"][0]["id"]
+    assert len(workflow["transitions"]) == 4
+    assert all(t["from_status_id"] is None for t in workflow["transitions"])
+    assert {t["to_status_id"] for t in workflow["transitions"]} == {
+        s["id"] for s in workflow["statuses"]
+    }
     assert [c["name"] for c in workflow["columns"]] == ["To Do", "In Progress", "In Review", "Done"]
     assert all(len(c["status_ids"]) == 1 for c in workflow["columns"])
-    assert all(t["from_status_id"] is None for t in workflow["transitions"])
     [counter] = await superuser_sql(
         "SELECT c.next_seq FROM project_issue_counters c JOIN projects p ON p.id = c.project_id "
         "WHERE p.org_id = :o AND p.key = 'WEB'",
@@ -271,6 +277,22 @@ async def test_project_visibility_and_role_restrictions(tenant: Tenant) -> None:
     async with AsyncExitStack() as stack:
         other = await make_tenant(stack, "other")
         assert (await other.http.get(f"/api/v1/orgs/{tenant.slug}/projects/WEB")).status_code == 404
+        assert (
+            await other.http.get(f"/api/v1/orgs/{tenant.slug}/projects/WEB/workflow")
+        ).status_code == 404
+
+
+async def test_org_owner_inspects_workflow_for_each_organization_project(tenant: Tenant) -> None:
+    assert (await create_project(tenant.http, tenant.slug, "WEB")).status_code == 201
+    assert (await create_project(tenant.http, tenant.slug, "MOB")).status_code == 201
+    for key in ("WEB", "MOB"):
+        workflow = (
+            await tenant.http.get(f"/api/v1/orgs/{tenant.slug}/projects/{key}/workflow")
+        ).json()
+        assert workflow["name"] == "Default workflow"
+        assert [s["position"] for s in workflow["statuses"]] == [0, 1, 2, 3]
+        assert workflow["initial_status_id"] == workflow["statuses"][0]["id"]
+        assert len(workflow["transitions"]) == 4
 
 
 async def test_project_members_must_be_active_org_members(tenant: Tenant) -> None:

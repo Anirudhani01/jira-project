@@ -161,7 +161,7 @@ export function ProjectPage() {
         </TabsContent>
 
         <TabsContent value="workflow" className="pt-4">
-          <ProjectWorkflowSection workflow={workflow} />
+          <ProjectWorkflowSection workflow={workflow} project={{ key: p.key, name: p.name }} />
         </TabsContent>
 
         <TabsContent value="danger" className="pt-4">

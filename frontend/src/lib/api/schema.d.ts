@@ -2504,6 +2504,8 @@ export interface components {
              * Format: uuid
              */
             initial_status_id: string;
+            /** Name */
+            name: string;
             /** Statuses */
             statuses: components["schemas"]["StatusResponse"][];
             /** Transitions */

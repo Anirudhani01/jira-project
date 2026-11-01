@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   Bell,
   ClipboardList,
-  Columns3,
   GitBranch,
   LayoutDashboard,
   Mail,
@@ -90,8 +89,13 @@ export function adminNavGroups(orgSlug: string): AdminNavGroup[] {
           to: `${base}/catalogs`,
           icon: ClipboardList,
         },
-        { id: 'workflow', label: 'Workflows', to: `${base}/workflow`, icon: GitBranch },
-        { id: 'boards', label: 'Boards', to: `${base}/workflow#boards`, icon: Columns3 },
+        {
+          id: 'workflow',
+          label: 'Workflows',
+          to: `${base}/workflow`,
+          icon: GitBranch,
+          requiresManage: true,
+        },
       ],
     },
     {

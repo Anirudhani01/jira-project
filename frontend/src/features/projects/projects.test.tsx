@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { json, mockApi, problem, renderApp, SIGNED_IN } from '../../test/api';
@@ -29,9 +29,17 @@ const PROJECT = {
 };
 const S1 = '44444444-4444-4444-4444-444444444441';
 const WORKFLOW = {
+  name: 'Default workflow',
   initial_status_id: S1,
   statuses: [{ id: S1, name: 'To Do', category: 'todo', position: 0 }],
-  transitions: [],
+  transitions: [
+    {
+      id: '66666666-6666-6666-6666-666666666661',
+      name: 'Move to Done',
+      from_status_id: null,
+      to_status_id: S1,
+    },
+  ],
   columns: [{ name: 'To Do', position: 0, status_ids: [S1] }],
 };
 
@@ -189,10 +197,27 @@ describe('ProjectPage', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'WEB — Website' }),
     ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Default workflow' })).toBeInTheDocument();
+    expect(screen.getByText('Read-only')).toBeInTheDocument();
+    const workflowCard = screen
+      .getByRole('heading', { name: 'Default workflow' })
+      .closest('[aria-labelledby="workflow-title"]');
+    expect(workflowCard).not.toBeNull();
+    expect(
+      within(workflowCard as HTMLElement).getByText((_, element) => {
+        const text = element?.textContent;
+        if (!text) return false;
+        return text.startsWith('Project') && text.includes('WEB') && text.includes('Website');
+      }),
+    ).toBeInTheDocument();
+    expect(await screen.findByRole('table', { name: 'Workflow statuses' })).toBeInTheDocument();
+    expect(await screen.findByRole('table', { name: 'Workflow transitions' })).toBeInTheDocument();
+    expect(screen.getByText('Any status')).toBeInTheDocument();
     expect(await screen.findByRole('table', { name: 'Board columns' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Column' })).toBeInTheDocument();
     expect(screen.getAllByText('To Do').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByRole('button', { name: 'Archive project' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save columns' })).toBeNull();
   });
 
   it('renders not-found for inaccessible projects', async () => {
