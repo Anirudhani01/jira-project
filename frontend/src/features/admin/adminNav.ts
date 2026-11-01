@@ -7,6 +7,7 @@ import {
   GitBranch,
   LayoutDashboard,
   Mail,
+  KeyRound,
   ScrollText,
   Settings2,
   UserPlus,
@@ -68,6 +69,13 @@ export function adminNavGroups(orgSlug: string): AdminNavGroup[] {
           label: 'Audit Logs',
           to: `${base}/audit`,
           icon: ScrollText,
+          requiresAudit: true,
+        },
+        {
+          id: 'auth-activity',
+          label: 'Authentication Activity',
+          to: `${base}/security/activity`,
+          icon: KeyRound,
           requiresAudit: true,
         },
       ],
@@ -145,9 +153,22 @@ export function adminBreadcrumbLabel(pathname: string, orgSlug: string): string 
     'admin/invitations': 'Invitations',
     'admin/catalogs': 'Defaults & Catalogs',
     'admin/audit': 'Audit Logs',
+    'admin/security/activity': 'Authentication Activity',
     'admin/workflow': 'Workflows',
     'admin/system/notifications': 'Notifications',
     'admin/system/email': 'Email Delivery',
   };
   return map[rest] ?? 'Administration';
+}
+
+export type AdminBreadcrumbSegment = { label: string; to?: string };
+
+/** Middle segments before the current page (Administration is rendered separately). */
+export function adminBreadcrumbTrail(pathname: string, orgSlug: string): AdminBreadcrumbSegment[] {
+  const prefix = `/o/${orgSlug}/`;
+  const rest = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : pathname;
+  if (rest === 'admin/security/activity') {
+    return [{ label: 'Security' }, { label: 'Authentication Activity' }];
+  }
+  return [{ label: adminBreadcrumbLabel(pathname, orgSlug) }];
 }

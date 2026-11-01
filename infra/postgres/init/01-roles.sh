@@ -36,12 +36,15 @@ SELECT 'CREATE ROLE app_retention' WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHER
 -- Read-only access to security.platform_security_events (plan V2.7). NOLOGIN: humans
 -- get it via a separate audited login role granted membership; never the app.
 SELECT 'CREATE ROLE platform_security_reader' WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'platform_security_reader') \gexec
+-- A3.2: audited operator actions on org auth projection failures (NOLOGIN; break-glass login granted MEMBER).
+SELECT 'CREATE ROLE org_auth_operator' WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'org_auth_operator') \gexec
 
 ALTER ROLE app_owner  LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION PASSWORD :'owner_pw';
 ALTER ROLE app_rw     LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION NOINHERIT PASSWORD :'rw_pw';
 ALTER ROLE app_worker LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION NOINHERIT PASSWORD :'worker_pw';
 ALTER ROLE app_retention LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION NOINHERIT PASSWORD :'retention_pw';
 ALTER ROLE platform_security_reader NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION;
+ALTER ROLE org_auth_operator NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS NOREPLICATION;
 SQL
 
 for db in "${DB_NAMES[@]}"; do
@@ -59,4 +62,4 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 SQL
 done
 
-echo "Provisioned roles app_owner, app_rw, app_worker, app_retention, platform_security_reader and databases: ${DB_NAMES[*]}"
+echo "Provisioned roles app_owner, app_rw, app_worker, app_retention, platform_security_reader, org_auth_operator and databases: ${DB_NAMES[*]}"

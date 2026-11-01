@@ -30,6 +30,19 @@ RULES = (
     PurgeRule("notifications", "created_at < now() - interval '90 days'"),
     PurgeRule("audit_events", "created_at < now() - interval '1 year'"),
     PurgeRule("security.platform_security_events", "occurred_at < now() - interval '1 year'"),
+    PurgeRule("org_authentication_events", "occurred_at < now() - interval '1 year'"),
+    PurgeRule(
+        "security.org_auth_projection_failures",
+        "last_failed_at < now() - interval '90 days'",
+    ),
+    PurgeRule(
+        "security.org_auth_operator_actions",
+        "created_at < now() - interval '1 year'",
+    ),
+    PurgeRule(
+        "security.org_auth_missing_source_inconsistencies",
+        "detected_at < now() - interval '1 year'",
+    ),
 )
 
 

@@ -101,6 +101,9 @@ class Settings(BaseSettings):
     worker_batch_size: int = Field(default=20, ge=1, le=500)
     worker_lease_seconds: int = Field(default=300, ge=10, le=3_600)
     worker_max_attempts: int = Field(default=10, ge=1, le=50)
+    # A3.2 org auth projection gap reconciliation (``app_worker`` / WORKER_DATABASE_URL).
+    org_auth_reconciliation_interval_seconds: int = Field(default=300, ge=30, le=86400)
+    org_auth_reconciliation_batch_size: int = Field(default=100, ge=1, le=500)
     session_idle_ttl_seconds: int = Field(default=86_400, ge=300)
     session_absolute_ttl_seconds: int = Field(default=1_209_600, ge=3_600)
     session_max_active: int = Field(default=20, ge=1, le=100)

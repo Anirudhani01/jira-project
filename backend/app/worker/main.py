@@ -1,9 +1,10 @@
-"""Background worker: delivers outbox jobs (M2: email only).
+"""Background worker: outbox delivery (M2), org auth reconciliation (A3.2), retention (M12).
 
-Run with ``python -m app.worker``. Connects as the least-privileged worker role
-(WORKER_DATABASE_URL), checks that role at startup like the API does, and stops
-gracefully on SIGTERM/SIGINT: the job in progress finishes, unstarted claimed jobs are
-released, and anything else is recovered by lease expiry.
+Run with ``python -m app.worker``. Connects as ``app_worker`` (WORKER_DATABASE_URL),
+checks that role at startup like the API does, and stops gracefully on SIGTERM/SIGINT:
+the job in progress finishes, unstarted claimed jobs are released, and anything else is
+recovered by lease expiry. Org auth reconciliation and retention run on separate asyncio
+tasks; failures there do not stop outbox polling.
 """
 
 import asyncio
@@ -26,6 +27,7 @@ from app.modules.orgs.emails import handle_invitation_job
 from app.modules.orgs.members import TOPIC_ORG_INVITATION
 from app.modules.outbox import repository as outbox
 from app.modules.outbox.repository import ClaimedJob
+from app.worker.org_auth_reconciliation import org_auth_reconciliation_loop
 from app.worker.retention import run_purge
 
 logger = logging.getLogger("app.worker")
@@ -204,6 +206,9 @@ async def run_worker(settings: Settings) -> None:
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGTERM, signal.SIGINT):
             loop.add_signal_handler(sig, worker.stopping.set)
+        org_auth_task = asyncio.create_task(
+            org_auth_reconciliation_loop(settings, engine, worker.stopping)
+        )
         retention_engine = None
         retention_task = None
         if settings.retention_database_url is not None:
@@ -214,6 +219,7 @@ async def run_worker(settings: Settings) -> None:
                 retention_loop(settings, retention_engine, worker.stopping)
             )
         await worker.run()
+        await org_auth_task
         if retention_task is not None:
             await retention_task
         if retention_engine is not None:

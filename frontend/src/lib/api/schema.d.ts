@@ -310,6 +310,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orgs/{org_slug}/authentication-activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Authentication Activity
+         * @description Owners and admins only. Reads org authentication projections (not platform events).
+         */
+        get: operations["list_authentication_activity_api_v1_orgs__org_slug__authentication_activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orgs/{org_slug}/comments/{comment_id}": {
         parameters: {
             query?: never;
@@ -1262,6 +1282,48 @@ export interface components {
             target_type: string | null;
             /** User Agent */
             user_agent: string | null;
+        };
+        /** AuthenticationActivityItem */
+        AuthenticationActivityItem: {
+            /** Event Type */
+            event_type: string;
+            /** Id */
+            id: number;
+            /** Member Display Name */
+            member_display_name: string;
+            /**
+             * Member Status
+             * @enum {string}
+             */
+            member_status: "active" | "removed";
+            /**
+             * Metadata
+             * @description Allowlisted metadata copied from the platform event at projection time.
+             */
+            metadata: {
+                [key: string]: unknown;
+            };
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Outcome */
+            outcome: string;
+            /** Reason */
+            reason: string | null;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** AuthenticationActivityListResponse */
+        AuthenticationActivityListResponse: {
+            /** Items */
+            items: components["schemas"]["AuthenticationActivityItem"][];
+            /** Next Cursor */
+            next_cursor: string | null;
         };
         /** BacklogResponse */
         BacklogResponse: {
@@ -2931,6 +2993,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditEventListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_authentication_activity_api_v1_orgs__org_slug__authentication_activity_get: {
+        parameters: {
+            query?: {
+                member?: string | null;
+                event_type?: string | null;
+                from?: string | null;
+                to?: string | null;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthenticationActivityListResponse"];
                 };
             };
             /** @description Validation Error */

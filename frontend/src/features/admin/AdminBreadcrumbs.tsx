@@ -1,10 +1,22 @@
+import { Fragment } from 'react';
 import { Link, useLocation } from 'react-router';
 
-import { adminBreadcrumbLabel } from './adminNav';
+import { adminBreadcrumbLabel, adminBreadcrumbTrail } from './adminNav';
+
+function CrumbSeparator() {
+  return (
+    <li aria-hidden="true" className="text-[var(--admin-border)]">
+      /
+    </li>
+  );
+}
 
 export function AdminBreadcrumbs({ orgSlug, orgName }: { orgSlug: string; orgName: string }) {
   const { pathname } = useLocation();
-  const page = adminBreadcrumbLabel(pathname, orgSlug);
+  const nested = adminBreadcrumbTrail(pathname, orgSlug);
+  const page =
+    nested.length > 1 ? nested[nested.length - 1]?.label : adminBreadcrumbLabel(pathname, orgSlug);
+  const middle = nested.length > 1 ? nested.slice(0, -1) : [];
 
   return (
     <nav
@@ -20,9 +32,7 @@ export function AdminBreadcrumbs({ orgSlug, orgName }: { orgSlug: string; orgNam
             {orgName}
           </Link>
         </li>
-        <li aria-hidden="true" className="text-[var(--admin-border)]">
-          /
-        </li>
+        <CrumbSeparator />
         <li>
           <Link
             to={`/o/${orgSlug}/admin`}
@@ -31,9 +41,13 @@ export function AdminBreadcrumbs({ orgSlug, orgName }: { orgSlug: string; orgNam
             Administration
           </Link>
         </li>
-        <li aria-hidden="true" className="text-[var(--admin-border)]">
-          /
-        </li>
+        {middle.map((segment) => (
+          <Fragment key={segment.label}>
+            <CrumbSeparator />
+            <li className="text-[var(--admin-muted)]">{segment.label}</li>
+          </Fragment>
+        ))}
+        <CrumbSeparator />
         <li aria-current="page" className="font-medium text-[var(--admin-text)]">
           {page}
         </li>
