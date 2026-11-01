@@ -1,5 +1,5 @@
-# syntax=docker/dockerfile:1
 # Antideploy / single-container production: nginx on $PORT, API on 127.0.0.1:8000.
+# No BuildKit-only directives (Antideploy builder does not enable BuildKit).
 
 FROM node:24-alpine AS frontend-build
 WORKDIR /app

@@ -10,6 +10,8 @@ if [ -z "${APP_BASE_URL:-}" ] && [ -n "${APP_URL:-}" ]; then
   export APP_BASE_URL="$APP_URL"
 fi
 
+# Migrations also run in Antideploy's pre-release step when the image includes alembic.
+# Keep this for Dockerfile deploys where that step is skipped (e.g. wrong buildpack image).
 if [ -n "${MIGRATION_DATABASE_URL:-}" ]; then
   echo "Running database migrations..."
   alembic upgrade head

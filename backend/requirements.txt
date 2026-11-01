@@ -1,0 +1,13 @@
+# Antideploy buildpacks read requirements.txt at the build root. Keep in sync with pyproject.toml.
+alembic>=1.14
+argon2-cffi>=23.1
+asyncpg>=0.30
+fastapi>=0.115
+httpx>=0.28
+markdown>=3.11.2
+nh3>=0.3.7
+pydantic>=2.9
+pydantic-settings>=2.6
+redis>=5.2
+sqlalchemy[asyncio]>=2.0.36
+uvicorn>=0.32
