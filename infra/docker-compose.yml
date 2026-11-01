@@ -130,7 +130,7 @@ services:
   frontend:
     build:
       context: ../frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.compose
     profiles: ["app"]
     ports:
       - "127.0.0.1:8080:8080"

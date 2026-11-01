@@ -12,6 +12,6 @@
 frontend/dist
 frontend/coverage
 docs/ui-redesign/evidence
-**/*.png
+docs/**/*.png
 test-results
 playwright-report

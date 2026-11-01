@@ -42,7 +42,7 @@ jobs:
             docker:
               - 'backend/Dockerfile'
               - 'backend/.dockerignore'
-              - 'frontend/Dockerfile'
+              - 'frontend/Dockerfile.compose'
               - 'frontend/.dockerignore'
               - 'infra/docker-compose.yml'
             code:

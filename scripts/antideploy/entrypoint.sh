@@ -20,7 +20,9 @@ fi
 mkdir -p /tmp/nginx/conf.d
 envsubst '${PORT}' < /etc/nginx/templates/default.conf.template > /tmp/nginx/conf.d/default.conf
 
-uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 --no-access-log --proxy-headers &
+FORWARDED_ALLOW="${UVICORN_FORWARDED_ALLOW_IPS:-*}"
+uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 --no-access-log \
+  --proxy-headers --forwarded-allow-ips "$FORWARDED_ALLOW" &
 api_pid=$!
 
 cleanup() {

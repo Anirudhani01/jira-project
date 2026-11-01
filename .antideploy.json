@@ -1,5 +1,7 @@
 {
   "applicationId": "0eabedc8-1ab7-4a1c-a589-476e12583db0",
   "name": "jira-project",
-  "url": "https://task-tracker.antideploy.app"
+  "url": "https://task-tracker.antideploy.app",
+  "rootDirectory": "",
+  "deployNotes": "Monorepo: build from repository root so the root Dockerfile runs (nginx + FastAPI + Vite build). Do not set the Antideploy build directory to frontend/ or backend/ alone."
 }

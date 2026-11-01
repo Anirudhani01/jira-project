@@ -1,4 +1,5 @@
-# Antideploy buildpacks read requirements.txt at the build root. Keep in sync with pyproject.toml.
+# Only used if the Antideploy build directory is set to backend/ (API-only emergency deploy).
+# Normal deploy: repository root + root Dockerfile (see .antideploy.json).
 alembic>=1.14
 argon2-cffi>=23.1
 asyncpg>=0.30
