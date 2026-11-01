@@ -19,11 +19,13 @@ from app.modules.identity.directory import visible_users
 from app.modules.orgs.models import (
     IssueType,
     Organization,
+    OrganizationSettings,
     OrgInvitation,
     OrgMembership,
     Priority,
 )
 from app.modules.orgs.seeds import ISSUE_TYPES, PRIORITIES
+from app.modules.orgs.settings_defaults import DEFAULT_ORG_LOCALE, DEFAULT_ORG_TIMEZONE
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,6 +89,21 @@ async def list_my_orgs(session: AsyncSession) -> list[MembershipRow]:
 
 
 # ------------------------------------------------------------------------- creation
+async def seed_organization_settings(session: AsyncSession, org_id: uuid.UUID) -> None:
+    """Insert default settings for a new org (caller must be owner/admin under RLS).
+
+    Runs after the owner membership row exists so ``app_has_org_role`` allows INSERT.
+    """
+    require_org_context(session)
+    await session.execute(
+        insert(OrganizationSettings).values(
+            org_id=org_id,
+            timezone=DEFAULT_ORG_TIMEZONE,
+            locale=DEFAULT_ORG_LOCALE,
+        )
+    )
+
+
 async def create_org_with_owner(
     session: AsyncSession, *, org_id: uuid.UUID, slug: str, name: str, owner_id: uuid.UUID
 ) -> None:
@@ -114,6 +131,7 @@ async def create_org_with_owner(
             for index, (priority, color) in enumerate(PRIORITIES)
         ],
     )
+    await seed_organization_settings(session, org_id)
 
 
 # ------------------------------------------------------------------- org operations
@@ -145,6 +163,55 @@ async def rename_org(session: AsyncSession, name: str) -> bool:
         .values(name=name, updated_at=func.now())
     )
     return bool(result.rowcount)  # type: ignore[attr-defined]
+
+
+@dataclass(frozen=True, slots=True)
+class OrgSettingsRecord:
+    timezone: str
+    locale: str
+    updated_at: datetime
+
+
+async def get_organization_settings(session: AsyncSession) -> OrgSettingsRecord:
+    context = require_org_context(session)
+    row = (
+        await session.execute(
+            select(
+                OrganizationSettings.timezone,
+                OrganizationSettings.locale,
+                OrganizationSettings.updated_at,
+            ).where(OrganizationSettings.org_id == context.org_id)
+        )
+    ).one()
+    return OrgSettingsRecord(timezone=row.timezone, locale=row.locale, updated_at=row.updated_at)
+
+
+async def update_organization_settings(
+    session: AsyncSession,
+    *,
+    timezone: str | None,
+    locale: str | None,
+) -> tuple[OrgSettingsRecord, list[str]]:
+    """Apply a partial update; return the row and sorted changed field names (empty if no-op)."""
+    current = await get_organization_settings(session)
+    changed: list[str] = []
+    values: dict[str, object] = {}
+    if timezone is not None and timezone != current.timezone:
+        changed.append("timezone")
+        values["timezone"] = timezone
+    if locale is not None and locale != current.locale:
+        changed.append("locale")
+        values["locale"] = locale
+    if not changed:
+        return current, []
+    context = require_org_context(session)
+    values["updated_at"] = func.now()
+    await session.execute(
+        update(OrganizationSettings)
+        .where(OrganizationSettings.org_id == context.org_id)
+        .values(**values)
+    )
+    return await get_organization_settings(session), changed
 
 
 async def list_issue_types(session: AsyncSession) -> list[IssueType]:

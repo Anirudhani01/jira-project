@@ -1006,6 +1006,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orgs/{org_slug}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Org Settings */
+        get: operations["get_org_settings_api_v1_orgs__org_slug__settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Org Settings */
+        patch: operations["update_org_settings_api_v1_orgs__org_slug__settings_patch"];
+        trace?: never;
+    };
     "/api/v1/orgs/{org_slug}/sprints/{sprint_id}": {
         parameters: {
             query?: never;
@@ -1900,6 +1918,18 @@ export interface components {
             /** Slug */
             slug: string;
         };
+        /** OrgSettingsResponse */
+        OrgSettingsResponse: {
+            /** Locale */
+            locale: string;
+            /** Timezone */
+            timezone: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** OrgSummary */
         OrgSummary: {
             /** Name */
@@ -2324,6 +2354,13 @@ export interface components {
             name?: string | null;
             /** Slug */
             readonly slug?: unknown;
+        };
+        /** UpdateOrgSettingsRequest */
+        UpdateOrgSettingsRequest: {
+            /** Locale */
+            locale?: string | null;
+            /** Timezone */
+            timezone?: string | null;
         };
         /** UpdateProfileRequest */
         UpdateProfileRequest: {
@@ -4710,6 +4747,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkflowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_org_settings_api_v1_orgs__org_slug__settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_org_settings_api_v1_orgs__org_slug__settings_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOrgSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgSettingsResponse"];
                 };
             };
             /** @description Validation Error */

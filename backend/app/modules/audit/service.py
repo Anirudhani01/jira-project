@@ -24,6 +24,7 @@ Outcome = Literal["success", "failure"]
 ACTION_METADATA_ALLOWLIST: Final[dict[str, frozenset[str]]] = {
     "org.created": frozenset({"slug"}),
     "org.updated": frozenset({"fields"}),
+    "org.settings.updated": frozenset({"fields"}),
     # M4
     "org.member.invited": frozenset({"role"}),
     "org.invitation.revoked": frozenset(),

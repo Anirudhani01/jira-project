@@ -6,11 +6,9 @@ import { ErrorState, LoadingState } from '../../../components/ui/States';
 import type { AuditEvent, Member } from '../../../lib/api/types';
 import { useAuditEvents } from '../../audit/api';
 
-import {
-  describeAuditEvent,
-  formatRelativeTime,
-  memberDisplayNameByUserId,
-} from './formatAuditActivity';
+import { useOrgFormatters } from '../useOrgFormatters';
+
+import { describeAuditEvent, memberDisplayNameByUserId } from './formatAuditActivity';
 
 const PREVIEW_LIMIT = 5;
 
@@ -21,6 +19,7 @@ function ActivityRow({
   event: AuditEvent;
   membersById: Map<string, string>;
 }) {
+  const orgFormat = useOrgFormatters();
   const name = event.actor_user_id
     ? (membersById.get(event.actor_user_id) ?? 'Team member')
     : 'System';
@@ -32,7 +31,7 @@ function ActivityRow({
           {describeAuditEvent(event, membersById)}
         </p>
         <time className="text-xs text-[var(--org-dash-muted)]" dateTime={event.created_at}>
-          {formatRelativeTime(event.created_at)}
+          {orgFormat.formatRelativeTime(event.created_at)}
         </time>
       </div>
     </li>

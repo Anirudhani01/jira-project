@@ -2047,6 +2047,30 @@
         "title": "OrgResponse",
         "type": "object"
       },
+      "OrgSettingsResponse": {
+        "properties": {
+          "locale": {
+            "title": "Locale",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timezone",
+          "locale",
+          "updated_at"
+        ],
+        "title": "OrgSettingsResponse",
+        "type": "object"
+      },
       "OrgSummary": {
         "properties": {
           "name": {
@@ -3215,6 +3239,35 @@
           }
         },
         "title": "UpdateOrgRequest",
+        "type": "object"
+      },
+      "UpdateOrgSettingsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          }
+        },
+        "title": "UpdateOrgSettingsRequest",
         "type": "object"
       },
       "UpdateProfileRequest": {
@@ -7517,6 +7570,98 @@
         "summary": "Get Workflow",
         "tags": [
           "projects"
+        ]
+      }
+    },
+    "/api/v1/orgs/{org_slug}/settings": {
+      "get": {
+        "operationId": "get_org_settings_api_v1_orgs__org_slug__settings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_slug",
+            "required": true,
+            "schema": {
+              "title": "Org Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Org Settings",
+        "tags": [
+          "orgs"
+        ]
+      },
+      "patch": {
+        "operationId": "update_org_settings_api_v1_orgs__org_slug__settings_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_slug",
+            "required": true,
+            "schema": {
+              "title": "Org Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrgSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Org Settings",
+        "tags": [
+          "orgs"
         ]
       }
     },

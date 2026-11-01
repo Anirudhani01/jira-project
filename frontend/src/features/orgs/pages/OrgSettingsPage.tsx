@@ -11,15 +11,12 @@ import { FormError, SubmitButton, TextField } from '../../../components/ui/Form'
 import { ApiError } from '../../../lib/api/errors';
 import type { Org } from '../../../lib/api/types';
 import { applyServerErrors, describeError } from '../../../lib/forms';
+import { useOrgFormatters } from '../useOrgFormatters';
+import { OrgRegionalPreferencesSection } from '../OrgRegionalPreferencesSection';
 import { useOrg, useRenameOrg } from '../api';
 
 const schema = z.object({
   name: z.string().trim().min(1, 'Enter a name.').max(100, 'Use at most 100 characters.'),
-});
-
-const createdFormat = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-  timeStyle: 'short',
 });
 
 function roleLabel(role: string): string {
@@ -124,6 +121,7 @@ function OrgIdCopy({ orgId }: { orgId: string }) {
 }
 
 function OrgSettingsContent({ org }: { org: Org }) {
+  const orgFormat = useOrgFormatters();
   const canManage = org.permissions.includes('org.manage');
   const adminBase = `/o/${org.slug}/admin`;
 
@@ -151,9 +149,7 @@ function OrgSettingsContent({ org }: { org: Org }) {
           <div>
             <dt className="font-medium text-[var(--admin-muted)]">Created</dt>
             <dd className="mt-1 text-[var(--admin-text)]">
-              <time dateTime={org.created_at}>
-                {createdFormat.format(new Date(org.created_at))}
-              </time>
+              <time dateTime={org.created_at}>{orgFormat.formatDateTime(org.created_at)}</time>
             </dd>
           </div>
           <div>
@@ -204,19 +200,17 @@ function OrgSettingsContent({ org }: { org: Org }) {
       </section>
 
       <section
-        className="admin-card space-y-3 rounded-xl border p-5 sm:p-6"
+        className="admin-card space-y-4 rounded-xl border p-5 sm:p-6"
         aria-labelledby="org-settings-regional"
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 id="org-settings-regional" className="text-lg font-semibold text-[var(--admin-text)]">
-            Regional preferences
-          </h2>
-          <Badge tone="neutral">Not configurable</Badge>
-        </div>
+        <h2 id="org-settings-regional" className="text-lg font-semibold text-[var(--admin-text)]">
+          Regional preferences
+        </h2>
         <p className="text-sm leading-relaxed text-[var(--admin-muted)]">
-          Organization-level timezone, locale, and date or time format settings are not supported
-          yet. Dates and times in the product use server and browser defaults.
+          Default timezone and locale for this organization. Formatting across the product will use
+          these values in a later release.
         </p>
+        <OrgRegionalPreferencesSection slug={org.slug} canManage={canManage} />
       </section>
 
       <section

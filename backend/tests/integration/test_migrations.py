@@ -10,9 +10,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from tests.integration.conftest import run_alembic
-from tests.integration.migration_support import OBJECTS_0018, roundtrip_owner_url
+from tests.integration.migration_support import OBJECTS_0018, OBJECTS_0019, roundtrip_owner_url
 
-HEAD = "0018"
+HEAD = "0019"
 
 HELPERS = text(
     "SELECT count(*) FROM pg_proc WHERE proname IN ('app_current_org', 'app_current_user')"
@@ -41,6 +41,26 @@ async def _rows(engine: AsyncEngine, statement: object) -> list[tuple[object, ..
         return list((await conn.execute(statement)).all())  # type: ignore[call-overload]
 
 
+async def test_upgrade_head_and_0019_downgrade_leaves_0018_intact(
+    migration_roundtrip_db: str,
+    migration_owner_engine: AsyncEngine,
+) -> None:
+    run_alembic("upgrade", "head", migration_database_url=migration_roundtrip_db)
+    assert await _scalar(migration_owner_engine, VERSION) == HEAD
+    assert await _scalar(migration_owner_engine, PLATFORM_EVENTS) == 1
+    assert await _rows(migration_owner_engine, OBJECTS_0019) != []
+
+    run_alembic("downgrade", "0018", migration_database_url=migration_roundtrip_db)
+    assert await _scalar(migration_owner_engine, VERSION) == "0018"
+    assert await _rows(migration_owner_engine, OBJECTS_0019) == []
+    assert await _scalar(migration_owner_engine, PLATFORM_EVENTS) == 1
+    assert await _rows(migration_owner_engine, OBJECTS_0018) != []
+
+    run_alembic("upgrade", "0019", migration_database_url=migration_roundtrip_db)
+    assert await _scalar(migration_owner_engine, VERSION) == HEAD
+    assert await _scalar(migration_owner_engine, PLATFORM_EVENTS) == 1
+
+
 async def test_upgrade_head_and_0018_downgrade_leaves_pre0018_security_intact(
     migration_roundtrip_db: str,
     migration_owner_engine: AsyncEngine,
@@ -55,7 +75,7 @@ async def test_upgrade_head_and_0018_downgrade_leaves_pre0018_security_intact(
     assert await _scalar(migration_owner_engine, PLATFORM_EVENTS) == 1
 
     run_alembic("upgrade", "0018", migration_database_url=migration_roundtrip_db)
-    assert await _scalar(migration_owner_engine, VERSION) == HEAD
+    assert await _scalar(migration_owner_engine, VERSION) == "0018"
     assert await _scalar(migration_owner_engine, PLATFORM_EVENTS) == 1
 
 

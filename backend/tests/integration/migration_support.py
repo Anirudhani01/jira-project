@@ -19,6 +19,17 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 DEFAULT_ROUNDTRIP_DB = "jira_migration"
 
+OBJECTS_0019 = text(
+    """
+    SELECT c.relkind::text AS kind, c.relname AS name
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind IN ('r', 'S', 'i', 'p')
+      AND c.relname = 'organization_settings'
+    ORDER BY 2
+    """
+)
+
 OBJECTS_0018 = text(
     """
     SELECT c.relkind::text AS kind, c.relname AS name

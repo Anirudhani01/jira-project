@@ -29,7 +29,8 @@ from app.modules.identity import service as identity
 from app.modules.identity.deps import AuthContext, IdentityServices
 from app.modules.orgs import repository
 from app.modules.orgs.models import IssueType, Priority
-from app.modules.orgs.repository import AuditFilter, MembershipRow, OrgRecord
+from app.modules.orgs.repository import AuditFilter, MembershipRow, OrgRecord, OrgSettingsRecord
+from app.modules.orgs.settings_schemas import UpdateOrgSettingsRequest
 from app.modules.orgs.slugs import is_reserved
 from app.modules.security_events.service import ClientInfo
 
@@ -113,6 +114,38 @@ async def rename_org(
                 metadata={"fields": "name"},
             )
         return await repository.get_org(session), current
+
+
+async def get_org_settings(services: IdentityServices, access: OrgAccess) -> OrgSettingsRecord:
+    async with org_transaction(services, access, Permission.ORG_VIEW) as (session, _):
+        return await repository.get_organization_settings(session)
+
+
+async def update_org_settings(
+    services: IdentityServices,
+    access: OrgAccess,
+    body: UpdateOrgSettingsRequest,
+    *,
+    client: ClientInfo,
+) -> OrgSettingsRecord:
+    fields_set = body.model_fields_set
+    timezone = body.timezone if "timezone" in fields_set else None
+    locale = body.locale if "locale" in fields_set else None
+    async with org_transaction(services, access, Permission.ORG_MANAGE) as (session, current):
+        record, changed = await repository.update_organization_settings(
+            session, timezone=timezone, locale=locale
+        )
+        if changed:
+            await audit.record(
+                session,
+                "org.settings.updated",
+                client,
+                actor_user_id=current.user_id,
+                target_type="organization",
+                target_id=str(current.org_id),
+                metadata={"fields": ",".join(changed)},
+            )
+        return record
 
 
 async def list_issue_types(services: IdentityServices, access: OrgAccess) -> list[IssueType]:

@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '../../components/ui/Overlay';
 import { useToast } from '../../components/ui/Toast';
-import { formatRelativeTime } from '../../lib/relativeTime';
+import { useOrgFormatters } from '../orgs/useOrgFormatters';
 import { FormError } from '../../components/ui/Form';
 import { StatusLozenge } from '../../components/ui/IssueIcons';
 import { Input } from '../../components/ui/Input';
@@ -165,6 +165,7 @@ function IssueView({
   canDeleteAnyComment: boolean;
   onReload: () => void;
 }) {
+  const orgFormat = useOrgFormatters();
   const navigate = useNavigate();
   const location = useLocation();
   const session = useSession();
@@ -564,12 +565,12 @@ function IssueView({
             ) : null}
             <SidebarField label="Created">
               <time className="text-fg-muted" dateTime={issue.created_at}>
-                {formatRelativeTime(issue.created_at)}
+                {orgFormat.formatRelativeTime(issue.created_at)}
               </time>
             </SidebarField>
             <SidebarField label="Last updated">
               <time className="text-fg-muted" dateTime={issue.updated_at}>
-                {formatRelativeTime(issue.updated_at)}
+                {orgFormat.formatRelativeTime(issue.updated_at)}
               </time>
             </SidebarField>
           </Card>

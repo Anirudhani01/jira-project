@@ -10,7 +10,7 @@ import {
   DataGridRow,
   DataGridTable,
 } from '../../components/ui/DataGrid';
-import { formatRelativeTime } from '../../lib/relativeTime';
+import { useOrgFormatters } from '../orgs/useOrgFormatters';
 import type { Issue, IssueType, Priority, ProjectMember } from '../../lib/api/types';
 
 import { issueDetailLinkProps } from './issueDetailNavigation';
@@ -156,6 +156,7 @@ function IssueListTableRow({
   canAssign: boolean;
   canTransition: boolean;
 }) {
+  const orgFormat = useOrgFormatters();
   const location = useLocation();
   const detailLink = issueDetailLinkProps(org, issue.key, location);
 
@@ -216,7 +217,7 @@ function IssueListTableRow({
       {columns.updated ? (
         <DataGridDividedCell>
           <time className="text-xs text-fg-muted" dateTime={issue.updated_at}>
-            {formatRelativeTime(issue.updated_at)}
+            {orgFormat.formatRelativeTime(issue.updated_at)}
           </time>
         </DataGridDividedCell>
       ) : null}

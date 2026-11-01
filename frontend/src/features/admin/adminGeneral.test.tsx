@@ -18,8 +18,14 @@ const ORG_OWNER = {
 };
 const ORG_ADMIN = { ...ORG_OWNER, role: 'admin' };
 const ORG_MEMBER = { ...ORG_OWNER, role: 'member', permissions: ['org.view'] };
+const ORG_SETTINGS = {
+  timezone: 'UTC',
+  locale: 'en-US',
+  updated_at: '2026-10-27T00:00:00Z',
+};
 const SHELL = {
   'GET /orgs/acme/notifications/unread-count': () => json({ count: 0 }),
+  'GET /orgs/acme/settings': () => json(ORG_SETTINGS),
 };
 
 describe('Admin General settings', () => {
@@ -63,7 +69,12 @@ describe('Admin General settings', () => {
     });
     renderApp('/o/acme/admin/general');
     expect(await screen.findByRole('heading', { name: 'General' })).toBeInTheDocument();
-    expect(screen.getByText(/Only organization owners and admins can change/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Only organization owners and admins can change the display name/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Only organization owners and admins can change regional preferences/),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
     expect(screen.getByText(/cannot be changed/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open Defaults & Catalogs' })).toHaveAttribute(
