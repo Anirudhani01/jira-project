@@ -37,11 +37,7 @@ import { permissionDeniedInlineMessage } from '../../lib/ux/permissionDenied';
 import { useUnsavedChangesWarning } from '../../hooks/useUnsavedChangesWarning';
 
 import { projectKey as projectQueryKey, useReplaceWorkflow } from './api';
-import {
-  assignStatus,
-  MAX_COLUMNS,
-  moveColumn,
-} from './boardColumnsModel';
+import { assignStatus, MAX_COLUMNS, moveColumn } from './boardColumnsModel';
 import {
   addStatus,
   addTransition,
@@ -115,9 +111,7 @@ export function ProjectWorkflowEditor({
 
   const boot = useMemo(() => fromServer(workflow, board), [workflow, board]);
   const [baselineRevision, setBaselineRevision] = useState(workflow.revision);
-  const [draft, setDraft] = useState<WorkflowDraft | null>(
-    boot.ok ? cloneDraft(boot.draft) : null,
-  );
+  const [draft, setDraft] = useState<WorkflowDraft | null>(boot.ok ? cloneDraft(boot.draft) : null);
   const [baseline, setBaseline] = useState<WorkflowDraft | null>(
     boot.ok ? cloneDraft(boot.draft) : null,
   );
@@ -294,7 +288,9 @@ export function ProjectWorkflowEditor({
             maxLength={100}
             disabled={disabled}
             aria-invalid={Boolean(errors?.workflowName)}
-            onChange={(e) => { setDraft({ ...draft, name: e.target.value }); }}
+            onChange={(e) => {
+              setDraft({ ...draft, name: e.target.value });
+            }}
           />
           {errors?.workflowName ? (
             <p className="text-xs text-danger">{errors.workflowName}</p>
@@ -313,9 +309,7 @@ export function ProjectWorkflowEditor({
         </div>
       </div>
 
-      {archived ? (
-        <p className="text-sm text-fg-muted">Archived projects are read-only.</p>
-      ) : null}
+      {archived ? <p className="text-sm text-fg-muted">Archived projects are read-only.</p> : null}
       {!online ? (
         <p role="status" className="text-sm text-warning">
           You are offline. Changes stay in this tab until you reconnect.
@@ -363,9 +357,7 @@ export function ProjectWorkflowEditor({
                   }
                   onChange={(e) => {
                     if (!e.target.value) return;
-                    setDraft((d) =>
-                      d ? applyStatusRemapToDraft(d, fromId, e.target.value) : d,
-                    );
+                    setDraft((d) => (d ? applyStatusRemapToDraft(d, fromId, e.target.value) : d));
                   }}
                 >
                   <option value="">Move issues to…</option>
@@ -388,13 +380,20 @@ export function ProjectWorkflowEditor({
       <FormError>{failure}</FormError>
 
       <section aria-labelledby={`${formId}-statuses`}>
-        <h3 id={`${formId}-statuses`} className="text-xs font-semibold uppercase tracking-wide text-fg-muted">
+        <h3
+          id={`${formId}-statuses`}
+          className="text-xs font-semibold uppercase tracking-wide text-fg-muted"
+        >
           Statuses
         </h3>
         {errors?.initialStatus ? (
           <p className="mt-1 text-xs text-danger">{errors.initialStatus}</p>
         ) : null}
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onStatusDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={onStatusDragEnd}
+        >
           <SortableContext
             items={draft.statuses.map((s) => s.clientKey)}
             strategy={verticalListSortingStrategy}
@@ -408,28 +407,30 @@ export function ProjectWorkflowEditor({
                     maxLength={100}
                     disabled={disabled}
                     className="min-w-32 flex-1"
-                    onChange={(e) => { setDraft({
+                    onChange={(e) => {
+                      setDraft({
                         ...draft,
                         statuses: draft.statuses.map((row) =>
                           row.clientKey === s.clientKey ? { ...row, name: e.target.value } : row,
                         ),
-                      }); }
-                    }
+                      });
+                    }}
                   />
                   <select
                     aria-label="Category"
                     disabled={disabled}
                     className="h-9 rounded-md border border-line-strong bg-surface px-2 text-sm"
                     value={s.category}
-                    onChange={(e) => { setDraft({
+                    onChange={(e) => {
+                      setDraft({
                         ...draft,
                         statuses: draft.statuses.map((row) =>
                           row.clientKey === s.clientKey
                             ? { ...row, category: e.target.value as StatusCategory }
                             : row,
                         ),
-                      }); }
-                    }
+                      });
+                    }}
                   >
                     <option value="todo">To do</option>
                     <option value="in_progress">In progress</option>
@@ -441,7 +442,9 @@ export function ProjectWorkflowEditor({
                       name={`${formId}-initial`}
                       disabled={disabled}
                       checked={draft.initialStatusId === s.id}
-                      onChange={() => { setDraft({ ...draft, initialStatusId: s.id }); }}
+                      onChange={() => {
+                        setDraft({ ...draft, initialStatusId: s.id });
+                      }}
                     />
                     Initial
                   </label>
@@ -470,7 +473,9 @@ export function ProjectWorkflowEditor({
           size="sm"
           className="mt-2"
           disabled={disabled}
-          onClick={() => { setDraft(addStatus(draft)); }}
+          onClick={() => {
+            setDraft(addStatus(draft));
+          }}
         >
           <Plus className="size-4" /> Add status
         </Button>
@@ -485,7 +490,9 @@ export function ProjectWorkflowEditor({
           <select
             className="mt-2 h-9 w-full max-w-xs rounded-md border border-line-strong bg-surface px-2 text-sm"
             value={deleteRemapTo}
-            onChange={(e) => { setDeleteRemapTo(e.target.value); }}
+            onChange={(e) => {
+              setDeleteRemapTo(e.target.value);
+            }}
           >
             <option value="">Move issues to (if any)…</option>
             {draft.statuses
@@ -512,7 +519,14 @@ export function ProjectWorkflowEditor({
             >
               Remove from draft
             </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => { setDeleteTarget(null); }}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setDeleteTarget(null);
+              }}
+            >
               Cancel
             </Button>
           </div>
@@ -537,20 +551,22 @@ export function ProjectWorkflowEditor({
                 value={t.name}
                 disabled={disabled}
                 className="min-w-28 flex-1"
-                onChange={(e) => { setDraft({
+                onChange={(e) => {
+                  setDraft({
                     ...draft,
                     transitions: draft.transitions.map((row) =>
                       row.clientKey === t.clientKey ? { ...row, name: e.target.value } : row,
                     ),
-                  }); }
-                }
+                  });
+                }}
               />
               <select
                 aria-label="From status"
                 disabled={disabled}
                 className="h-9 rounded-md border border-line-strong px-2 text-sm"
                 value={t.from_status_id ?? ''}
-                onChange={(e) => { setDraft({
+                onChange={(e) => {
+                  setDraft({
                     ...draft,
                     transitions: draft.transitions.map((row) =>
                       row.clientKey === t.clientKey
@@ -560,8 +576,8 @@ export function ProjectWorkflowEditor({
                           }
                         : row,
                     ),
-                  }); }
-                }
+                  });
+                }}
               >
                 <option value="">Any status</option>
                 {draft.statuses.map((s) => (
@@ -576,15 +592,16 @@ export function ProjectWorkflowEditor({
                 disabled={disabled}
                 className="h-9 rounded-md border border-line-strong px-2 text-sm"
                 value={t.to_status_id}
-                onChange={(e) => { setDraft({
+                onChange={(e) => {
+                  setDraft({
                     ...draft,
                     transitions: draft.transitions.map((row) =>
                       row.clientKey === t.clientKey
                         ? { ...row, to_status_id: e.target.value }
                         : row,
                     ),
-                  }); }
-                }
+                  });
+                }}
               >
                 {draft.statuses.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -596,11 +613,12 @@ export function ProjectWorkflowEditor({
                 label="Delete transition"
                 size="sm"
                 disabled={disabled}
-                onClick={() => { setDraft({
+                onClick={() => {
+                  setDraft({
                     ...draft,
                     transitions: draft.transitions.filter((row) => row.clientKey !== t.clientKey),
-                  }); }
-                }
+                  });
+                }}
               >
                 <Trash2 className="size-4" />
               </IconButton>
@@ -613,17 +631,26 @@ export function ProjectWorkflowEditor({
           size="sm"
           className="mt-2"
           disabled={disabled || draft.statuses.length === 0}
-          onClick={() => { setDraft(addTransition(draft)); }}
+          onClick={() => {
+            setDraft(addTransition(draft));
+          }}
         >
           <Plus className="size-4" /> Add transition
         </Button>
       </section>
 
       <section aria-labelledby={`${formId}-columns`}>
-        <h3 id={`${formId}-columns`} className="text-xs font-semibold uppercase tracking-wide text-fg-muted">
+        <h3
+          id={`${formId}-columns`}
+          className="text-xs font-semibold uppercase tracking-wide text-fg-muted"
+        >
           Board columns
         </h3>
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onColumnDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={onColumnDragEnd}
+        >
           <SortableContext
             items={draft.columns.map((c) => c.uid)}
             strategy={verticalListSortingStrategy}
@@ -640,13 +667,14 @@ export function ProjectWorkflowEditor({
                       value={column.name}
                       disabled={disabled}
                       className="min-w-32 flex-1"
-                      onChange={(e) => { setDraft({
+                      onChange={(e) => {
+                        setDraft({
                           ...draft,
                           columns: draft.columns.map((c) =>
                             c.uid === column.uid ? { ...c, name: e.target.value } : c,
                           ),
-                        }); }
-                      }
+                        });
+                      }}
                     />
                     <Input
                       aria-label="WIP limit"
@@ -654,20 +682,22 @@ export function ProjectWorkflowEditor({
                       value={column.wip}
                       disabled={disabled}
                       className="w-24"
-                      onChange={(e) => { setDraft({
+                      onChange={(e) => {
+                        setDraft({
                           ...draft,
                           columns: draft.columns.map((c) =>
                             c.uid === column.uid ? { ...c, wip: e.target.value } : c,
                           ),
-                        }); }
-                      }
+                        });
+                      }}
                     />
                     <IconButton
                       label="Move column up"
                       size="sm"
                       disabled={disabled || index === 0}
-                      onClick={() => { setDraft({ ...draft, columns: moveColumn(draft.columns, index, -1) }); }
-                      }
+                      onClick={() => {
+                        setDraft({ ...draft, columns: moveColumn(draft.columns, index, -1) });
+                      }}
                     >
                       <ArrowUp className="size-4" />
                     </IconButton>
@@ -675,8 +705,9 @@ export function ProjectWorkflowEditor({
                       label="Move column down"
                       size="sm"
                       disabled={disabled || index === draft.columns.length - 1}
-                      onClick={() => { setDraft({ ...draft, columns: moveColumn(draft.columns, index, 1) }); }
-                      }
+                      onClick={() => {
+                        setDraft({ ...draft, columns: moveColumn(draft.columns, index, 1) });
+                      }}
                     >
                       <ArrowDown className="size-4" />
                     </IconButton>
@@ -684,11 +715,12 @@ export function ProjectWorkflowEditor({
                       label="Remove column"
                       size="sm"
                       disabled={disabled || column.statusIds.length > 0}
-                      onClick={() => { setDraft({
+                      onClick={() => {
+                        setDraft({
                           ...draft,
                           columns: draft.columns.filter((c) => c.uid !== column.uid),
-                        }); }
-                      }
+                        });
+                      }}
                     >
                       <Trash2 className="size-4" />
                     </IconButton>
@@ -702,11 +734,12 @@ export function ProjectWorkflowEditor({
                           className="h-7 rounded-md border px-1 text-xs"
                           value={column.uid}
                           disabled={disabled}
-                          onChange={(e) => { setDraft({
+                          onChange={(e) => {
+                            setDraft({
                               ...draft,
                               columns: assignStatus(draft.columns, sid, e.target.value),
-                            }); }
-                          }
+                            });
+                          }}
                         >
                           {draft.columns.map((c, i) => (
                             <option key={c.uid} value={c.uid}>
@@ -728,14 +761,15 @@ export function ProjectWorkflowEditor({
           size="sm"
           className="mt-2"
           disabled={disabled || draft.columns.length >= MAX_COLUMNS}
-          onClick={() => { setDraft({
+          onClick={() => {
+            setDraft({
               ...draft,
               columns: [
                 ...draft.columns,
                 { uid: nextColumnClientKey(), name: '', wip: '', statusIds: [] },
               ],
-            }); }
-          }
+            });
+          }}
         >
           <Plus className="size-4" /> Add column
         </Button>

@@ -21,5 +21,4 @@ describe('useUnsavedChangesWarning', () => {
     expect(add).toHaveBeenCalledWith('beforeunload', expect.any(Function), { capture: true });
     add.mockRestore();
   });
-
 });

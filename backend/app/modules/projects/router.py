@@ -22,10 +22,10 @@ from app.modules.projects.schemas import (
     ProjectMemberResponse,
     ProjectResponse,
     ProjectSummary,
+    ReplaceWorkflowRequest,
     StatusResponse,
     TransitionResponse,
     UpdateProjectMemberRequest,
-    ReplaceWorkflowRequest,
     UpdateProjectRequest,
     WorkflowResponse,
 )
@@ -205,7 +205,6 @@ async def put_workflow(
         client=client_info(request),
     )
     return _workflow_response(view)
-
 
 
 @router.get("/{project_key}/members", response_model=ProjectMemberListResponse)

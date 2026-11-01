@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 WORKFLOW_STATUS_NAME_UNIQUE = "uq_workflow_statuses_workflow_id_name"
 _DUPLICATE_NAME = re.compile(
-    r'Key \(workflow_id, name\)=\([^,]+,\s*(?P<name>[^)]+)\)\s+already exists',
+    r"Key \(workflow_id, name\)=\([^,]+,\s*(?P<name>[^)]+)\)\s+already exists",
     re.IGNORECASE,
 )
 

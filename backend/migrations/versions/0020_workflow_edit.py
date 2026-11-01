@@ -71,7 +71,10 @@ def downgrade() -> None:
     op.execute("DROP POLICY workflow_statuses_update ON workflow_statuses")
     op.execute("DROP POLICY workflows_update ON workflows")
 
-    op.execute("REVOKE UPDATE (name, from_status_id, to_status_id), DELETE ON workflow_transitions FROM app_rw")
+    op.execute(
+        "REVOKE UPDATE (name, from_status_id, to_status_id), "
+        "DELETE ON workflow_transitions FROM app_rw"
+    )
     op.execute("REVOKE UPDATE (name, category, position), DELETE ON workflow_statuses FROM app_rw")
     op.execute("REVOKE UPDATE (name, initial_status_id, revision) ON workflows FROM app_rw")
 

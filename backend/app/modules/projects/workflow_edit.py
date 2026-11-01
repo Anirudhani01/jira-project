@@ -11,7 +11,11 @@ from app.modules.projects.schemas import (
     StatusInput,
     TransitionInput,
 )
-from app.modules.projects.workflow_errors import invalid_workflow, status_in_use
+from app.modules.projects.workflow_errors import (
+    invalid_workflow,
+    status_in_use,
+    status_name_taken,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,8 +49,6 @@ def _assign_status_ids(statuses: list[StatusInput]) -> list[StatusSpec]:
     for item in statuses:
         name_key = item.name.casefold()
         if name_key in seen_names:
-            from app.modules.projects.workflow_errors import status_name_taken
-
             raise status_name_taken(item.name)
         seen_names.add(name_key)
         status_id = item.id if item.id is not None else uuid.uuid4()
@@ -75,13 +77,22 @@ def desired_graph(body: ReplaceWorkflowRequest) -> WorkflowGraphState:
     status_specs = _assign_status_ids(body.statuses)
     status_ids = {s.id for s in status_specs}
     if body.initial_status_id not in status_ids:
-        raise invalid_workflow("initial_status_id must refer to a status in the payload.", "body.initial_status_id")
+        raise invalid_workflow(
+            "initial_status_id must refer to a status in the payload.",
+            "body.initial_status_id",
+        )
     transition_specs = _assign_transition_ids(body.transitions)
     for transition in transition_specs:
         if transition.from_status_id is not None and transition.from_status_id not in status_ids:
-            raise invalid_workflow("Transition from_status_id is not in statuses.", "body.transitions")
+            raise invalid_workflow(
+                "Transition from_status_id is not in statuses.",
+                "body.transitions",
+            )
         if transition.to_status_id not in status_ids:
-            raise invalid_workflow("Transition to_status_id is not in statuses.", "body.transitions")
+            raise invalid_workflow(
+                "Transition to_status_id is not in statuses.",
+                "body.transitions",
+            )
     return WorkflowGraphState(
         name=body.name,
         initial_status_id=body.initial_status_id,
@@ -109,12 +120,21 @@ def validate_remaps(
         if target is None:
             raise status_in_use()
         if target == status_id:
-            raise invalid_workflow("status_remaps cannot map a status to itself.", "body.status_remaps")
+            raise invalid_workflow(
+                "status_remaps cannot map a status to itself.",
+                "body.status_remaps",
+            )
         if target not in desired.statuses:
-            raise invalid_workflow("Replacement status must remain in the workflow.", "body.status_remaps")
-    for from_id, to_id in remaps.items():
+            raise invalid_workflow(
+                "Replacement status must remain in the workflow.",
+                "body.status_remaps",
+            )
+    for from_id, _to_id in remaps.items():
         if from_id not in removing:
-            raise invalid_workflow("status_remaps entry refers to a status that is not being removed.", "body.status_remaps")
+            raise invalid_workflow(
+                "status_remaps entry refers to a status that is not being removed.",
+                "body.status_remaps",
+            )
 
 
 def remap_lookup(body: ReplaceWorkflowRequest) -> dict[uuid.UUID, uuid.UUID]:

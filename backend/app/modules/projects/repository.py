@@ -7,13 +7,13 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import delete, func, insert, select, update
+from sqlalchemy import delete, func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.tenant import require_org_context
 from app.modules.identity.directory import visible_users
-from app.modules.projects.defaults import STATUSES, WORKFLOW_NAME
 from app.modules.issues.models import Issue
+from app.modules.projects.defaults import STATUSES, WORKFLOW_NAME
 from app.modules.projects.models import (
     Board,
     BoardColumn,
@@ -433,8 +433,6 @@ async def prune_workflow_transitions(
         delete_predicates.append(WorkflowTransition.from_status_id.in_(removing))
         delete_predicates.append(WorkflowTransition.to_status_id.in_(removing))
     if delete_predicates:
-        from sqlalchemy import or_
-
         await session.execute(
             delete(WorkflowTransition).where(*transition_scope, or_(*delete_predicates))
         )
@@ -481,9 +479,7 @@ async def upsert_workflow_statuses(
             )
 
 
-async def delete_workflow_statuses(
-    session: AsyncSession, removing: set[uuid.UUID]
-) -> None:
+async def delete_workflow_statuses(session: AsyncSession, removing: set[uuid.UUID]) -> None:
     if not removing:
         return
     context = require_org_context(session)

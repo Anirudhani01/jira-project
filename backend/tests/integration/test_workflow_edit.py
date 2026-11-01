@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from contextlib import AsyncExitStack
 from typing import Any
 
 import httpx
 import pytest
-
 from sqlalchemy.exc import IntegrityError
 
 from app.modules.projects import repository as projects_repository
 from tests.integration.auth_support import csrf, superuser_sql
-from tests.integration.tenancy_support import Tenant, make_tenant
+from tests.integration.tenancy_support import make_tenant
 from tests.integration.test_issues import Ctx, new_issue
 from tests.integration.test_projects import create_project, org_member
 
@@ -114,9 +114,7 @@ async def test_put_requires_if_match(project_ctx: Ctx) -> None:
 async def test_put_rejects_malformed_if_match(project_ctx: Ctx) -> None:
     wf = await _get_workflow(project_ctx.http, project_ctx.slug)
     body = _body_from_workflow(wf, name="Renamed")
-    response = await _put_workflow(
-        project_ctx.http, project_ctx.slug, body, if_match='"v1"'
-    )
+    response = await _put_workflow(project_ctx.http, project_ctx.slug, body, if_match='"v1"')
     assert response.status_code == 412
     assert response.json()["code"] == "workflow_revision_conflict"
 
@@ -125,9 +123,7 @@ async def test_put_rejects_stale_revision(project_ctx: Ctx) -> None:
     wf = await _get_workflow(project_ctx.http, project_ctx.slug)
     body = _body_from_workflow(wf, name="First rename")
     assert wf["revision"] == 1
-    ok = await _put_workflow(
-        project_ctx.http, project_ctx.slug, body, revision=wf["revision"]
-    )
+    ok = await _put_workflow(project_ctx.http, project_ctx.slug, body, revision=wf["revision"])
     assert ok.status_code == 200
     assert ok.json()["revision"] == 2
     stale = await _put_workflow(project_ctx.http, project_ctx.slug, body, revision=1)
@@ -272,9 +268,7 @@ async def test_project_member_can_get_workflow(project_ctx: Ctx) -> None:
             p=proj.id,
             u=member_id,
         )
-        response = await member_http.get(
-            f"/api/v1/orgs/{project_ctx.slug}/projects/WEB/workflow"
-        )
+        response = await member_http.get(f"/api/v1/orgs/{project_ctx.slug}/projects/WEB/workflow")
     assert response.status_code == 200
     assert "revision" in response.json()
 
@@ -296,9 +290,7 @@ async def test_project_member_cannot_put_workflow(project_ctx: Ctx) -> None:
             u=member_id,
         )
         revision_before = await _workflow_revision(project_ctx.tenant.org_id, "WEB")
-        response = await _put_workflow(
-            member_http, project_ctx.slug, body, revision=wf["revision"]
-        )
+        response = await _put_workflow(member_http, project_ctx.slug, body, revision=wf["revision"])
         revision_after = await _workflow_revision(project_ctx.tenant.org_id, "WEB")
     assert response.status_code == 403
     assert revision_after == revision_before
@@ -309,9 +301,7 @@ async def test_org_admin_can_put_workflow(project_ctx: Ctx) -> None:
     body = _body_from_workflow(wf, name="Admin edited")
     async with AsyncExitStack() as stack:
         admin_http, _ = await org_member(stack, project_ctx.tenant, "admin")
-        response = await _put_workflow(
-            admin_http, project_ctx.slug, body, revision=wf["revision"]
-        )
+        response = await _put_workflow(admin_http, project_ctx.slug, body, revision=wf["revision"])
     assert response.status_code == 200
     assert response.json()["name"] == "Admin edited"
 
@@ -345,9 +335,7 @@ async def test_project_admin_can_put_own_project_workflow(project_ctx: Ctx) -> N
             p=proj.id,
             u=admin_id,
         )
-        response = await _put_workflow(
-            admin_http, project_ctx.slug, body, revision=wf["revision"]
-        )
+        response = await _put_workflow(admin_http, project_ctx.slug, body, revision=wf["revision"])
     assert response.status_code == 200
     assert response.json()["name"] == "Project admin edit"
 
@@ -396,16 +384,12 @@ async def test_non_member_cannot_access_project_workflow(project_ctx: Ctx) -> No
 
 async def test_concurrent_puts_adding_same_new_status_name(project_ctx: Ctx) -> None:
     """Database unique index wins; loser is status_name_taken, not a generic 500."""
-    import asyncio
-
     wf = await _get_workflow(project_ctx.http, project_ctx.slug)
     new_a, new_b = str(uuid.uuid4()), str(uuid.uuid4())
 
     def body_with(extra_id: str) -> dict[str, Any]:
         statuses = list(_body_from_workflow(wf)["statuses"])
-        statuses.append(
-            {"id": extra_id, "name": "QA", "category": "in_progress", "position": 50}
-        )
+        statuses.append({"id": extra_id, "name": "QA", "category": "in_progress", "position": 50})
         transitions = list(_body_from_workflow(wf)["transitions"])
         transitions.append(
             {
@@ -417,9 +401,7 @@ async def test_concurrent_puts_adding_same_new_status_name(project_ctx: Ctx) -> 
         )
         columns = list(_body_from_workflow(wf)["columns"])
         columns.append({"name": "QA", "status_ids": [extra_id]})
-        return _body_from_workflow(
-            wf, statuses=statuses, transitions=transitions, columns=columns
-        )
+        return _body_from_workflow(wf, statuses=statuses, transitions=transitions, columns=columns)
 
     results = await asyncio.gather(
         _put_workflow(
@@ -437,7 +419,8 @@ async def test_concurrent_puts_adding_same_new_status_name(project_ctx: Ctx) -> 
         assert loser.json()["code"] == "status_name_taken"
     elif loser.status_code == 412:
         assert loser.json()["code"] == "workflow_revision_conflict"
-    assert "QA" in [s["name"] for s in (await _get_workflow(project_ctx.http, project_ctx.slug))["statuses"]]
+    wf_after = await _get_workflow(project_ctx.http, project_ctx.slug)
+    assert "QA" in [s["name"] for s in wf_after["statuses"]]
 
 
 async def test_unrelated_integrity_error_is_not_status_name_taken(
@@ -486,9 +469,7 @@ async def test_add_status_and_transition(project_ctx: Ctx) -> None:
     )
     columns = list(_body_from_workflow(wf)["columns"])
     columns.append({"name": "QA", "status_ids": [new_status_id]})
-    body = _body_from_workflow(
-        wf, statuses=statuses, transitions=transitions, columns=columns
-    )
+    body = _body_from_workflow(wf, statuses=statuses, transitions=transitions, columns=columns)
     response = await _put_workflow(
         project_ctx.http, project_ctx.slug, body, revision=wf["revision"]
     )

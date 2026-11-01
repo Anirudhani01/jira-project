@@ -10,13 +10,14 @@ import { defineConfig, devices } from '@playwright/test';
 const PLAYWRIGHT_MOCK_PORT = process.env.PLAYWRIGHT_MOCK_PORT ?? '5193';
 const mockBaseURL = `http://127.0.0.1:${PLAYWRIGHT_MOCK_PORT}`;
 
-const externalBaseURL = process.env.E2E_BASE_URL?.replace(/\/$/, '');
+const rawExternalBaseURL = process.env.E2E_BASE_URL?.trim() ?? '';
+const externalBaseURL = rawExternalBaseURL ? rawExternalBaseURL.replace(/\/$/, '') : undefined;
 if (externalBaseURL && !/^https?:\/\//.test(externalBaseURL)) {
   throw new Error(`E2E_BASE_URL must be an absolute http(s) URL, got: ${externalBaseURL}`);
 }
 
 const baseURL = externalBaseURL ?? mockBaseURL;
-const useManagedMockWebServer = !externalBaseURL;
+const useManagedMockWebServer = externalBaseURL === undefined;
 
 export default defineConfig({
   testDir: './e2e',

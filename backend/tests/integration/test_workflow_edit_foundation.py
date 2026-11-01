@@ -37,9 +37,7 @@ async def _two_status_ids(org_id: uuid.UUID, workflow_id: uuid.UUID) -> tuple[uu
     return rows[0].id, rows[1].id
 
 
-async def _project_admin(
-    stack: AsyncExitStack, tenant: Tenant, project_id: uuid.UUID
-) -> uuid.UUID:
+async def _project_admin(stack: AsyncExitStack, tenant: Tenant, project_id: uuid.UUID) -> uuid.UUID:
     _, admin_id = await org_member(stack, tenant)
     await superuser_sql(
         "INSERT INTO project_memberships (org_id, project_id, user_id, role) VALUES "
@@ -151,7 +149,9 @@ async def test_project_admin_can_update_own_project_workflow(
     ctx = await _project_context(seeded_project.org_id, "WEB")
     async with AsyncExitStack() as stack:
         admin_id = await _project_admin(
-            stack, seeded_project, ctx.project_id  # type: ignore[attr-defined]
+            stack,
+            seeded_project,
+            ctx.project_id,  # type: ignore[attr-defined]
         )
     assert (
         await affected(
@@ -165,13 +165,13 @@ async def test_project_admin_can_update_own_project_workflow(
     )
 
 
-async def test_project_admin_insert_status(
-    rw_engine: AsyncEngine, seeded_project: Tenant
-) -> None:
+async def test_project_admin_insert_status(rw_engine: AsyncEngine, seeded_project: Tenant) -> None:
     ctx = await _project_context(seeded_project.org_id, "WEB")
     async with AsyncExitStack() as stack:
         admin_id = await _project_admin(
-            stack, seeded_project, ctx.project_id  # type: ignore[attr-defined]
+            stack,
+            seeded_project,
+            ctx.project_id,  # type: ignore[attr-defined]
         )
     new_id = uuid.uuid4()
     assert (
@@ -189,13 +189,13 @@ async def test_project_admin_insert_status(
     )
 
 
-async def test_project_admin_update_status(
-    rw_engine: AsyncEngine, seeded_project: Tenant
-) -> None:
+async def test_project_admin_update_status(rw_engine: AsyncEngine, seeded_project: Tenant) -> None:
     ctx = await _project_context(seeded_project.org_id, "WEB")
     async with AsyncExitStack() as stack:
         admin_id = await _project_admin(
-            stack, seeded_project, ctx.project_id  # type: ignore[attr-defined]
+            stack,
+            seeded_project,
+            ctx.project_id,  # type: ignore[attr-defined]
         )
     assert (
         await affected(
@@ -215,14 +215,14 @@ async def test_project_admin_delete_unused_status(
     ctx = await _project_context(seeded_project.org_id, "WEB")
     async with AsyncExitStack() as stack:
         admin_id = await _project_admin(
-            stack, seeded_project, ctx.project_id  # type: ignore[attr-defined]
+            stack,
+            seeded_project,
+            ctx.project_id,  # type: ignore[attr-defined]
         )
     new_id = uuid.uuid4()
     async with AsyncSession(bind=rw_engine) as session:
         await session.begin()
-        await bind_tenant(
-            session, TenantContext(org_id=seeded_project.org_id, user_id=admin_id)
-        )
+        await bind_tenant(session, TenantContext(org_id=seeded_project.org_id, user_id=admin_id))
         await session.execute(
             text(
                 "INSERT INTO workflow_statuses (id, org_id, workflow_id, name, category, position) "
@@ -243,18 +243,19 @@ async def test_project_admin_insert_update_delete_transition(
 ) -> None:
     ctx = await _project_context(seeded_project.org_id, "WEB")
     from_id, to_id = await _two_status_ids(
-        seeded_project.org_id, ctx.workflow_id  # type: ignore[attr-defined]
+        seeded_project.org_id,
+        ctx.workflow_id,  # type: ignore[attr-defined]
     )
     async with AsyncExitStack() as stack:
         admin_id = await _project_admin(
-            stack, seeded_project, ctx.project_id  # type: ignore[attr-defined]
+            stack,
+            seeded_project,
+            ctx.project_id,  # type: ignore[attr-defined]
         )
     transition_id = uuid.uuid4()
     async with AsyncSession(bind=rw_engine) as session:
         await session.begin()
-        await bind_tenant(
-            session, TenantContext(org_id=seeded_project.org_id, user_id=admin_id)
-        )
+        await bind_tenant(session, TenantContext(org_id=seeded_project.org_id, user_id=admin_id))
         inserted = await session.execute(
             text(
                 "INSERT INTO workflow_transitions (id, org_id, workflow_id, name, from_status_id, "
@@ -285,7 +286,8 @@ async def test_project_admin_insert_update_delete_transition(
 async def test_org_admin_can_mutate_any_project_workflow(
     rw_engine: AsyncEngine, seeded_project: Tenant
 ) -> None:
-    assert (await create_project(seeded_project.http, seeded_project.slug, "API")).status_code == 201
+    api_create = await create_project(seeded_project.http, seeded_project.slug, "API")
+    assert api_create.status_code == 201
     api = await _project_context(seeded_project.org_id, "API")
     async with AsyncExitStack() as stack:
         _, org_admin_id = await org_member(stack, seeded_project, "admin")
@@ -351,7 +353,7 @@ GRAPH_WRITE_OPS = (
 )
 
 
-@pytest.mark.parametrize("op_name,statement,denial", GRAPH_WRITE_OPS)
+@pytest.mark.parametrize(("op_name", "statement", "denial"), GRAPH_WRITE_OPS)
 async def test_project_member_graph_writes_denied(
     rw_engine: AsyncEngine,
     seeded_project: Tenant,
@@ -361,7 +363,8 @@ async def test_project_member_graph_writes_denied(
 ) -> None:
     ctx = await _project_context(seeded_project.org_id, "WEB")
     _, to_id = await _two_status_ids(
-        seeded_project.org_id, ctx.workflow_id  # type: ignore[attr-defined]
+        seeded_project.org_id,
+        ctx.workflow_id,  # type: ignore[attr-defined]
     )
     async with AsyncExitStack() as stack:
         _, member_id = await org_member(stack, seeded_project)
@@ -401,7 +404,7 @@ async def test_project_member_graph_writes_denied(
         assert "row-level security" in error, op_name
 
 
-@pytest.mark.parametrize("op_name,statement,denial", GRAPH_WRITE_OPS)
+@pytest.mark.parametrize(("op_name", "statement", "denial"), GRAPH_WRITE_OPS)
 async def test_project_admin_other_project_graph_writes_denied(
     rw_engine: AsyncEngine,
     seeded_project: Tenant,
@@ -409,15 +412,19 @@ async def test_project_admin_other_project_graph_writes_denied(
     statement: str,
     denial: str,
 ) -> None:
-    assert (await create_project(seeded_project.http, seeded_project.slug, "API")).status_code == 201
+    api_create = await create_project(seeded_project.http, seeded_project.slug, "API")
+    assert api_create.status_code == 201
     web = await _project_context(seeded_project.org_id, "WEB")
     api = await _project_context(seeded_project.org_id, "API")
     _, to_id = await _two_status_ids(
-        seeded_project.org_id, api.workflow_id  # type: ignore[attr-defined]
+        seeded_project.org_id,
+        api.workflow_id,  # type: ignore[attr-defined]
     )
     async with AsyncExitStack() as stack:
         admin_id = await _project_admin(
-            stack, seeded_project, web.project_id  # type: ignore[attr-defined]
+            stack,
+            seeded_project,
+            web.project_id,  # type: ignore[attr-defined]
         )
     params = {
         "o": seeded_project.org_id,
@@ -471,7 +478,8 @@ async def test_status_delete_blocked_while_mapped_on_board_column(
 async def test_project_admin_cannot_update_another_projects_workflow(
     rw_engine: AsyncEngine, seeded_project: Tenant
 ) -> None:
-    assert (await create_project(seeded_project.http, seeded_project.slug, "API")).status_code == 201
+    api_create = await create_project(seeded_project.http, seeded_project.slug, "API")
+    assert api_create.status_code == 201
     web = await _project_context(seeded_project.org_id, "WEB")
     api = await _project_context(seeded_project.org_id, "API")
     async with AsyncExitStack() as stack:
@@ -634,9 +642,7 @@ async def test_status_delete_still_restricted_when_issues_reference_it(
     ctx = await _project_context(seeded_project.org_id, "WEB")
     types, priorities = await _config(seeded_project.org_id)
     async with AsyncExitStack() as stack:
-        issue_ctx = Ctx(
-            stack=stack, tenant=seeded_project, types=types, priorities=priorities
-        )
+        issue_ctx = Ctx(stack=stack, tenant=seeded_project, types=types, priorities=priorities)
         assert (await new_issue(issue_ctx.http, issue_ctx)).status_code == 201
     error = await denied(
         rw_engine,

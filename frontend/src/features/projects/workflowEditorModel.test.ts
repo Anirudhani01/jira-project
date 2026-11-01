@@ -104,10 +104,7 @@ describe('fromServer', () => {
   it('assigns distinct client keys to workflow-only empty columns at different positions', () => {
     const wfOnly = {
       ...workflow,
-      columns: [
-        ...workflow.columns,
-        { name: 'Empty A', position: 2, status_ids: [] as string[] },
-      ],
+      columns: [...workflow.columns, { name: 'Empty A', position: 2, status_ids: [] as string[] }],
     };
     const result = fromServer(wfOnly, board);
     expect(result.ok).toBe(true);
@@ -186,10 +183,7 @@ describe('fromServer', () => {
   it('appends workflow-only columns without server ids', () => {
     const wfOnly = {
       ...workflow,
-      columns: [
-        ...workflow.columns,
-        { name: 'Extra', position: 2, status_ids: [] as string[] },
-      ],
+      columns: [...workflow.columns, { name: 'Extra', position: 2, status_ids: [] as string[] }],
     };
     const result = fromServer(wfOnly, board);
     expect(result.ok).toBe(true);
@@ -220,10 +214,7 @@ describe('toReplaceWorkflowRequest', () => {
     if (!boot.ok) return;
     const withNew: WorkflowDraft = {
       ...boot.draft,
-      columns: [
-        ...boot.draft.columns,
-        { uid: 'new-col', name: 'New', wip: '5', statusIds: [] },
-      ],
+      columns: [...boot.draft.columns, { uid: 'new-col', name: 'New', wip: '5', statusIds: [] }],
     };
     const body = toReplaceWorkflowRequest(withNew);
     const created = body.columns.find((c) => c.name === 'New');

@@ -212,10 +212,7 @@ export function ProjectWorkflowSection({
   }
   if (workflow.isError || (canEdit && board?.isError)) {
     return (
-      <ErrorState
-        error={workflow.error ?? board?.isError}
-        {...(onRetry ? { onRetry } : {})}
-      />
+      <ErrorState error={workflow.error ?? board?.isError} {...(onRetry ? { onRetry } : {})} />
     );
   }
 

@@ -66,7 +66,11 @@ export function columnSignature(statusIds: string[]): string {
   return [...statusIds].sort().join('\0');
 }
 
-function boardColumnToDraft(column: BoardColumn, clientKey: string, statusIds: string[]): ColumnDraft {
+function boardColumnToDraft(
+  column: BoardColumn,
+  clientKey: string,
+  statusIds: string[],
+): ColumnDraft {
   return {
     id: column.id,
     uid: clientKey,
@@ -76,9 +80,7 @@ function boardColumnToDraft(column: BoardColumn, clientKey: string, statusIds: s
   };
 }
 
-function indexBySignature<T extends { status_ids: string[] }>(
-  items: T[],
-): Map<string, T[]> {
+function indexBySignature<T extends { status_ids: string[] }>(items: T[]): Map<string, T[]> {
   const map = new Map<string, T[]>();
   for (const item of items) {
     const sig = columnSignature(item.status_ids);
@@ -94,9 +96,7 @@ function uniqueSignatureMatch<T>(groups: T[] | undefined): T | undefined {
   return groups[0];
 }
 
-export type FromServerResult =
-  | { ok: true; draft: WorkflowDraft }
-  | { ok: false; error: string };
+export type FromServerResult = { ok: true; draft: WorkflowDraft } | { ok: false; error: string };
 
 export function fromServer(workflow: Workflow, board: Board): FromServerResult {
   const wfBySig = indexBySignature(workflow.columns);
@@ -130,9 +130,7 @@ export function fromServer(workflow: Workflow, board: Board): FromServerResult {
     columns.push(boardColumnToDraft(boardCol, boardCol.id, statusIds));
   }
 
-  const matchedBoardSigs = new Set(
-    sortedBoard.map((c) => columnSignature(c.status_ids)),
-  );
+  const matchedBoardSigs = new Set(sortedBoard.map((c) => columnSignature(c.status_ids)));
 
   const sortedWf = [...workflow.columns].sort((a, b) => a.position - b.position);
   for (const wfCol of sortedWf) {
@@ -224,7 +222,8 @@ export function validateDraft(draft: WorkflowDraft): WorkflowEditorErrors {
   for (const s of draft.statuses) {
     const key = s.name.trim().toLowerCase();
     if (s.name.trim() === '') statusNames[s.clientKey] = 'Enter a status name.';
-    else if (key && seen.has(key)) statusNames[s.clientKey] = 'Name is already used in this workflow.';
+    else if (key && seen.has(key))
+      statusNames[s.clientKey] = 'Name is already used in this workflow.';
     else if (key) seen.add(key);
   }
 

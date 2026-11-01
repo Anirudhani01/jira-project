@@ -10,6 +10,7 @@ from app.authz.projects import ProjectAccess, project_transaction
 from app.core.errors import AppError
 from app.modules.audit import service as audit
 from app.modules.boards import repository
+from app.modules.boards.column_mapping import validate_column_mapping
 from app.modules.boards.schemas import (
     BoardColumn,
     BoardResponse,
@@ -111,8 +112,6 @@ async def replace_columns(
         if project.archived_at is not None:
             raise project_archived()
         board = await repository.find_board(session, project.id)
-        from app.modules.boards.column_mapping import validate_column_mapping
-
         statuses = await repository.workflow_status_ids(session, project.workflow_id)
         column_tuples = await validate_column_mapping(
             session, project, board, body.columns, expected_status_ids=statuses

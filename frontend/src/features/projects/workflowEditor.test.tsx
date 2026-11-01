@@ -144,8 +144,7 @@ describe('Project workflow editor', () => {
 
   it('saves with If-Match and keeps draft on 412', async () => {
     const calls = baseApi({
-      'PUT /orgs/acme/projects/WEB/workflow': () =>
-        problem(412, 'workflow_revision_conflict'),
+      'PUT /orgs/acme/projects/WEB/workflow': () => problem(412, 'workflow_revision_conflict'),
     });
     renderApp('/o/acme/p/WEB?tab=workflow');
     const user = userEvent.setup();
@@ -207,7 +206,9 @@ describe('Project workflow editor', () => {
     renderApp('/o/acme/p/WEB?tab=workflow');
     const user = userEvent.setup();
     await screen.findByLabelText('Workflow name');
-    const moveDown = screen.getAllByRole('button', { name: 'Move column down' }).find((el) => !el.hasAttribute('disabled'));
+    const moveDown = screen
+      .getAllByRole('button', { name: 'Move column down' })
+      .find((el) => !el.hasAttribute('disabled'));
     expect(moveDown).toBeDefined();
     await user.click(moveDown as HTMLElement);
     await user.click(screen.getByRole('button', { name: 'Save workflow' }));

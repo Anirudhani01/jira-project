@@ -19,7 +19,9 @@ def precondition_required() -> AppError:
     )
 
 
-def status_in_use(message: str = "Provide status_remaps for statuses that still have issues.") -> AppError:
+def status_in_use(
+    message: str = "Provide status_remaps for statuses that still have issues.",
+) -> AppError:
     return AppError(422, "status_in_use", message)
 
 

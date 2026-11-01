@@ -18,11 +18,23 @@ from app.authz.permissions import Permission
 from app.authz.projects import ProjectAccess, project_transaction
 from app.core.errors import AppError
 from app.modules.audit import service as audit
+from app.modules.boards import repository as boards_repo
+from app.modules.boards.column_mapping import validate_column_mapping
 from app.modules.identity.deps import IdentityServices
 from app.modules.orgs import repository as orgs
-from app.modules.projects import repository
+from app.modules.projects import repository, workflow_edit
 from app.modules.projects.models import Project
 from app.modules.projects.repository import NewProject, ProjectMemberRow
+from app.modules.projects.schemas import ReplaceWorkflowRequest
+from app.modules.projects.workflow_errors import (
+    status_in_use,
+    status_name_taken,
+    workflow_revision_conflict,
+)
+from app.modules.projects.workflow_integrity import (
+    conflicting_status_name,
+    is_workflow_status_name_conflict,
+)
 from app.modules.security_events.service import ClientInfo
 
 
@@ -261,22 +273,11 @@ async def _record_workflow_audit(
 async def replace_workflow(
     services: IdentityServices,
     access: ProjectAccess,
-    body,
+    body: ReplaceWorkflowRequest,
     *,
     expected_revision: int,
     client: ClientInfo,
 ) -> dict[str, object]:
-    from app.modules.boards import repository as boards_repo
-    from app.modules.boards.column_mapping import validate_column_mapping
-    from app.modules.projects import workflow_edit
-    from app.modules.projects.schemas import ReplaceWorkflowRequest
-    from app.modules.projects.workflow_errors import (
-        status_in_use,
-        status_name_taken,
-        workflow_revision_conflict,
-    )
-
-    assert isinstance(body, ReplaceWorkflowRequest)
     async with project_transaction(services, access, Permission.PROJECT_MANAGE) as (
         session,
         project,
@@ -296,7 +297,9 @@ async def replace_workflow(
         issue_counts = await repository.issue_counts_by_status(session, project.id, removing)
         workflow_edit.validate_remaps(removing, desired, issue_counts, remaps)
 
-        def _column_canonical_from_view(columns: list[dict[str, object]]) -> list[dict[str, object]]:
+        def _column_canonical_from_view(
+            columns: list[dict[str, object]],
+        ) -> list[dict[str, object]]:
             return sorted(
                 [
                     {
@@ -374,11 +377,6 @@ async def replace_workflow(
             await repository.delete_workflow_statuses(session, removing)
             await repository.finalize_workflow_graph(session, project.workflow_id, desired)
         except IntegrityError as error:
-            from app.modules.projects.workflow_integrity import (
-                conflicting_status_name,
-                is_workflow_status_name_conflict,
-            )
-
             if is_workflow_status_name_conflict(error):
                 taken = conflicting_status_name(error, body.statuses[0].name)
                 raise status_name_taken(taken) from error

@@ -38,7 +38,7 @@ def test_extracts_duplicate_name_from_detail() -> None:
         "",
         {},
         _Orig(
-            detail='Key (workflow_id, name)=(x, QA) already exists.',
+            detail="Key (workflow_id, name)=(x, QA) already exists.",
         ),
     )
     assert conflicting_status_name(error, "fallback") == "QA"

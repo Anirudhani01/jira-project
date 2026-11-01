@@ -154,8 +154,7 @@ jobs:
     timeout-minutes: 20
     env:
       CI: "true"
-      # Force Playwright webServer on :5193; never attach to an unrelated :5173 dev server.
-      E2E_BASE_URL: ""
+      # Omit E2E_BASE_URL so Playwright starts Vite on :5193 (see playwright.config.ts).
     steps:
       - name: Checkout
         uses: actions/checkout@v4

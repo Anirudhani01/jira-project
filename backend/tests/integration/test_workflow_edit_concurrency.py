@@ -90,12 +90,8 @@ async def test_transition_races_workflow_status_removal(project_ctx: Ctx) -> Non
     wf = await _get_workflow(project_ctx.http, project_ctx.slug)
     assert wf["revision"] >= 1
     revision_before = wf["revision"]
-    remap_target = next(
-        s for s in wf["statuses"] if str(s["id"]) != in_progress_status_id
-    )
-    body = _workflow_without_status(
-        wf, in_progress_status_id, remap_to=str(remap_target["id"])
-    )
+    remap_target = next(s for s in wf["statuses"] if str(s["id"]) != in_progress_status_id)
+    body = _workflow_without_status(wf, in_progress_status_id, remap_to=str(remap_target["id"]))
     done = by_status["Done"]
     start = asyncio.Event()
     results: dict[str, httpx.Response] = {}

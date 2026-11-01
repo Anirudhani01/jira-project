@@ -141,11 +141,15 @@ async def snapshot_workflow_graph_acl(engine: AsyncEngine) -> WorkflowGraphAclSn
                 continue
             flags[name] = bool((await conn.execute(text(f"SELECT {expr}"))).scalar_one())
         policy_rows = (
-            await conn.execute(
-                WORKFLOW_EDIT_POLICIES_SQL,
-                {"names": list(WORKFLOW_EDIT_POLICY_NAMES)},
+            (
+                await conn.execute(
+                    WORKFLOW_EDIT_POLICIES_SQL,
+                    {"names": list(WORKFLOW_EDIT_POLICY_NAMES)},
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
     return WorkflowGraphAclSnapshot(flags=flags, edit_policies=tuple(policy_rows))
 
 

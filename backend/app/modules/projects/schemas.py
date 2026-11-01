@@ -70,7 +70,10 @@ class ProjectResponse(BaseModel):
 
 StatusCategory = Literal["todo", "in_progress", "done"]
 StatusName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
-TransitionName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+TransitionName = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=100),
+]
 
 
 class StatusInput(_Request):
