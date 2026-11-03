@@ -45,7 +45,7 @@ services:
   # Free, local SMTP sink for development and tests (M2). Captures every message; nothing
   # leaves the machine. Web UI and API on http://localhost:8025. Never used in production.
   mailpit:
-    image: axllent/mailpit:v1.27.11
+    image: axllent/mailpit:v1.33.0
     environment:
       MP_DISABLE_VERSION_CHECK: "true"
       MP_MAX_MESSAGES: "5000"
