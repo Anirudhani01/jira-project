@@ -1,24 +1,16 @@
 # jira-project
-alternative of jira application
 
-An enterprise project-management platform (organizations, projects, issues, workflows,
-boards, sprints), built as a modular monolith: React + TypeScript frontend, FastAPI
-backend, PostgreSQL with a shared-schema tenancy design based on row-level security
-(RLS), and Redis.
+Jira Project Management Platform
+An open-source project management platform inspired by Jira, designed to help teams organize projects, manage issues, collaborate effectively and track development progress.
 
-**Status: M3 — Organizations & tenancy.** On top of M0–M2 (identity, sessions, email
-verification and password reset via an outbox worker): organizations with immutable slugs,
-memberships (owner/admin/member), seeded issue types and priorities, an owner/admin-only
-org audit log, an authorization framework (`app/authz`), and row-level security policies
-bound to the caller's active membership. Projects, invitations and issues arrive later.
-
-> **Verification status — tenant isolation is NOT yet verified.** M3 adds the first tenant
-> tables and the applicable cross-tenant suite (plan R3.5,
-> `backend/tests/integration/security/`). Isolation is **unverified until that suite passes
-> in GitHub Actions**, and any claim then covers only the tables it tests. What M0 does verify (by tests): the runtime database role is least-privileged
-> (not superuser, no BYPASSRLS, owns nothing, cannot create objects), and the
-> tenant-context helpers return NULL without context and do not leak between transactions.
-> Statements about isolation in the docs describe the *design*, not proven behavior.
+Built with a modern technology stack:
+Frontend: React, TypeScript and Vite
+Backend: Python, FastAPI
+Database: PostgreSQL
+Caching and background processing: Redis
+Architecture: Modular monolith
+Infrastructure: Docker and Docker Compose
+The platform focuses on structured project management, configurable workflows, organization-level access control, issue tracking and Scrum-based development.
 
 **Cost policy:** zero paid software cost. No paid services, subscriptions, paid APIs or
 provisioned paid resources without explicit owner approval (decision D14).
