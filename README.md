@@ -78,51 +78,6 @@ CI (`.github/workflows/ci.yml`) runs `make ci` then `make images` when applicabl
 
 After merge to **`main`**, path-scoped pushes also run **E2E UX states** (`.github/workflows/e2e-ux.yml`): Playwright `e2e/ux-states.spec.ts` against a local dev stack (`make e2e-ux-states` with `make dev`). Not a PR-required check.
 
-## Identity (M1, M2) at a glance
-
-| Endpoint | Notes |
-|---|---|
-| `POST /api/v1/auth/signup` | Always `202`, no cookie, whether or not the email exists. Emails a verification link (new/unverified) or a notice (already registered). `404` when `SIGNUP_ENABLED` is off (default in prod). |
-| `POST /api/v1/auth/verify-email` | `{token}`; verifies, rotates the current session if it is the owner's, signs out the owner's other sessions |
-| `POST /api/v1/auth/password-reset/request` | `202` for every address; `503 email_unavailable` for every address while email delivery is disabled |
-| `POST /api/v1/auth/password-reset/confirm` | `{token, new_password}`; password policy applies; signs out everywhere; never signs in |
-| `POST /api/v1/auth/login` / `logout` | Generic `401`; sets/clears the HttpOnly session cookie |
-| `GET /api/v1/auth/session` | Current user + session-bound CSRF token |
-| `PATCH /api/v1/me`, `POST /api/v1/me/password` | Profile; password change rotates the session and signs out other devices |
-| `GET/DELETE /api/v1/me/sessions[/{id}]`, `POST /api/v1/me/sessions/revoke-others` | Session management |
-
-- Every state-changing request must come from the app's own origin (`Origin` header) and,
-  when signed in, carry `X-CSRF-Token` from `GET /auth/session`.
-- Passwords: 12–128 characters, checked against a bundled common-password list and the free
-  Pwned Passwords k-anonymity API (only a 5-character hash prefix is sent). If that API is
-  unreachable, signup/password change fall back to the local list only and log
-  `breach_check.unavailable` (decision D7). **Production needs outbound HTTPS to
-  `api.pwnedpasswords.com`.**
-- Email links carry the token in the URL fragment (`/verify-email#token=…`), which is never
-  sent to servers or logs. Tokens are stored as SHA-256 hashes, single-use, 24 h
-  (verification) / 1 h (reset), at most 3 active per purpose.
-- Email: `EMAIL_DELIVERY_ENABLED` is `false` by default. `.env.example` enables it for local
-  development against Mailpit. Staging/prod require STARTTLS/TLS and SMTP credentials; **no
-  production provider is configured yet** (decision D13; zero paid cost, D14).
-- Worker: `python -m app.worker` (role `app_worker`, `WORKER_DATABASE_URL`); at-least-once
-  delivery with retries and dead-lettering after 10 attempts. Inspect and retry dead jobs
-  with `uv run python -m app.cli outbox list-dead` / `outbox requeue <id>`.
-- Dev only: mark an account verified with `cd backend && uv run python -m app.cli users verify <email>`
-  (refuses to run in staging/prod; there is no HTTP bypass).
-- Behind a proxy, set `FORWARDED_ALLOW_IPS` to the proxy addresses so per-IP rate limits see
-  real client IPs.
-
-## Organizations (M3) at a glance
-
-| Endpoint | Notes |
-|---|---|
-| `POST /api/v1/orgs` | `{slug, name}`; verified email required (`403 email_unverified`); caller becomes owner; `409 slug_unavailable` for taken/reserved slugs; 10 attempts/hour/user |
-| `GET /api/v1/orgs` | My organizations (also in `GET /auth/session`) |
-| `GET/PATCH /api/v1/orgs/{slug}` | View; rename (owners/admins). The slug never changes (`422 field_immutable`) |
-| `GET /api/v1/orgs/{slug}/issue-types`, `/priorities` | Seeded configuration |
-| `GET /api/v1/orgs/{slug}/audit-events` | Owners/admins only; cursor-paginated; filters `action`, `actor`, `from`, `to` |
-
-Every inaccessible organization (unknown, not a member, removed) answers the same `404`.
 
 ## Database roles
 
@@ -163,3 +118,25 @@ infra/      docker-compose.yml and PostgreSQL role provisioning
 docs/       architecture plan, ADRs, decision log, ui-redesign plans
 .github/    CI workflow (runs `make ci`) and Dependabot
 ```
+
+
+## Contributing
+
+Contributions are welcome!
+You can contribute by:
+
+- Reporting bugs and suggesting improvements.
+- Implementing new features.
+- Improving documentation.
+- Writing unit and integration tests.
+- Reviewing pull requests.
+
+Before submitting a pull request:
+1. Check existing issues.
+2. Create a branch for your changes.
+3. Run the relevant tests.
+4. Run linting and type checks.
+5. Submit a pull request with a clear description.
+
+Please refer to our contribution guidelines for development
+setup and coding standards.
