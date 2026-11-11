@@ -90,9 +90,11 @@ const BASE = {
 
 const MORE = {
   'GET /orgs/acme/issue-types': () =>
-    json({ items: [{ id: 't1', name: 'Task', kind: 'standard', position: 1 }] }),
+    json({ items: [{ id: 't1', name: 'Task', kind: 'standard', position: 1, is_active: true }] }),
   'GET /orgs/acme/priorities': () =>
-    json({ items: [{ id: 'p1', name: 'Medium', sort_order: 2, color: '#888888' }] }),
+    json({
+      items: [{ id: 'p1', name: 'Medium', sort_order: 2, color: '#888888', is_active: true }],
+    }),
 };
 
 function mount(overrides: Record<string, () => Response> = {}) {
@@ -237,6 +239,26 @@ describe('backlog page', () => {
     await user.type(box, 'zzz-nothing');
     expect(await screen.findByText(/No issues for “zzz-nothing”/)).toBeInTheDocument();
     expect(box).toHaveValue('zzz-nothing');
+  });
+
+  it('bulk set priority lists active priorities only', async () => {
+    mount({
+      'GET /orgs/acme/priorities': () =>
+        json({
+          items: [
+            { id: 'p-active', name: 'High', sort_order: 0, color: '#ff0000', is_active: true },
+            { id: 'p-old', name: 'Retired', sort_order: 1, color: '#111111', is_active: false },
+          ],
+        }),
+    });
+    await openBacklog();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('checkbox', { name: 'Select SCR-1' }));
+    const bar = await screen.findByRole('region', { name: 'Bulk actions' });
+    await user.selectOptions(within(bar).getByLabelText('Action'), 'priority');
+    const value = within(bar).getByLabelText('Value');
+    expect(within(value).getByRole('option', { name: 'High' })).toBeInTheDocument();
+    expect(within(value).queryByRole('option', { name: 'Retired' })).not.toBeInTheDocument();
   });
 
   it('selects a range with shift and moves the selection with one request', async () => {

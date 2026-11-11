@@ -103,6 +103,7 @@ class IssueType(Base):
     name: Mapped[str] = mapped_column(CITEXT)
     kind: Mapped[str] = mapped_column(String(16))
     position: Mapped[int] = mapped_column(Integer)
+    is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
 
 
 class Priority(Base):
@@ -122,6 +123,7 @@ class Priority(Base):
     name: Mapped[str] = mapped_column(CITEXT)
     sort_order: Mapped[int] = mapped_column(Integer)
     color: Mapped[str] = mapped_column(String(7))
+    is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
 
 
 INVITATION_TTL_DAYS = 7

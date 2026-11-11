@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { mutationErrorMessage } from '../../lib/ux/permissionDenied';
 import { useCreateIssue, useIssueTypes, usePriorities } from '../issues/api';
+import { activeCatalogEntries } from '../issues/catalogUtils';
 
 import { useMoveToSprint, useRefresh } from './api';
 
@@ -34,9 +35,10 @@ export function InlineCreate({
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const typeId = (types.data?.find((t) => t.name === 'Task') ?? types.data?.[0])?.id;
-  const priorityId = (priorities.data?.find((p) => p.name === 'Medium') ?? priorities.data?.[0])
-    ?.id;
+  const activeTypes = activeCatalogEntries(types.data ?? []);
+  const activePriorities = activeCatalogEntries(priorities.data ?? []);
+  const typeId = (activeTypes.find((t) => t.name === 'Task') ?? activeTypes[0])?.id;
+  const priorityId = (activePriorities.find((p) => p.name === 'Medium') ?? activePriorities[0])?.id;
 
   const submit = async (event: SyntheticEvent) => {
     event.preventDefault();

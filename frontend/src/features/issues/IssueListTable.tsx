@@ -13,6 +13,7 @@ import {
 import { useOrgFormatters } from '../orgs/useOrgFormatters';
 import type { Issue, IssueType, Priority, ProjectMember } from '../../lib/api/types';
 
+import { selectableCatalogEntries } from './catalogUtils';
 import { issueDetailLinkProps } from './issueDetailNavigation';
 import { issueListTableColumnCount, type IssueListColumnVisibility } from './issueListColumns';
 import { IssueListRowActions } from './IssueListRowActions';
@@ -159,6 +160,8 @@ function IssueListTableRow({
   const orgFormat = useOrgFormatters();
   const location = useLocation();
   const detailLink = issueDetailLinkProps(org, issue.key, location);
+  const selectableTypes = selectableCatalogEntries(types, issue.type.id);
+  const selectablePriorities = selectableCatalogEntries(priorities, issue.priority.id);
 
   return (
     <DataGridRow issueKey={issue.key}>
@@ -179,10 +182,15 @@ function IssueListTableRow({
         </div>
       </DataGridDividedCell>
       <DataGridDividedCell>
-        <IssueListTypeMenu org={org} issue={issue} types={types} canEdit={canEdit} />
+        <IssueListTypeMenu org={org} issue={issue} types={selectableTypes} canEdit={canEdit} />
       </DataGridDividedCell>
       <DataGridDividedCell>
-        <IssueListPriorityMenu org={org} issue={issue} priorities={priorities} canEdit={canEdit} />
+        <IssueListPriorityMenu
+          org={org}
+          issue={issue}
+          priorities={selectablePriorities}
+          canEdit={canEdit}
+        />
       </DataGridDividedCell>
       {columns.status ? (
         <DataGridDividedCell>
