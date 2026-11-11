@@ -56,9 +56,10 @@ function moveItem(items: { id: string }[], id: string, direction: -1 | 1): strin
   if (index < 0) return items.map((item) => item.id);
   const target = index + direction;
   if (target < 0 || target >= items.length) return items.map((item) => item.id);
-  const next = [...items];
-  [next[index], next[target]] = [next[target], next[index]];
-  return next.map((item) => item.id);
+  const ids = items.map((item) => item.id);
+  const moved = ids.splice(index, 1);
+  ids.splice(target, 0, ...moved);
+  return ids;
 }
 
 function IssueTypeRow({

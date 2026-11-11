@@ -68,7 +68,7 @@ describe('AdminCatalogsPage', () => {
     renderApp('/o/acme/admin/catalogs');
     await screen.findByRole('heading', { name: 'Issue types' });
     await user.type(screen.getByLabelText('New issue type'), 'Spike');
-    await user.click(screen.getAllByRole('button', { name: 'Add' })[0]);
+    await user.click(screen.getAllByRole('button', { name: 'Add' }).at(0) as HTMLElement);
     expect(await screen.findByText('Spike')).toBeInTheDocument();
   });
 

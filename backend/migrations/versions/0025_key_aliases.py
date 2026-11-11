@@ -35,7 +35,9 @@ KEY_PATTERN = "^[A-Z][A-Z0-9]{1,9}$"
 TABLES = ("project_key_aliases", "issue_key_aliases")
 
 
-def _fk(name: str, cols: list[str], table: str, refcols: list[str], ondelete: str | None = None):
+def _fk(
+    name: str, cols: list[str], table: str, refcols: list[str], ondelete: str | None = None
+) -> sa.ForeignKeyConstraint:
     return sa.ForeignKeyConstraint(
         cols, [f"{table}.{c}" for c in refcols], name=name, ondelete=ondelete
     )
