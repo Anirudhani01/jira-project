@@ -70,6 +70,9 @@ ALLOWED_TABLES = frozenset(
         "notifications",
         # versions / releases
         "versions",
+        # project key rename + issue relocation (old keys keep resolving)
+        "project_key_aliases",
+        "issue_key_aliases",
     }
 )
 

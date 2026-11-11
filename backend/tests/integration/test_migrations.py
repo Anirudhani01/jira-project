@@ -41,7 +41,7 @@ WORKFLOW_EDIT_POLICIES = text(
     """
 )
 
-HEAD = "0024"
+HEAD = "0025"
 
 HELPERS = text(
     "SELECT count(*) FROM pg_proc WHERE proname IN ('app_current_org', 'app_current_user')"

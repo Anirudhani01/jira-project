@@ -292,3 +292,26 @@ class IssueLabel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()")
     )
+
+
+class IssueKeyAlias(Base):
+    """The ``KEY-n`` an issue had before it was moved to another project. Mirrors 0025."""
+
+    __tablename__ = "issue_key_aliases"
+    __table_args__ = (
+        CheckConstraint("project_key ~ '^[A-Z][A-Z0-9]{1,9}$'", name="project_key_format"),
+        CheckConstraint("seq > 0", name="seq_positive"),
+        _fk(
+            "fk_issue_key_aliases_org_id_issues", ["org_id", "issue_id"], "issues", ["org_id", "id"]
+        ),
+        Index("ix_issue_key_aliases_issue_id", "issue_id"),
+        _NO_RETURNING,
+    )
+
+    org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    project_key: Mapped[str] = mapped_column(String(10), primary_key=True)
+    seq: Mapped[int] = mapped_column(Integer, primary_key=True)
+    issue_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )

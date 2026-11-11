@@ -42,27 +42,63 @@ def _visible(org: OrgAccess, project_role: str | None) -> bool:
     return org.role in ("owner", "admin") or project_role is not None
 
 
-async def resolve_project(
+async def _resolve(
     project_key: str,
-    org: Annotated[OrgAccess, Depends(resolve_org)],
-    services: Services,
-) -> ProjectAccess:
+    org: OrgAccess,
+    services: IdentityServices,
+    issue_seq: int | None = None,
+) -> tuple[ProjectAccess | None, tuple[str, int] | None]:
+    """Resolve a project key (current or retired). With ``issue_seq`` it also checks, in the
+    same transaction, whether ``KEY-seq`` is an issue that was moved to another project and
+    returns its current ``(key, seq)`` instead (the caller then resolves that project)."""
     if len(project_key) > 10:
         raise not_found()
     async with org_transaction(services, org, Permission.ORG_VIEW) as (session, current):
+        if issue_seq is not None:
+            moved = await repository.find_moved_issue(session, project_key.upper(), issue_seq)
+            if moved is not None:
+                return None, moved
         project = await repository.find_project(session, project_key)
         if project is None:
             raise not_found()
         role = await repository.my_project_role(session, project.id)
     if not _visible(current, role):
         raise not_found()
-    return ProjectAccess(
-        org=current,
-        project_id=project.id,
-        key=project.key,
-        project_role=role,
-        permissions=project_permissions(current.role, role),
+    return (
+        ProjectAccess(
+            org=current,
+            project_id=project.id,
+            key=project.key,
+            project_role=role,
+            permissions=project_permissions(current.role, role),
+        ),
+        None,
     )
+
+
+async def resolve_project(
+    project_key: str,
+    org: Annotated[OrgAccess, Depends(resolve_org)],
+    services: Services,
+) -> ProjectAccess:
+    access, _ = await _resolve(project_key, org, services)
+    if access is None:
+        raise not_found()
+    return access
+
+
+async def resolve_project_for_issue(
+    project_key: str, seq: int, org: OrgAccess, services: IdentityServices
+) -> tuple[ProjectAccess, int]:
+    """Project access for ``KEY-seq`` plus the issue's current seq: follows a project rename
+    (retired key) and an issue relocation (old ``KEY-seq`` alias)."""
+    access, moved = await _resolve(project_key, org, services, seq)
+    if moved is not None:
+        moved_key, seq = moved
+        access, _ = await _resolve(moved_key, org, services)
+    if access is None:
+        raise not_found()
+    return access, seq
 
 
 def require_project(permission: Permission) -> Any:

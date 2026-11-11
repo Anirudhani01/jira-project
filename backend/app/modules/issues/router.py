@@ -14,7 +14,7 @@ from app.authz.permissions import Permission
 from app.authz.projects import ProjectAccess, require_project
 from app.core.errors import AppError
 from app.modules.identity.deps import CsrfProtected, Services, client_info
-from app.modules.issues import bulk, service
+from app.modules.issues import bulk, relocate, service
 from app.modules.issues.repository import IssueFilter
 from app.modules.issues.schemas import (
     ActivityListResponse,
@@ -30,6 +30,7 @@ from app.modules.issues.schemas import (
     LabelListResponse,
     LabelResponse,
     MoveIssueRequest,
+    RelocateIssueRequest,
     SortOrder,
     StatusCategory,
     TransitionListResponse,
@@ -261,6 +262,36 @@ async def move_issue(
             raise service.version_conflict()
         expected = int(match.group(1))
     issue = await service.move_issue(services, ref, body, expected)
+    response.headers["ETag"] = _etag(issue)
+    return issue
+
+
+@router.post(
+    "/issues/{issue_key}/relocate",
+    response_model=IssueResponse,
+    dependencies=[CsrfProtected],
+)
+async def relocate_issue(
+    body: RelocateIssueRequest,
+    *,
+    ref: EditIssue,
+    request: Request,
+    response: Response,
+    services: Services,
+    if_match: Annotated[str | None, Header()] = None,
+) -> IssueResponse:
+    """Move the issue to another project. Requires ``If-Match: "v<version>"`` (428/412).
+    The old key keeps resolving to the issue."""
+    if if_match is None:
+        raise AppError(
+            428, "precondition_required", 'Send If-Match with the issue\'s ETag ("v<version>").'
+        )
+    match = ETAG.fullmatch(if_match.strip())
+    if match is None:
+        raise service.version_conflict()
+    issue = await relocate.relocate_issue(
+        services, ref, body, int(match.group(1)), client_info(request)
+    )
     response.headers["ETag"] = _etag(issue)
     return issue
 

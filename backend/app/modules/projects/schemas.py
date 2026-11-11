@@ -3,7 +3,7 @@
 import re
 import uuid
 from datetime import datetime
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
 
@@ -40,8 +40,8 @@ class CreateProjectRequest(_Request):
 class UpdateProjectRequest(_Request):
     name: ProjectName | None = None
     description: Description | None = None
-    # Accepted only so it can be rejected with `field_immutable`; never applied.
-    key: Any = Field(default=None, json_schema_extra={"readOnly": True})
+    # Renaming the key is restricted to org owners/admins (enforced in the service).
+    key: ProjectKey | None = None
 
 
 class ProjectSummary(BaseModel):

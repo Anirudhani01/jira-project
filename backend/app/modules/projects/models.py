@@ -219,6 +219,32 @@ class ProjectIssueCounter(Base):
     next_seq: Mapped[int] = mapped_column(Integer, server_default=text("0"))
 
 
+class ProjectKeyAlias(Base):
+    """A key a project used to have: old URLs keep resolving and the key stays reserved
+    (never reusable by another project). Mirrors migration 0025."""
+
+    __tablename__ = "project_key_aliases"
+    __table_args__ = (
+        CheckConstraint(f"key ~ '{KEY_PATTERN}'", name="key_format"),
+        _fk(
+            "fk_project_key_aliases_org_id_projects",
+            ["org_id", "project_id"],
+            "projects",
+            ["org_id", "id"],
+            ondelete="CASCADE",
+        ),
+        Index("ix_project_key_aliases_project_id", "project_id"),
+        _NO_RETURNING,
+    )
+
+    org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    key: Mapped[str] = mapped_column(String(10), primary_key=True)
+    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+
 class ProjectMembership(Base):
     __tablename__ = "project_memberships"
     __table_args__ = (

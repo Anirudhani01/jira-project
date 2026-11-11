@@ -182,6 +182,15 @@ class ApplyTransitionRequest(_Request):
 IssueKey = Annotated[str, StringConstraints(pattern=r"^[A-Z][A-Z0-9]{1,9}-[1-9][0-9]{0,8}$")]
 
 
+class RelocateIssueRequest(_Request):
+    """Move one issue to another project of the same organization. ``target_status_id`` picks
+    the status in the target workflow; without it the status is matched by name, then by
+    category, then the target's initial status."""
+
+    target_project_key: Annotated[str, StringConstraints(pattern=r"^[A-Za-z][A-Za-z0-9]{1,9}$")]
+    target_status_id: uuid.UUID | None = None
+
+
 class MoveIssueRequest(_Request):
     """Board move (M9): optional status change plus position. ``after_key`` is the card
     that will sit directly above the moved one, ``before_key`` the one directly below."""

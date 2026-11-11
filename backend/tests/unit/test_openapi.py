@@ -80,6 +80,7 @@ M9_PATHS = {
     "/api/v1/orgs/{org_slug}/projects/{project_key}/board",
     "/api/v1/orgs/{org_slug}/projects/{project_key}/board/columns",
     "/api/v1/orgs/{org_slug}/issues/{issue_key}/move",
+    "/api/v1/orgs/{org_slug}/issues/{issue_key}/relocate",
 }
 
 M10_PATHS = {

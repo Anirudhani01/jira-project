@@ -581,6 +581,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orgs/{org_slug}/issues/{issue_key}/relocate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Relocate Issue
+         * @description Move the issue to another project. Requires ``If-Match: "v<version>"`` (428/412).
+         *     The old key keeps resolving to the issue.
+         */
+        post: operations["relocate_issue_api_v1_orgs__org_slug__issues__issue_key__relocate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orgs/{org_slug}/issues/{issue_key}/transitions": {
         parameters: {
             query?: never;
@@ -2215,6 +2236,18 @@ export interface components {
             moved_issues: number;
             version: components["schemas"]["VersionResponse"];
         };
+        /**
+         * RelocateIssueRequest
+         * @description Move one issue to another project of the same organization. ``target_status_id`` picks
+         *     the status in the target workflow; without it the status is matched by name, then by
+         *     category, then the target's initial status.
+         */
+        RelocateIssueRequest: {
+            /** Target Project Key */
+            target_project_key: string;
+            /** Target Status Id */
+            target_status_id?: string | null;
+        };
         /** ReorderIssueTypesRequest */
         ReorderIssueTypesRequest: {
             /** Ids */
@@ -2619,7 +2652,7 @@ export interface components {
             /** Description */
             description?: string | null;
             /** Key */
-            readonly key?: unknown;
+            key?: string | null;
             /** Name */
             name?: string | null;
         };
@@ -3965,6 +3998,44 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["MoveIssueRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    relocate_issue_api_v1_orgs__org_slug__issues__issue_key__relocate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
+            path: {
+                issue_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RelocateIssueRequest"];
             };
         };
         responses: {

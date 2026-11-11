@@ -35,6 +35,8 @@ ACTION_METADATA_ALLOWLIST: Final[dict[str, frozenset[str]]] = {
     # M5
     "project.created": frozenset({"key"}),
     "project.updated": frozenset({"fields"}),
+    "project.key_changed": frozenset({"from", "to"}),
+    "issue.moved_project": frozenset({"from", "to"}),
     "project.settings.updated": frozenset({"project", "fields"}),
     "project.archived": frozenset(),
     "project.unarchived": frozenset(),

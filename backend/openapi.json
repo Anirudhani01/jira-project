@@ -2599,6 +2599,34 @@
         "title": "ReleaseVersionResponse",
         "type": "object"
       },
+      "RelocateIssueRequest": {
+        "additionalProperties": false,
+        "description": "Move one issue to another project of the same organization. ``target_status_id`` picks\nthe status in the target workflow; without it the status is matched by name, then by\ncategory, then the target's initial status.",
+        "properties": {
+          "target_project_key": {
+            "pattern": "^[A-Za-z][A-Za-z0-9]{1,9}$",
+            "title": "Target Project Key",
+            "type": "string"
+          },
+          "target_status_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Status Id"
+          }
+        },
+        "required": [
+          "target_project_key"
+        ],
+        "title": "RelocateIssueRequest",
+        "type": "object"
+      },
       "ReorderIssueTypesRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3809,7 +3837,15 @@
             "title": "Description"
           },
           "key": {
-            "readOnly": true,
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Key"
           },
           "name": {
@@ -6409,6 +6445,84 @@
           }
         },
         "summary": "Move Issue",
+        "tags": [
+          "issues"
+        ]
+      }
+    },
+    "/api/v1/orgs/{org_slug}/issues/{issue_key}/relocate": {
+      "post": {
+        "description": "Move the issue to another project. Requires ``If-Match: \"v<version>\"`` (428/412).\nThe old key keeps resolving to the issue.",
+        "operationId": "relocate_issue_api_v1_orgs__org_slug__issues__issue_key__relocate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issue_key",
+            "required": true,
+            "schema": {
+              "title": "Issue Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "org_slug",
+            "required": true,
+            "schema": {
+              "title": "Org Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RelocateIssueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssueResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Relocate Issue",
         "tags": [
           "issues"
         ]
