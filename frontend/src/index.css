@@ -3,21 +3,25 @@
 @import '@fontsource-variable/jetbrains-mono';
 
 /* Design tokens (docs/ui-redesign-plan.md §3). Components use these roles, never raw
-   colours, so light/dark and any future rebrand are a one-file change. */
+   colours, so every theme (light, dark, paper) and any future rebrand is a one-file change.
+   One neutral ramp per theme, three text roles, ONE accent. The org dashboard, admin and
+   board shells below read these tokens; they no longer carry colours of their own. */
 :root {
-  --bg: #f6f7f9;
+  --bg: #f7f7f8;
   --surface: #ffffff;
-  --surface-2: #eef1f5; /* sunken: columns, wells */
-  --surface-hover: #f3f5f8;
-  --line: #dfe3e8;
-  --line-strong: #c3cad4;
-  --fg: #172033;
-  --fg-muted: #4f5a6d;
-  --fg-subtle: #657085;
-  --accent: #6a45d6;
-  --accent-hover: #5632c0;
-  --accent-soft: #efeaff;
+  --surface-2: #f0f0f2; /* sunken: columns, wells */
+  --surface-hover: #f5f5f6;
+  --line: #e4e4e7;
+  --line-strong: #cfcfd4;
+  --fg: #18181b;
+  --fg-muted: #52525b;
+  --fg-subtle: #71717a;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: #eaf1ff;
   --accent-fg: #ffffff;
+  --accent-on-soft: #1d4ed8; /* accent used as text on --accent-soft */
+  --link: #1d4ed8;
   --danger: #c81e1e;
   --danger-soft: #fdecec;
   --warning: #a35a00;
@@ -26,8 +30,8 @@
   --success-soft: #e3f5ea;
   --info: #0b6fa8;
   --info-soft: #e1f2fb;
-  --status-todo: #657085;
-  --status-todo-soft: #eef1f5;
+  --status-todo: #71717a;
+  --status-todo-soft: #f0f0f2;
   --status-in-progress: #0b6fa8;
   --status-in-progress-soft: #e1f2fb;
   --status-in-review: #6a45d6;
@@ -43,27 +47,59 @@
   --p-high: #d9480f;
   --p-medium: #b7791f;
   --p-low: #2563eb;
-  --p-lowest: #657085;
-  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
-  --shadow-md: 0 4px 12px rgb(16 24 40 / 0.1);
-  --shadow-lg: 0 12px 32px rgb(16 24 40 / 0.18);
+  --p-lowest: #71717a;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.08);
+  --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.16);
+  color-scheme: light;
+}
+
+/* Paper: off-white and black. The page is an off-white sheet, cards are a shade lighter,
+   text and the primary action are black, hairlines are warm grey. Status and priority
+   colours stay (they carry meaning); everything else is monochrome. Semantic tokens not
+   listed here come from :root. */
+:root[data-theme='paper'] {
+  --bg: #f5f4f0;
+  --surface: #fbfaf7;
+  --surface-2: #ecebe5;
+  --surface-hover: #f1efea;
+  --line: #dddad1;
+  --line-strong: #bdb9ad;
+  --fg: #111111;
+  --fg-muted: #44433f;
+  --fg-subtle: #66645e;
+  --accent: #111111;
+  --accent-hover: #000000;
+  --accent-soft: #e7e5de;
+  --accent-fg: #faf9f5;
+  --accent-on-soft: #111111;
+  --link: #111111;
+  --status-todo: #66645e;
+  --status-todo-soft: #ecebe5;
+  --task: #111111;
+  --p-low: #44433f;
+  --shadow-sm: 0 1px 0 rgb(17 17 17 / 0.05);
+  --shadow-md: 0 2px 8px rgb(17 17 17 / 0.08);
+  --shadow-lg: 0 12px 28px rgb(17 17 17 / 0.14);
   color-scheme: light;
 }
 
 :root[data-theme='dark'] {
-  --bg: #0e1320;
-  --surface: #161c2b;
-  --surface-2: #111726;
-  --surface-hover: #1c2335;
-  --line: #28324a;
-  --line-strong: #3a4664;
-  --fg: #e7eaf2;
-  --fg-muted: #aab3c5;
-  --fg-subtle: #8791a6;
-  --accent: #b69cff;
-  --accent-hover: #cbb8ff;
-  --accent-soft: #2a2150;
-  --accent-fg: #130d2b;
+  --bg: #141415;
+  --surface: #19191b;
+  --surface-2: #101011;
+  --surface-hover: #202023;
+  --line: #2a2a2e;
+  --line-strong: #3b3b41;
+  --fg: #ededed;
+  --fg-muted: #a1a1a6;
+  --fg-subtle: #8a8a90;
+  --accent: #4f8cff;
+  --accent-hover: #78a6ff;
+  --accent-soft: #17264a;
+  --accent-fg: #07142b;
+  --accent-on-soft: #bfd6ff;
+  --link: #8ab4ff;
   --danger: #ff8a8a;
   --danger-soft: #3a1c22;
   --warning: #f5b351;
@@ -72,8 +108,8 @@
   --success-soft: #14301f;
   --info: #6cc3f0;
   --info-soft: #12303f;
-  --status-todo: #8791a6;
-  --status-todo-soft: #1c2335;
+  --status-todo: #8a8a90;
+  --status-todo-soft: #202023;
   --status-in-progress: #6cc3f0;
   --status-in-progress-soft: #12303f;
   --status-in-review: #b69cff;
@@ -89,7 +125,7 @@
   --p-high: #ff9a62;
   --p-medium: #f5b351;
   --p-low: #7aa7ff;
-  --p-lowest: #8791a6;
+  --p-lowest: #8a8a90;
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-md: 0 4px 12px rgb(0 0 0 / 0.5);
   --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.6);
@@ -123,44 +159,53 @@
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
+  /* Radius scale: tags 4, controls 8, cards 12, panels and dialogs 16. */
   --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 }
 
 .auth-marketing-panel {
-  background: linear-gradient(145deg, #f4f0ff 0%, #ebe3ff 42%, #e6eefc 100%);
-}
-
-:root[data-theme='dark'] .auth-marketing-panel {
-  background: linear-gradient(145deg, var(--accent-soft) 0%, var(--surface-2) 55%, var(--bg) 100%);
+  background: var(--surface-2);
 }
 
 .auth-eyebrow {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #5e4a94;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--fg-subtle);
 }
 
-:root[data-theme='dark'] .auth-eyebrow {
-  color: #c9b8ff;
+/* The three app shells (organization dashboard, administration, project board) read the global
+   tokens above. Their own variable names stay because many components use them; they are
+   only aliases now, so one accent and one neutral ramp serve every theme. */
+.org-dashboard-shell,
+.admin-shell,
+.board-shell {
+  --shell-bg: var(--bg);
+  --shell-surface: var(--surface);
+  --shell-text: var(--fg);
+  --shell-muted: var(--fg-subtle);
+  --shell-border: var(--line);
+  --shell-accent: var(--accent);
+  --shell-accent-soft: var(--accent-soft);
+  --shell-accent-hover: var(--accent-hover);
+  --shell-link: var(--link);
 }
 
-/* Organization dashboard shell (scoped blue; does not override global violet tokens). */
+/* Organization dashboard shell. */
 .org-dashboard-shell {
-  --org-dash-bg: #f8fafc;
-  --org-dash-surface: #ffffff;
-  --org-dash-text: #0f172a;
-  --org-dash-muted: #64748b;
-  --org-dash-border: #e2e8f0;
-  --org-dash-accent: #2563eb;
-  --org-dash-accent-soft: #eff6ff;
-  --org-dash-accent-hover: #1d4ed8;
-  --org-dash-accent-on-soft: #1d4ed8;
-  --org-dash-muted-on-promo: #475569;
-  --org-dash-link: #1d4ed8;
+  --org-dash-bg: var(--shell-bg);
+  --org-dash-surface: var(--shell-surface);
+  --org-dash-text: var(--shell-text);
+  --org-dash-muted: var(--shell-muted);
+  --org-dash-border: var(--shell-border);
+  --org-dash-accent: var(--shell-accent);
+  --org-dash-accent-soft: var(--shell-accent-soft);
+  --org-dash-accent-hover: var(--shell-accent-hover);
+  --org-dash-accent-on-soft: var(--accent-on-soft);
+  --org-dash-link: var(--shell-link);
   background-color: var(--org-dash-bg);
   color: var(--org-dash-text);
 }
@@ -172,19 +217,11 @@
 .org-dashboard-shell .org-dash-btn-primary {
   border: none;
   background: var(--org-dash-accent) !important;
-  color: #fff !important;
+  color: var(--accent-fg) !important;
 }
 
 .org-dashboard-shell .org-dash-btn-primary:hover {
   background: var(--org-dash-accent-hover) !important;
-}
-
-:root[data-theme='dark'] .org-dashboard-shell .org-dash-btn-primary {
-  background: #2563eb !important;
-}
-
-:root[data-theme='dark'] .org-dashboard-shell .org-dash-btn-primary:hover {
-  background: #1d4ed8 !important;
 }
 
 .org-dashboard-shell .org-dash-btn-secondary {
@@ -201,84 +238,39 @@
   border-color: var(--org-dash-border);
   background: var(--org-dash-surface);
   border-radius: 12px;
-  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+  box-shadow: var(--shadow-sm);
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
 }
 
 .org-dashboard-shell .org-dash-card:hover {
-  box-shadow: 0 4px 12px rgb(15 23 42 / 0.06);
+  box-shadow: var(--shadow-md);
 }
 
 .org-dashboard-shell .org-dashboard :focus-visible {
   outline-color: var(--org-dash-accent);
 }
 
-:root[data-theme='dark'] .org-dashboard-shell {
-  --org-dash-bg: #0f1419;
-  --org-dash-surface: #1a2332;
-  --org-dash-text: #e7eaf2;
-  --org-dash-muted: #94a3b8;
-  --org-dash-border: #2d3a4f;
-  --org-dash-accent: #3b82f6;
-  --org-dash-accent-soft: #1e3a5f;
-  --org-dash-accent-hover: #60a5fa;
-  --org-dash-accent-on-soft: #dbeafe;
-  --org-dash-muted-on-promo: #cbd5e1;
-  --org-dash-link: #93c5fd;
-  /* Map global accent utilities to org blue on the dashboard shell. */
-  --accent: var(--org-dash-accent);
-  --accent-hover: var(--org-dash-accent-hover);
-  --accent-fg: #ffffff;
-}
-
-.org-dashboard-shell .org-dash-promo {
-  border-color: color-mix(in srgb, var(--org-dash-accent) 25%, var(--org-dash-border));
-  background: color-mix(in srgb, var(--org-dash-accent-soft) 70%, white);
-}
-
-:root[data-theme='dark'] .org-dashboard-shell .org-dash-promo {
-  background: var(--org-dash-accent-soft);
-}
-
-.org-dashboard-shell .org-dash-promo-muted {
-  color: var(--org-dash-muted-on-promo);
-}
-
-.org-dashboard-shell .org-dash-on-accent-soft {
-  color: var(--org-dash-accent-on-soft);
-}
-
-:root[data-theme='dark'] .org-dashboard-shell .org-dash-topbar {
+.org-dashboard-shell .org-dash-topbar,
+.org-dashboard-shell .org-dash-sidebar,
+.org-dashboard-shell .org-dash-search {
   background: var(--org-dash-surface);
 }
 
-:root[data-theme='dark'] .org-dashboard-shell .org-dash-sidebar {
-  background: var(--org-dash-surface);
-}
-
-:root[data-theme='dark'] .org-dashboard-shell .org-dash-search {
-  background: var(--org-dash-surface);
-}
-
-/* Enterprise Administration shell (scoped blue; mirrors org dashboard tokens). */
+/* Enterprise Administration shell. */
 .admin-shell {
-  --admin-bg: #f8fafc;
-  --admin-surface: #ffffff;
-  --admin-text: #0f172a;
-  --admin-muted: #64748b;
-  --admin-border: #e2e8f0;
-  --admin-accent: #2563eb;
-  --admin-accent-soft: #eff6ff;
-  --admin-accent-hover: #1d4ed8;
-  --admin-accent-on-soft: #1d4ed8;
+  --admin-bg: var(--shell-bg);
+  --admin-surface: var(--shell-surface);
+  --admin-text: var(--shell-text);
+  --admin-muted: var(--shell-muted);
+  --admin-border: var(--shell-border);
+  --admin-accent: var(--shell-accent);
+  --admin-accent-soft: var(--shell-accent-soft);
+  --admin-accent-hover: var(--shell-accent-hover);
+  --admin-accent-on-soft: var(--accent-on-soft);
   background-color: var(--admin-bg);
   color: var(--admin-text);
-  /* Map global accent utilities to admin blue (same pattern as org-dashboard-shell). */
-  --accent: var(--admin-accent);
-  --accent-hover: var(--admin-accent-hover);
-  --accent-fg: #ffffff;
 }
 
 .admin-shell .admin-page :focus-visible {
@@ -288,35 +280,20 @@
 .admin-shell .admin-card {
   border-color: var(--admin-border);
   background: var(--admin-surface);
-  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
-}
-
-:root[data-theme='dark'] .admin-shell {
-  --admin-bg: #0f1419;
-  --admin-surface: #1a2332;
-  --admin-text: #e7eaf2;
-  --admin-muted: #94a3b8;
-  --admin-border: #2d3a4f;
-  --admin-accent: #3b82f6;
-  --admin-accent-soft: #1e3a5f;
-  --admin-accent-hover: #60a5fa;
-  --admin-accent-on-soft: #dbeafe;
-  --accent: var(--admin-accent);
-  --accent-hover: var(--admin-accent-hover);
-  --accent-fg: #ffffff;
+  box-shadow: var(--shadow-sm);
 }
 
 /* Project board shell — scoped to `/o/:org/p/:key/board` only. */
 .board-shell {
-  --board-bg: #f8fafc;
-  --board-surface: #ffffff;
-  --board-text: #0f172a;
-  --board-muted: #64748b;
-  --board-border: #e2e8f0;
-  --board-accent: #2563eb;
-  --board-accent-soft: #eff6ff;
-  --board-accent-hover: #1d4ed8;
-  --board-link: #1d4ed8;
+  --board-bg: var(--shell-bg);
+  --board-surface: var(--shell-surface);
+  --board-text: var(--shell-text);
+  --board-muted: var(--shell-muted);
+  --board-border: var(--shell-border);
+  --board-accent: var(--shell-accent);
+  --board-accent-soft: var(--shell-accent-soft);
+  --board-accent-hover: var(--shell-accent-hover);
+  --board-link: var(--shell-link);
   background-color: var(--board-bg);
   color: var(--board-text);
   width: 100%;
@@ -375,40 +352,17 @@
 
 .board-shell .board-logo {
   background: var(--board-accent);
-  color: #fff;
+  color: var(--accent-fg);
 }
 
 .board-shell .board-btn-primary {
   border: none;
   background: var(--board-accent) !important;
-  color: #fff !important;
+  color: var(--accent-fg) !important;
 }
 
 .board-shell .board-btn-primary:hover {
   background: var(--board-accent-hover) !important;
-}
-
-:root[data-theme='dark'] .board-shell {
-  --board-bg: #0f1419;
-  --board-surface: #1a2332;
-  --board-text: #e7eaf2;
-  --board-muted: #94a3b8;
-  --board-border: #2d3a4f;
-  --board-accent: #3b82f6;
-  --board-accent-soft: #1e3a5f;
-  --board-accent-hover: #60a5fa;
-  --board-link: #93c5fd;
-  --accent: var(--board-accent);
-  --accent-hover: var(--board-accent-hover);
-  --accent-fg: #ffffff;
-}
-
-:root[data-theme='dark'] .board-shell .board-btn-primary {
-  background: #2563eb !important;
-}
-
-:root[data-theme='dark'] .board-shell .board-btn-primary:hover {
-  background: #1d4ed8 !important;
 }
 
 .board-shell .board-btn-secondary {
@@ -439,7 +393,7 @@
 }
 
 .board-shell .board-sprint-card {
-  box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
+  box-shadow: var(--shadow-sm);
   align-items: center;
 }
 
@@ -531,51 +485,29 @@ body:has(.board-shell) {
   font-weight: 600;
 }
 
-.board-shell .board-column-count {
-  min-width: 1.25rem;
-  padding-inline: 0.375rem;
-  font-size: 0.75rem;
-  line-height: 1.25rem;
-  color: #475569;
-  background: #e2e8f0;
-}
-
 .board-shell .board-column .board-create-issue {
-  color: #1e40af;
+  color: var(--link);
 }
 
 .board-shell .board-column .board-col-action {
-  color: #475569;
+  color: var(--fg-muted);
 }
 
 .board-shell .board-empty-hint {
-  color: #475569;
-}
-
-:root[data-theme='dark'] .board-shell .board-empty-hint {
-  color: #94a3b8;
-}
-
-:root[data-theme='dark'] .board-shell .board-sidebar-nav-active,
-:root[data-theme='dark'] .board-shell .board-sidebar-nav-active span {
-  color: #93c5fd;
-}
-
-:root[data-theme='dark'] .board-shell .board-column .board-create-issue {
-  color: #93c5fd;
+  color: var(--fg-muted);
 }
 
 .board-shell {
-  --board-col-bg: #eef2f7;
-  --board-col-dot-todo: #64748b;
-  --board-col-dot-in-progress: #2563eb;
-  --board-col-dot-in-review: #d97706;
-  --board-col-dot-done: #16a34a;
+  --board-col-bg: var(--surface-2);
+  --board-col-dot-todo: var(--status-todo);
+  --board-col-dot-in-progress: var(--status-in-progress);
+  --board-col-dot-in-review: var(--warning);
+  --board-col-dot-done: var(--success);
 }
 
 .board-shell .board-column {
   border-radius: 0.75rem;
-  box-shadow: inset 0 0 0 1px rgb(15 23 42 / 3%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 4%, transparent);
 }
 
 .board-shell .board-col-dot {
@@ -604,8 +536,12 @@ body:has(.board-shell) {
 }
 
 .board-shell .board-column-count {
+  min-width: 1.25rem;
+  padding-inline: 0.375rem;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
   border: none;
-  background: rgb(15 23 42 / 6%);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
   color: var(--board-muted);
   font-weight: 500;
 }
@@ -619,16 +555,146 @@ body:has(.board-shell) {
 }
 
 .board-shell .board-issue-card:hover {
-  box-shadow: 0 2px 6px rgb(15 23 42 / 8%);
+  box-shadow: var(--shadow-md);
 }
 
-:root[data-theme='dark'] .board-shell {
-  --board-col-bg: #1e2838;
-  --board-col-dot-in-review: #fbbf24;
+/* Initials tiles (Avatar). The hue is stable per name; fill, text and edge are mixed from the
+   theme's own surface and text colours, so they read as part of every theme. Paper is
+   monochrome on purpose. */
+.avatar {
+  --avatar-base: hsl(var(--avatar-hue, 215) 62% 48%);
+  background: color-mix(in srgb, var(--avatar-base) 16%, var(--surface));
+  color: color-mix(in srgb, var(--avatar-base) 72%, var(--fg));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--avatar-base) 26%, var(--line));
 }
 
-:root[data-theme='dark'] .board-shell .board-column-count {
-  background: rgb(255 255 255 / 8%);
+:root[data-theme='paper'] .avatar {
+  background: var(--surface-2);
+  color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+/* Native dropdowns: one control for every <select> in the app. Same 32px height, radius, border
+   and chevron as the text inputs, instead of 34 hand-written variants. Unlayered on purpose so it
+   wins over utility classes; the board's borderless filter selects opt out. */
+select:not([multiple]):not([size]):not(.board-filter-select) {
+  appearance: none;
+  height: 2rem;
+  padding: 0 2rem 0 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background-color: var(--surface);
+  color: var(--fg);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a8a90' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1rem;
+}
+
+select:not([multiple]):not([size]):not(.board-filter-select):hover {
+  border-color: var(--fg-subtle);
+}
+
+/* Customizable selects (Chrome and other browsers that support `appearance: base-select`): the
+   open list is drawn by the page, so it matches the app's other menus instead of the operating
+   system's. Browsers without support keep the native menu and the control above. */
+@supports (appearance: base-select) {
+  select:not([multiple]):not([size]):not(.board-filter-select),
+  select:not([multiple]):not([size]):not(.board-filter-select)::picker(select) {
+    appearance: base-select;
+  }
+
+  select:not([multiple]):not([size]):not(.board-filter-select) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0 0.5rem 0 0.75rem;
+    background-image: none;
+  }
+
+  /* The same thin chevron as everywhere else, not the browser's filled triangle. */
+  select:not([multiple]):not([size]):not(.board-filter-select)::picker-icon {
+    content: '';
+    width: 1rem;
+    height: 1rem;
+    background-color: var(--fg-subtle);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+    transition: rotate 150ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  select:not([multiple]):not([size]):not(.board-filter-select):open::picker-icon {
+    rotate: 180deg;
+  }
+
+  /* The list: same surface, hairline, radius and shadow as every other menu in the app. */
+  select:not([multiple]):not([size]):not(.board-filter-select)::picker(select) {
+    margin-block: 4px;
+    padding: 4px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    color: var(--fg);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Inner radius = outer radius (12) minus the padding (4). */
+  select:not([multiple]):not([size]):not(.board-filter-select) option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2rem;
+    padding: 0 0.5rem;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    color: var(--fg);
+  }
+
+  select:not([multiple]):not([size]):not(.board-filter-select) option:hover,
+  select:not([multiple]):not([size]):not(.board-filter-select) option:focus-visible {
+    background: var(--surface-hover);
+    outline: none;
+  }
+
+  /* The current value: a small surface step and a check, no coloured pill. */
+  select:not([multiple]):not([size]):not(.board-filter-select) option:checked {
+    background: var(--surface-2);
+  }
+
+  select:not([multiple]):not([size]):not(.board-filter-select) option::checkmark {
+    order: 1;
+    margin-left: auto;
+    color: var(--fg-muted);
+  }
+}
+
+/* A select that lives inside a larger bordered control (the filter pills): the pill draws the
+   border and focus ring, the select only supplies the value. Placed after the rules above so it
+   wins at equal specificity. */
+select.select-bare:not([multiple]):not([size]) {
+  height: 100%;
+  border: 0;
+  background-color: transparent;
+  padding-left: 0.375rem;
+  font-weight: 500;
+}
+
+select.select-bare:not([multiple]):not([size]):hover {
+  border-color: transparent;
+}
+
+select.select-bare:focus-visible {
+  outline: none;
+}
+
+/* Focus ring on form controls hugs the border instead of floating 2px away from it. */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline-offset: 0;
 }
 
 @layer base {
@@ -636,7 +702,7 @@ body:has(.board-shell) {
     background: var(--bg);
     color: var(--fg);
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
   }

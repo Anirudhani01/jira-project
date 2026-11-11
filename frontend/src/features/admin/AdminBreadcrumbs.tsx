@@ -21,9 +21,9 @@ export function AdminBreadcrumbs({ orgSlug, orgName }: { orgSlug: string; orgNam
   return (
     <nav
       aria-label="Breadcrumb"
-      className="border-b border-[var(--admin-border)] bg-[var(--admin-surface)] px-4 py-2.5 text-sm sm:px-6"
+      className="border-b border-[var(--admin-border)] bg-[var(--admin-surface)] px-4 py-3 text-sm sm:px-6"
     >
-      <ol className="flex flex-wrap items-center gap-1.5 text-[var(--admin-muted)]">
+      <ol className="flex flex-wrap items-center gap-2 text-[var(--admin-muted)]">
         <li>
           <Link
             to={`/o/${orgSlug}`}

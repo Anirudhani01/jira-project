@@ -9,7 +9,6 @@ import { OrgDashboardHeader } from '../dashboard/OrgDashboardHeader';
 import { OrgDashboardSidebar } from '../dashboard/OrgDashboardSidebar';
 import { OrgDashboardTabs } from '../dashboard/OrgDashboardTabs';
 import { OrgGetStartedSection } from '../dashboard/OrgGetStartedSection';
-import { OrgPromoBanner } from '../dashboard/OrgPromoBanner';
 import { ProjectDashboardSection } from '../dashboard/ProjectDashboardSection';
 import { rememberOrg, useOrg } from '../api';
 
@@ -35,7 +34,6 @@ export function OrgHomePage() {
   const canCreate = org.data.permissions.includes('project.create');
   const canInvite = org.data.permissions.includes('org.members.manage');
   const showAudit = org.data.permissions.includes('org.audit.view');
-  const activeProjectCount = (projects.data ?? []).filter((p) => !p.archived).length;
 
   return (
     <div className="org-dashboard mx-auto w-full min-w-0 max-w-[1280px] space-y-6 sm:space-y-8">
@@ -54,10 +52,6 @@ export function OrgHomePage() {
             canCreateProject={canCreate}
             canInviteMembers={canInvite}
             firstProjectKey={firstProjectKey}
-          />
-          <OrgPromoBanner
-            orgSlug={org.data.slug}
-            canCreateProject={canCreate && activeProjectCount > 0}
           />
         </div>
         <OrgDashboardSidebar

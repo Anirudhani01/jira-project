@@ -81,7 +81,7 @@ export function Combobox({ triggerRef, ...props }: ComboboxProps) {
 
   return (
     <div className={cn('space-y-1', className)}>
-      <span id={labelId} className="block text-[13px] font-medium text-fg">
+      <span id={labelId} className="block text-sm font-medium text-fg">
         {label}
       </span>
       <Popover open={open} onOpenChange={setOpen}>
@@ -97,7 +97,7 @@ export function Combobox({ triggerRef, ...props }: ComboboxProps) {
             aria-describedby={error ? errorId : undefined}
             disabled={disabled}
             className={cn(
-              'flex h-8 w-full items-center justify-between gap-2 rounded-md border border-line-strong bg-surface px-2.5 text-left text-sm hover:border-fg-subtle disabled:opacity-60',
+              'flex h-8 w-full items-center justify-between gap-2 rounded-md border border-line-strong bg-surface px-3 text-left text-sm hover:border-fg-subtle disabled:opacity-60',
               error && 'border-danger',
             )}
           >
@@ -136,7 +136,7 @@ export function Combobox({ triggerRef, ...props }: ComboboxProps) {
                     props.onChange(null);
                     setOpen(false);
                   }}
-                  className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm data-[selected=true]:bg-surface-hover"
+                  className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-2 text-sm data-[selected=true]:bg-surface-hover"
                 >
                   <X className="size-4 text-fg-subtle" aria-hidden="true" />
                   {clearLabel}
@@ -152,7 +152,7 @@ export function Combobox({ triggerRef, ...props }: ComboboxProps) {
                     onSelect={() => {
                       pick(option.value);
                     }}
-                    className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm data-[selected=true]:bg-surface-hover"
+                    className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-2 text-sm data-[selected=true]:bg-surface-hover"
                   >
                     {option.icon}
                     <span className="min-w-0 flex-1 truncate">

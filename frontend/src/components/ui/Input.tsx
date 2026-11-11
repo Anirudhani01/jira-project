@@ -9,7 +9,7 @@ import {
 import { cn } from '../../lib/cn';
 
 const control =
-  'w-full rounded-md border border-line-strong bg-surface px-2.5 text-sm text-fg placeholder:text-fg-subtle hover:border-fg-subtle disabled:opacity-60 aria-[invalid=true]:border-danger';
+  'w-full rounded-md border border-line-strong bg-surface px-3 text-sm text-fg placeholder:text-fg-subtle hover:border-fg-subtle disabled:opacity-60 aria-[invalid=true]:border-danger';
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className, ...props }, ref) {
@@ -21,7 +21,7 @@ export const Textarea = forwardRef<
   HTMLTextAreaElement,
   TextareaHTMLAttributes<HTMLTextAreaElement>
 >(function Textarea({ className, ...props }, ref) {
-  return <textarea ref={ref} className={cn(control, 'min-h-20 py-1.5', className)} {...props} />;
+  return <textarea ref={ref} className={cn(control, 'min-h-20 py-2', className)} {...props} />;
 });
 
 /** Label + control + hint/error wired together with ids, for any single control. */
@@ -45,7 +45,7 @@ export function Field({
   const note = error ?? hint;
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="block text-[13px] font-medium text-fg">
+      <label htmlFor={id} className="block text-sm font-medium text-fg">
         {label}
       </label>
       {children({

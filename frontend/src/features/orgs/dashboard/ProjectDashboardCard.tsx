@@ -129,9 +129,9 @@ export function ProjectDashboardCard({
           className="flex min-w-0 flex-1 items-center gap-3 no-underline outline-none focus-visible:ring-2 focus-visible:ring-[var(--org-dash-accent)]"
           aria-label={label}
         >
-          <Avatar name={project.name} size="md" className="shrink-0 rounded-lg" />
+          <Avatar name={project.name} size="md" className="shrink-0 rounded-md" />
           <div className="min-w-0">
-            <p className="truncate font-semibold text-[var(--org-dash-text)]">{project.name}</p>
+            <p className="truncate font-medium text-[var(--org-dash-text)]">{project.name}</p>
             <p className="font-mono text-xs text-[var(--org-dash-muted)]">{project.key}</p>
             {description ? (
               <p className="mt-1 line-clamp-1 text-sm text-[var(--org-dash-muted)]">
@@ -158,21 +158,19 @@ export function ProjectDashboardCard({
         aria-label={label}
       >
         <div className="flex items-start gap-3 pr-8">
-          <Avatar name={project.name} size="md" className="shrink-0 rounded-lg" />
+          <Avatar name={project.name} size="md" className="shrink-0 rounded-md" />
           <div className="min-w-0">
-            <p className="truncate font-semibold text-[var(--org-dash-text)] group-hover:text-[var(--org-dash-accent)]">
+            <p className="truncate font-medium text-[var(--org-dash-text)] group-hover:text-[var(--org-dash-accent)]">
               {project.name}
             </p>
             <p className="font-mono text-xs text-[var(--org-dash-muted)]">{project.key}</p>
           </div>
         </div>
         {description ? (
-          <p className="line-clamp-2 min-h-[2.5rem] text-sm leading-relaxed text-[var(--org-dash-muted)]">
+          <p className="line-clamp-2 text-sm leading-relaxed text-[var(--org-dash-muted)]">
             {description}
           </p>
-        ) : (
-          <p className="min-h-[2.5rem] text-sm text-[var(--org-dash-muted)]">&nbsp;</p>
-        )}
+        ) : null}
         <ProjectStatsLine stats={stats} pending={statsPending} />
         <div className="mt-auto">{meta}</div>
       </Link>
@@ -185,7 +183,7 @@ export function CreateProjectDashboardCard({ org }: { org: string }) {
     <Link
       to={`/o/${org}/projects/new`}
       className={cn(
-        'group flex h-full min-h-[11rem] flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center no-underline',
+        'group flex h-full min-h-36 flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center no-underline',
         'border-[var(--org-dash-border)] bg-[var(--org-dash-surface)] transition-colors',
         'hover:border-[var(--org-dash-accent)] hover:bg-[var(--org-dash-accent-soft)]/40',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--org-dash-accent)]',
@@ -197,7 +195,7 @@ export function CreateProjectDashboardCard({ org }: { org: string }) {
           +
         </span>
       </span>
-      <p className="mt-3 text-sm font-semibold text-[var(--org-dash-text)]">Create new project</p>
+      <p className="mt-3 text-sm font-medium text-[var(--org-dash-text)]">Create new project</p>
       <p className="mt-1 max-w-[14rem] text-xs leading-relaxed text-[var(--org-dash-muted)]">
         Start a new project to plan, track and manage your work.
       </p>

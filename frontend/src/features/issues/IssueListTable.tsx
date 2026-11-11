@@ -5,7 +5,7 @@ import {
   DataGridBody,
   DataGridDividedCell,
   DataGridDividedHeadCell,
-  DataGridEqualColumns,
+  DataGridColumns,
   DataGridHead,
   DataGridRow,
   DataGridTable,
@@ -15,7 +15,7 @@ import type { Issue, IssueType, Priority, ProjectMember } from '../../lib/api/ty
 
 import { selectableCatalogEntries } from './catalogUtils';
 import { issueDetailLinkProps } from './issueDetailNavigation';
-import { issueListTableColumnCount, type IssueListColumnVisibility } from './issueListColumns';
+import { type IssueListColumnVisibility } from './issueListColumns';
 import { IssueListRowActions } from './IssueListRowActions';
 import {
   IssueListAssigneeMenu,
@@ -88,12 +88,24 @@ export function IssueListTable({
   canAssign: boolean;
   canTransition: boolean;
 }) {
-  const columnCount = issueListTableColumnCount(columns) + 1;
+  // The issue takes the free width; every other column is as wide as its content needs.
+  const template = [
+    'minmax(16rem, 1fr)', // issue
+    '10rem', // type
+    '10rem', // priority
+    columns.status ? '10rem' : null,
+    columns.assignee ? '11rem' : null,
+    columns.labels ? '10rem' : null,
+    columns.updated ? '7rem' : null,
+    '3rem', // row actions
+  ]
+    .filter((width): width is string => width !== null)
+    .join(' ');
 
   return (
     <DataGrid>
       <DataGridTable aria-label="Issues">
-        <DataGridEqualColumns columnCount={columnCount}>
+        <DataGridColumns template={template}>
           <DataGridHead sticky>
             <DataGridDividedHeadCell>
               <SortableHead label="Issue" field="key" sort={sort} onSort={onSort} />
@@ -130,7 +142,7 @@ export function IssueListTable({
               />
             ))}
           </DataGridBody>
-        </DataGridEqualColumns>
+        </DataGridColumns>
       </DataGridTable>
     </DataGrid>
   );
@@ -211,7 +223,7 @@ function IssueListTableRow({
               issue.labels.map((l) => (
                 <span
                   key={l.id}
-                  className="max-w-[5rem] truncate rounded-full px-2 py-0.5 text-[10px] font-medium"
+                  className="max-w-[5rem] truncate rounded-full px-2 py-0.5 text-xs font-medium"
                   style={{ backgroundColor: `${l.color}33`, borderLeft: `2px solid ${l.color}` }}
                   title={l.name}
                 >

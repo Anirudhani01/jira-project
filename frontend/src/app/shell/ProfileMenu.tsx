@@ -7,15 +7,19 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../components/ui/Overlay';
 import { useLogout, useSession } from '../../features/auth/api';
+import { THEME_OPTIONS, useTheme, type ThemePreference } from '../../theme/ThemeProvider';
 
 export function ProfileMenu() {
   const session = useSession();
   const logout = useLogout();
   const navigate = useNavigate();
+  const { preference, setPreference } = useTheme();
   if (!session.data) return null;
 
   const { display_name } = session.data.user;
@@ -34,8 +38,32 @@ export function ProfileMenu() {
           <DropdownMenuLabel>{display_name}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link to="/account">Account</Link>
+            <Link to="/account" className="text-fg">
+              Account
+            </Link>
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel>Theme</DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            value={preference}
+            onValueChange={(value) => {
+              setPreference(value as ThemePreference);
+            }}
+          >
+            {THEME_OPTIONS.map((option) => (
+              <DropdownMenuRadioItem
+                key={option.value}
+                value={option.value}
+                // Keep the menu open so the themes can be compared one after another.
+                onSelect={(event) => {
+                  event.preventDefault();
+                }}
+              >
+                {option.label}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             disabled={logout.isPending}
             onSelect={() => {

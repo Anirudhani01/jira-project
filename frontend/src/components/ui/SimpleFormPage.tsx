@@ -20,7 +20,7 @@ export function SimpleFormPage({
       className={width === 'md' ? 'mx-auto max-w-lg' : 'mx-auto max-w-md'}
     >
       <Card className="space-y-6 p-6">
-        <h1 id={titleId} className="text-xl font-semibold text-fg">
+        <h1 id={titleId} className="text-xl font-medium text-fg">
           {title}
         </h1>
         {children}

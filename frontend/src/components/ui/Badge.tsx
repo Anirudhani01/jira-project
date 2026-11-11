@@ -4,7 +4,7 @@ import type { HTMLAttributes } from 'react';
 import { cn } from '../../lib/cn';
 
 const badgeVariants = cva(
-  'inline-flex items-center gap-1 rounded-sm px-1.5 text-[11px] font-semibold uppercase tracking-wide leading-5',
+  'inline-flex items-center gap-1 rounded-sm px-2 text-xs font-medium leading-5',
   {
     variants: {
       tone: {
@@ -32,10 +32,7 @@ export function Badge({
 export function Count({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <span
-      className={cn(
-        'rounded-full bg-surface-2 px-1.5 text-xs font-medium text-fg-muted',
-        className,
-      )}
+      className={cn('rounded-full bg-surface-2 px-2 text-xs font-medium text-fg-muted', className)}
     >
       {children}
     </span>

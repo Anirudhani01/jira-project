@@ -17,7 +17,7 @@ import { datetimeLocalToIso, isoToDatetimeLocalValue } from './auditDateParams';
 import { formatActorFilterLabel } from './auditActorLabel';
 
 const selectClass =
-  'mt-1 h-8 w-full max-w-full rounded-md border border-line-strong bg-surface px-2.5 text-sm text-fg sm:mt-0 sm:w-auto';
+  'mt-1 h-8 w-full max-w-full rounded-md border border-line-strong bg-surface px-3 text-sm text-fg sm:mt-0 sm:w-auto';
 
 function setFilterParam(setSearch: SetURLSearchParams, name: string, value: string) {
   setSearch(

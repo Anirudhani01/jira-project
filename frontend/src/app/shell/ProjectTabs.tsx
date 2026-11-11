@@ -53,7 +53,7 @@ export function ProjectTabs() {
           </p>
           <div className="mt-1 flex items-center gap-2">
             <Avatar name={name} size="md" className="rounded-md" />
-            <h1 className="truncate text-xl font-semibold">{name}</h1>
+            <h1 className="truncate text-xl font-medium">{name}</h1>
             <span className="font-mono text-xs text-fg-muted">{projectKey}</span>
             <IconButton
               label={starred ? `Unstar ${name}` : `Star ${name}`}

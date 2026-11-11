@@ -46,7 +46,7 @@ export function ForgotPasswordPage() {
     return (
       <AuthLayout>
         <section aria-labelledby="forgot-done" className="space-y-4">
-          <h1 id="forgot-done" className="text-2xl font-semibold text-fg">
+          <h1 id="forgot-done" className="text-2xl font-medium text-fg">
             Check your email
           </h1>
           <p role="status" className="text-fg-muted">
@@ -72,7 +72,7 @@ export function ForgotPasswordPage() {
   return (
     <AuthLayout>
       <section aria-labelledby="forgot-title" className="space-y-6">
-        <h1 id="forgot-title" className="text-2xl font-semibold text-fg">
+        <h1 id="forgot-title" className="text-2xl font-medium text-fg">
           Reset your password
         </h1>
         <form onSubmit={(e) => void onSubmit(e)} noValidate className="space-y-4">

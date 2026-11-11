@@ -5,7 +5,7 @@ import type { ProjectTemplateId } from './projectTemplates';
 function MiniCard({ className }: { className?: string }) {
   return (
     <div
-      className={cn('rounded border border-line bg-surface px-2 py-1.5 shadow-sm', className)}
+      className={cn('rounded border border-line bg-surface px-2 py-2 shadow-sm', className)}
       aria-hidden="true"
     >
       <div className="h-1 w-8 rounded bg-line" />
@@ -23,11 +23,9 @@ function KanbanPreview() {
       role="presentation"
     >
       {columns.map((name, i) => (
-        <div key={name} className="min-w-0 flex-1 space-y-1.5">
-          <div className="truncate text-[10px] font-semibold uppercase tracking-wide text-fg-muted">
-            {name}
-          </div>
-          <div className="space-y-1 rounded-md border border-dashed border-line bg-surface/80 p-1.5 min-h-[5.5rem]">
+        <div key={name} className="min-w-0 flex-1 space-y-2">
+          <div className="truncate text-xs font-medium text-fg-muted">{name}</div>
+          <div className="space-y-1 rounded-md border border-dashed border-line bg-surface/80 p-2 min-h-[5.5rem]">
             {i < 2 ? <MiniCard /> : null}
             {i === 0 ? <MiniCard className="opacity-70" /> : null}
           </div>
@@ -41,10 +39,8 @@ function ScrumPreview() {
   return (
     <div className="space-y-2" aria-hidden="true" role="presentation">
       <div className="rounded-lg border border-line bg-surface-2 p-2">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-fg-muted">
-          Backlog
-        </div>
-        <div className="mt-1.5 space-y-1">
+        <div className="text-xs font-medium text-fg-muted">Backlog</div>
+        <div className="mt-2 space-y-1">
           <MiniCard />
           <MiniCard className="opacity-80" />
           <MiniCard className="opacity-60" />
@@ -52,18 +48,16 @@ function ScrumPreview() {
       </div>
       <div className="rounded-lg border border-accent/30 bg-accent-soft/30 p-2">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-accent">
-            Sprint 1
-          </span>
-          <span className="rounded-full bg-surface px-1.5 text-[9px] text-fg-muted">Active</span>
+          <span className="text-xs font-medium text-accent">Sprint 1</span>
+          <span className="rounded-full bg-surface px-2 text-xs text-fg-muted">Active</span>
         </div>
-        <div className="mt-2 flex gap-1.5">
+        <div className="mt-2 flex gap-2">
           {['To do', 'Doing', 'Done'].map((col) => (
             <div
               key={col}
               className="flex-1 space-y-1 rounded border border-line/80 bg-surface p-1"
             >
-              <div className="text-[9px] text-fg-muted">{col}</div>
+              <div className="text-xs text-fg-muted">{col}</div>
               {col === 'To do' ? <MiniCard className="scale-90" /> : null}
             </div>
           ))}
@@ -77,7 +71,7 @@ function ScrumPreview() {
 export function TemplatePreviewMock({ templateId }: { templateId: ProjectTemplateId }) {
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium uppercase tracking-wide text-fg-muted">Preview</p>
+      <p className="text-xs font-medium text-fg-muted">Preview</p>
       {templateId === 'kanban' ? <KanbanPreview /> : <ScrumPreview />}
     </div>
   );

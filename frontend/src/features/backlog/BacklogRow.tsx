@@ -64,7 +64,7 @@ export function BacklogRow({
       data-issue-key={issue.key}
       className={cn(
         'flex items-center gap-2 border-b border-line px-2 text-sm last:border-b-0',
-        density === 'compact' ? 'py-0.5' : 'py-1.5',
+        density === 'compact' ? 'py-0.5' : 'py-2',
         selected && 'bg-accent-soft',
         isDragging && 'opacity-50',
       )}
@@ -109,7 +109,7 @@ export function BacklogRow({
       {fields.epic && issue.parent ? (
         <span
           title={`Parent: ${issue.parent.summary}`}
-          className="hidden shrink-0 rounded-sm bg-accent-soft px-1.5 text-[11px] font-medium text-accent sm:inline"
+          className="hidden shrink-0 rounded-sm bg-accent-soft px-2 text-xs font-medium text-accent sm:inline"
         >
           {issue.parent.key}
         </span>
@@ -117,7 +117,7 @@ export function BacklogRow({
       {fields.version && issue.fix_version ? (
         <span
           title={`Fix version: ${issue.fix_version.name}`}
-          className="hidden shrink-0 rounded-sm bg-surface-2 px-1.5 text-[11px] text-fg-muted lg:inline"
+          className="hidden shrink-0 rounded-sm bg-surface-2 px-2 text-xs text-fg-muted lg:inline"
         >
           {issue.fix_version.name}
         </span>
@@ -126,7 +126,7 @@ export function BacklogRow({
         ? issue.labels.slice(0, 2).map((label) => (
             <span
               key={label.id}
-              className="hidden shrink-0 rounded-sm bg-surface-2 px-1.5 text-[11px] text-fg-muted md:inline"
+              className="hidden shrink-0 rounded-sm bg-surface-2 px-2 text-xs text-fg-muted md:inline"
             >
               {label.name}
             </span>
@@ -136,7 +136,7 @@ export function BacklogRow({
         <span
           title="Story points"
           aria-label={`${String(issue.story_points)} story points`}
-          className="shrink-0 rounded-full bg-surface-2 px-1.5 text-xs font-medium text-fg-muted"
+          className="shrink-0 rounded-full bg-surface-2 px-2 text-xs font-medium text-fg-muted"
         >
           {issue.story_points}
         </span>

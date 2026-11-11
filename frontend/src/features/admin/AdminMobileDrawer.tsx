@@ -41,7 +41,7 @@ export function AdminMobileDrawer({
       <button
         type="button"
         aria-label="Close administration menu"
-        className="absolute inset-0 bg-slate-900/40"
+        className="absolute inset-0 bg-black/40"
         onClick={() => {
           setAdminMobileNavOpen(false);
         }}

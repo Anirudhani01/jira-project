@@ -64,11 +64,13 @@ import {
 
 type Field = 'summary' | 'description';
 
+/** One label/value row: labels share a column, so every value starts on the same line. */
 function SidebarField({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium text-fg-muted">{label}</p>
-      <div className="min-h-8 text-sm">{children}</div>
+    <div className="grid min-h-9 grid-cols-[6rem_minmax(0,1fr)] items-center gap-x-2">
+      <p className="text-sm text-fg-muted">{label}</p>
+      {/* Plain text gets the same inset as the controls beside it, so nothing is off the line. */}
+      <div className="min-w-0 text-sm [&>span]:px-2 [&>time]:px-2">{children}</div>
     </div>
   );
 }
@@ -335,7 +337,7 @@ function IssueView({
           aria-labelledby="issue-draft-restore-title"
           className="rounded-lg border border-line bg-surface-2 px-4 py-3 text-sm"
         >
-          <h2 id="issue-draft-restore-title" className="font-semibold text-fg">
+          <h2 id="issue-draft-restore-title" className="font-medium text-fg">
             Unsaved edits from before sign-in
           </h2>
           <p className="mt-1 text-fg-muted">
@@ -422,9 +424,6 @@ function IssueView({
       </FormError>
 
       <header className="space-y-2">
-        <p className="font-mono text-xs font-medium uppercase tracking-wide text-fg-subtle">
-          {issue.key}
-        </p>
         {editing === 'summary' ? (
           <InlineEditPanel
             saving={update.isPending}
@@ -438,7 +437,7 @@ function IssueView({
             <Input
               autoFocus
               aria-label="Summary"
-              className="h-11 text-xl font-semibold sm:text-2xl"
+              className="h-11 text-xl font-medium sm:text-2xl"
               maxLength={255}
               value={draft}
               onChange={(e) => {
@@ -458,7 +457,7 @@ function IssueView({
           </InlineEditPanel>
         ) : (
           <div className="flex flex-wrap items-start gap-2">
-            <h1 id="issue-title" className="text-2xl font-semibold leading-snug text-fg">
+            <h1 id="issue-title" className="text-2xl font-medium leading-snug text-fg">
               {issue.summary}
             </h1>
             {canEdit && editing === null ? (
@@ -491,7 +490,7 @@ function IssueView({
         ) : null}
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17.5rem] lg:items-start">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <div className="min-w-0 space-y-6">
           <Card className="p-5 sm:p-6">
             <IssueDescriptionSection
@@ -540,7 +539,7 @@ function IssueView({
           {storyPointsPolicy.status === 'conflict' ? (
             <StoryPointsConflictBanner org={org} projectKey={issue.project_key} />
           ) : null}
-          <Card className="space-y-4 p-4">
+          <Card className="space-y-1 p-3">
             <div className="[&_button]:flex [&_button]:w-full [&_button]:justify-between">
               <SidebarField label="Status">
                 {canTransition ? (
@@ -608,7 +607,7 @@ function IssueView({
 
           <Card className="space-y-3 p-4">
             <div className="flex items-center justify-between gap-2">
-              <h2 id="labels-title" className="text-sm font-semibold text-fg">
+              <h2 id="labels-title" className="text-sm font-medium text-fg">
                 Labels
               </h2>
               {canEdit && labelDraft === null && editing === null ? (
@@ -633,7 +632,7 @@ function IssueView({
                   currentLabels.map((l) => (
                     <span
                       key={l.id}
-                      className="rounded-full px-2.5 py-0.5 text-xs font-medium text-fg"
+                      className="rounded-full px-3 py-0.5 text-xs font-medium text-fg"
                       style={{
                         backgroundColor: `${l.color}33`,
                         borderLeft: `3px solid ${l.color}`,

@@ -37,12 +37,12 @@ import { toUxPermissionDeniedProps } from '../lib/ux/permissionDenied';
 import { ErrorState, LoadingState, ProjectGridSkeleton } from '../components/ui/States';
 import { useToast } from '../components/ui/Toast';
 import { ApiError, networkError } from '../lib/api/errors';
-import { useTheme, type ThemePreference } from '../theme/ThemeProvider';
+import { THEME_OPTIONS, useTheme, type ThemePreference } from '../theme/ThemeProvider';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section aria-labelledby={`ds-${title}`} className="space-y-3">
-      <h2 id={`ds-${title}`} className="text-lg font-semibold">
+      <h2 id={`ds-${title}`} className="text-lg font-medium">
         {title}
       </h2>
       {children}
@@ -58,7 +58,7 @@ export function DesignPage() {
   return (
     <div className="space-y-10">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Design system</h1>
+        <h1 className="text-2xl font-medium">Design system</h1>
         <label className="flex items-center gap-2 text-sm">
           Theme
           <select
@@ -68,9 +68,11 @@ export function DesignPage() {
             }}
             className="h-8 rounded-md border border-line-strong bg-surface px-2"
           >
-            <option value="system">System</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
+            {THEME_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </label>
       </header>
@@ -120,7 +122,7 @@ export function DesignPage() {
       <Section title="Issue markers">
         <div className="flex flex-wrap items-center gap-4">
           {(['Epic', 'Story', 'Task', 'Bug', 'Sub-task'] as const).map((name) => (
-            <span key={name} className="flex items-center gap-1.5">
+            <span key={name} className="flex items-center gap-2">
               <TypeIcon name={name} /> {name}
             </span>
           ))}
@@ -151,7 +153,7 @@ export function DesignPage() {
       <Section title="Surfaces">
         <div className="grid gap-4 sm:grid-cols-2">
           <Card className="space-y-2 p-4">
-            <h3 className="font-semibold">Card</h3>
+            <h3 className="font-medium">Card</h3>
             <p className="text-fg-muted">
               Raised surface with a hairline border and a soft shadow.
             </p>
@@ -173,7 +175,7 @@ export function DesignPage() {
         </p>
         <div className="grid gap-8">
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-fg-muted">1. Empty state</h3>
+            <h3 className="text-sm font-medium text-fg-muted">1. Empty state</h3>
             <UxEmptyState
               title="No issues yet"
               description="Create the first issue to start planning this sprint."
@@ -182,12 +184,12 @@ export function DesignPage() {
             />
           </div>
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-fg-muted">2. Loading state</h3>
+            <h3 className="text-sm font-medium text-fg-muted">2. Loading state</h3>
             <LoadingState label="Loading issues" />
             <ProjectGridSkeleton />
           </div>
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-fg-muted">3. Error state</h3>
+            <h3 className="text-sm font-medium text-fg-muted">3. Error state</h3>
             <div className="grid gap-4 lg:grid-cols-2">
               <UxErrorState error={networkError(new TypeError('Failed to fetch'))} />
               <UxErrorState
@@ -208,16 +210,16 @@ export function DesignPage() {
             />
           </div>
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-fg-muted">4. Offline notice</h3>
+            <h3 className="text-sm font-medium text-fg-muted">4. Offline notice</h3>
             <UxOfflineNotice offline variant="banner" />
             <UxOfflineNotice offline={false} variant="inline" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-fg-muted">5. Slow connection hint</h3>
+            <h3 className="text-sm font-medium text-fg-muted">5. Slow connection hint</h3>
             <UxSlowHint visible stage="Still loading issues…" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-fg-muted">6. No search results</h3>
+            <h3 className="text-sm font-medium text-fg-muted">6. No search results</h3>
             <UxSearchEmpty
               query="acme-mobile"
               scope="issues"
@@ -228,11 +230,11 @@ export function DesignPage() {
             />
           </div>
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-fg-muted">7. Permission denied</h3>
+            <h3 className="text-sm font-medium text-fg-muted">7. Permission denied</h3>
             <UxPermissionDenied {...toUxPermissionDeniedProps('org-audit', { orgSlug: 'demo' })} />
           </div>
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-fg-muted">8. Session expired</h3>
+            <h3 className="text-sm font-medium text-fg-muted">8. Session expired</h3>
             <UxErrorState
               error={
                 new ApiError({
@@ -245,7 +247,7 @@ export function DesignPage() {
             />
           </div>
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-fg-muted">9. Form validation</h3>
+            <h3 className="text-sm font-medium text-fg-muted">9. Form validation</h3>
             <div className="max-w-md">
               <Field label="Email" error="Enter a valid email address.">
                 {(props) => <Input defaultValue="not-an-email" {...props} />}
@@ -253,7 +255,7 @@ export function DesignPage() {
             </div>
           </div>
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-fg-muted">10. Success state</h3>
+            <h3 className="text-sm font-medium text-fg-muted">10. Success state</h3>
             <Button
               variant="primary"
               onClick={() => {

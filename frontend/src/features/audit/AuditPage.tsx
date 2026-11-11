@@ -37,7 +37,7 @@ function AuditLogContent() {
         className="admin-card space-y-4 rounded-xl border p-5 sm:p-6"
         aria-labelledby="audit-filters-heading"
       >
-        <h2 id="audit-filters-heading" className="text-lg font-semibold text-[var(--admin-text)]">
+        <h2 id="audit-filters-heading" className="text-lg font-medium text-[var(--admin-text)]">
           Filters
         </h2>
         <AuditFilters
@@ -52,7 +52,7 @@ function AuditLogContent() {
         className="admin-card space-y-4 rounded-xl border p-5 sm:p-6"
         aria-labelledby="audit-events-heading"
       >
-        <h2 id="audit-events-heading" className="text-lg font-semibold text-[var(--admin-text)]">
+        <h2 id="audit-events-heading" className="text-lg font-medium text-[var(--admin-text)]">
           Events
         </h2>
         {events.isPending ? <LoadingState label="Loading events" /> : null}

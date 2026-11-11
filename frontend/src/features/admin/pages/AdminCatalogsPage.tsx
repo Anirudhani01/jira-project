@@ -10,12 +10,13 @@ import {
   DataGridBody,
   DataGridDividedCell,
   DataGridDividedHeadCell,
-  DataGridEqualColumns,
+  DataGridColumns,
   DataGridHead,
   DataGridRow,
   DataGridTable,
 } from '../../../components/ui/DataGrid';
-import { FormError, SubmitButton, TextField } from '../../../components/ui/Form';
+import { FormError, SubmitButton } from '../../../components/ui/Form';
+import { Input } from '../../../components/ui/Input';
 import { ErrorState } from '../../../components/ui/States';
 import type { IssueType, Priority } from '../../../lib/api/types';
 import { describeError } from '../../../lib/forms';
@@ -136,7 +137,7 @@ function IssueTypeRow({
       </DataGridDividedCell>
       {canManage ? (
         <DataGridDividedCell>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-nowrap gap-1">
             <Button
               type="button"
               variant="ghost"
@@ -191,7 +192,7 @@ function AddIssueTypeForm({ org }: { org: string }) {
 
   return (
     <form
-      className="flex flex-wrap items-end gap-3 border-t border-[var(--admin-border)] pt-4"
+      className="space-y-2 overflow-x-auto"
       onSubmit={(e) => {
         e.preventDefault();
         const trimmed = name.trim();
@@ -202,31 +203,47 @@ function AddIssueTypeForm({ org }: { org: string }) {
       }}
     >
       <FormError>{failure}</FormError>
-      <TextField
-        label="New issue type"
-        value={name}
-        onChange={(e) => {
-          setName(e.target.value);
-        }}
-        className="min-w-[10rem] flex-1"
-      />
-      <label className="text-sm text-[var(--admin-muted)]">
-        Kind
-        <select
-          className="mt-1 block rounded-md border border-[var(--admin-border)] bg-[var(--admin-bg)] px-2 py-1.5 text-sm"
-          value={kind}
-          onChange={(e) => {
-            setKind(e.target.value);
-          }}
-        >
-          <option value="epic">Epic</option>
-          <option value="standard">Standard</option>
-          <option value="subtask">Sub-task</option>
-        </select>
-      </label>
-      <SubmitButton pending={create.isPending}>Add</SubmitButton>
+      <div
+        className="grid min-w-[47rem] items-center"
+        style={{ gridTemplateColumns: catalogTemplate(true) }}
+      >
+        <div className="px-4 py-2">
+          <Input
+            aria-label="New issue type"
+            placeholder="New issue type"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+            }}
+          />
+        </div>
+        <div className="px-4 py-2">
+          <select
+            aria-label="Kind"
+            value={kind}
+            onChange={(e) => {
+              setKind(e.target.value);
+            }}
+          >
+            <option value="epic">Epic</option>
+            <option value="standard">Standard</option>
+            <option value="subtask">Sub-task</option>
+          </select>
+        </div>
+        <div />
+        <div className="flex justify-start px-4 py-2">
+          <SubmitButton pending={create.isPending}>Add</SubmitButton>
+        </div>
+      </div>
     </form>
   );
+}
+
+/** Name is a fixed, readable width and the actions follow Status directly (left-aligned under
+ * their heading). The add rows below the tables use the same template, so their fields line up
+ * with the columns above them. */
+function catalogTemplate(canManage: boolean): string {
+  return `minmax(12rem, 16rem) 9rem 7rem${canManage ? ' minmax(19rem, 1fr)' : ''}`;
 }
 
 function IssueTypesSection({
@@ -245,7 +262,7 @@ function IssueTypesSection({
   if (query.isError) {
     return (
       <section className="admin-card rounded-xl border p-5 sm:p-6" aria-labelledby={titleId}>
-        <h2 id={titleId} className="text-lg font-semibold text-[var(--admin-text)]">
+        <h2 id={titleId} className="text-lg font-medium text-[var(--admin-text)]">
           Issue types
         </h2>
         <div className="mt-4">
@@ -256,14 +273,13 @@ function IssueTypesSection({
   }
 
   const items = query.data;
-  const columnCount = canManage ? 4 : 3;
   return (
     <section
       className="admin-card space-y-4 rounded-xl border p-5 sm:p-6"
       aria-labelledby={titleId}
     >
       <div>
-        <h2 id={titleId} className="text-lg font-semibold text-[var(--admin-text)]">
+        <h2 id={titleId} className="text-lg font-medium text-[var(--admin-text)]">
           Issue types
         </h2>
         <p className="mt-1 text-sm text-[var(--admin-muted)]">
@@ -280,7 +296,7 @@ function IssueTypesSection({
         <div className="min-w-0 overflow-x-auto">
           <DataGrid>
             <DataGridTable aria-label="Issue types">
-              <DataGridEqualColumns columnCount={columnCount}>
+              <DataGridColumns template={catalogTemplate(canManage)}>
                 <DataGridHead>
                   <DataGridDividedHeadCell>Name</DataGridDividedHeadCell>
                   <DataGridDividedHeadCell>Kind</DataGridDividedHeadCell>
@@ -298,7 +314,7 @@ function IssueTypesSection({
                     />
                   ))}
                 </DataGridBody>
-              </DataGridEqualColumns>
+              </DataGridColumns>
             </DataGridTable>
           </DataGrid>
         </div>
@@ -393,7 +409,7 @@ function PriorityRow({
       </DataGridDividedCell>
       {canManage ? (
         <DataGridDividedCell>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-nowrap gap-1">
             <Button
               type="button"
               variant="ghost"
@@ -448,7 +464,7 @@ function AddPriorityForm({ org }: { org: string }) {
 
   return (
     <form
-      className="flex flex-wrap items-end gap-3 border-t border-[var(--admin-border)] pt-4"
+      className="space-y-2 overflow-x-auto"
       onSubmit={(e) => {
         e.preventDefault();
         const trimmed = name.trim();
@@ -459,23 +475,36 @@ function AddPriorityForm({ org }: { org: string }) {
       }}
     >
       <FormError>{failure}</FormError>
-      <TextField
-        label="New priority"
-        value={name}
-        onChange={(e) => {
-          setName(e.target.value);
-        }}
-        className="min-w-[10rem] flex-1"
-      />
-      <TextField
-        label="Color"
-        value={color}
-        onChange={(e) => {
-          setColor(e.target.value);
-        }}
-        className="w-28"
-      />
-      <SubmitButton pending={create.isPending}>Add</SubmitButton>
+      <div
+        className="grid min-w-[47rem] items-center"
+        style={{ gridTemplateColumns: catalogTemplate(true) }}
+      >
+        <div className="px-4 py-2">
+          <Input
+            aria-label="New priority"
+            placeholder="New priority"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+            }}
+          />
+        </div>
+        <div className="px-4 py-2">
+          <Input
+            aria-label="Color"
+            placeholder="#rrggbb"
+            className="font-mono"
+            value={color}
+            onChange={(e) => {
+              setColor(e.target.value);
+            }}
+          />
+        </div>
+        <div />
+        <div className="flex justify-start px-4 py-2">
+          <SubmitButton pending={create.isPending}>Add</SubmitButton>
+        </div>
+      </div>
     </form>
   );
 }
@@ -496,7 +525,7 @@ function PrioritiesSection({
   if (query.isError) {
     return (
       <section className="admin-card rounded-xl border p-5 sm:p-6" aria-labelledby={titleId}>
-        <h2 id={titleId} className="text-lg font-semibold text-[var(--admin-text)]">
+        <h2 id={titleId} className="text-lg font-medium text-[var(--admin-text)]">
           Priorities
         </h2>
         <div className="mt-4">
@@ -507,14 +536,13 @@ function PrioritiesSection({
   }
 
   const items = query.data;
-  const columnCount = canManage ? 4 : 3;
   return (
     <section
       className="admin-card space-y-4 rounded-xl border p-5 sm:p-6"
       aria-labelledby={titleId}
     >
       <div>
-        <h2 id={titleId} className="text-lg font-semibold text-[var(--admin-text)]">
+        <h2 id={titleId} className="text-lg font-medium text-[var(--admin-text)]">
           Priorities
         </h2>
         <p className="mt-1 text-sm text-[var(--admin-muted)]">
@@ -531,7 +559,7 @@ function PrioritiesSection({
         <div className="min-w-0 overflow-x-auto">
           <DataGrid>
             <DataGridTable aria-label="Priorities">
-              <DataGridEqualColumns columnCount={columnCount}>
+              <DataGridColumns template={catalogTemplate(canManage)}>
                 <DataGridHead>
                   <DataGridDividedHeadCell>Name</DataGridDividedHeadCell>
                   <DataGridDividedHeadCell>Color</DataGridDividedHeadCell>
@@ -549,7 +577,7 @@ function PrioritiesSection({
                     />
                   ))}
                 </DataGridBody>
-              </DataGridEqualColumns>
+              </DataGridColumns>
             </DataGridTable>
           </DataGrid>
         </div>

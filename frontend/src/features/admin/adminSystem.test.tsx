@@ -100,7 +100,7 @@ describe('AdminSystemEmailPage', () => {
     expect(await screen.findByRole('heading', { name: 'Email delivery' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Transactional outbox' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'What is not available here' })).toBeInTheDocument();
-    expect(screen.getByText(/never shown in the product/i)).toBeInTheDocument();
+    expect(screen.getByText(/not available in the product/i)).toBeInTheDocument();
     expectNoConfigurationControls();
   });
 

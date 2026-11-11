@@ -13,7 +13,7 @@ import { ProjectWorkflowSection } from '../../projects/ProjectWorkflowSection';
 import { AdminOrgManagePageFrame } from './AdminOrgManagePageFrame';
 
 const HUB_DESCRIPTION =
-  'Each project has its own workflow instance, cloned from the default workflow when the project was created. These are not shared organization-wide templates. Expand a row to inspect statuses, transitions, and board column mappings. Board column editing stays on each project’s Columns tab. Expanding projects loads workflow data with individual GET requests (no bulk API in this release).';
+  'Each project has its own workflow. Expand a project to see its statuses, transitions and board columns, and edit them from the project settings.';
 
 function formatBoardType(boardType: string): string {
   return boardType === 'scrum' ? 'Scrum' : 'Kanban';
@@ -75,7 +75,7 @@ function ProjectWorkflowRow({
             )}
           </button>
           <div className="min-w-0 space-y-1">
-            <p className="truncate text-base font-semibold text-[var(--admin-text)]">
+            <p className="truncate text-base font-medium text-[var(--admin-text)]">
               <span className="font-mono text-sm">{project.key}</span>
               <span className="text-[var(--admin-muted)]"> · </span>
               {project.name}

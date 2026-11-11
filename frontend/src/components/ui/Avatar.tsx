@@ -1,17 +1,11 @@
 import * as AvatarPrimitive from '@radix-ui/react-avatar';
+import type { CSSProperties } from 'react';
 
 import { cn } from '../../lib/cn';
 
-// Deterministic, accessible colours (text contrast >= 4.5:1 on each background).
-const PALETTE = [
-  ['#dbe7ff', '#1d3d8f'],
-  ['#e0f5e8', '#14602f'],
-  ['#fde7d6', '#8a3a0c'],
-  ['#efe5ff', '#53279f'],
-  ['#d9f1f7', '#0b5c73'],
-  ['#fde3ee', '#8f1d4f'],
-  ['#fff1c9', '#7a4d00'],
-] as const;
+// A stable hue per name. The tile colours themselves come from the theme (see `.avatar` in
+// index.css), so the same name looks right in light, dark and paper.
+const HUES = [215, 150, 28, 268, 190, 335, 46] as const;
 
 function hash(text: string): number {
   let value = 0;
@@ -20,7 +14,12 @@ function hash(text: string): number {
 }
 
 export function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
+  // Leading punctuation never counts: "Mobile (Scrum)" is "MS", not "M(".
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .map((part) => part.replace(/^[^\p{L}\p{N}]+/u, ''))
+    .filter(Boolean);
   if (parts.length === 0) return '?';
   const first = parts[0]?.[0] ?? '?';
   const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '';
@@ -29,7 +28,7 @@ export function initials(name: string): string {
 
 const SIZES = {
   xs: 'size-5 text-[10px]',
-  sm: 'size-6 text-[11px]',
+  sm: 'size-6 text-xs',
   md: 'size-8 text-xs',
   lg: 'size-10 text-sm',
 };
@@ -45,16 +44,16 @@ export function Avatar({
   size?: keyof typeof SIZES;
   className?: string;
 }) {
-  const [background, color] = PALETTE[hash(name) % PALETTE.length] as readonly [string, string];
+  const hue = HUES[hash(name) % HUES.length] ?? HUES[0];
   return (
     <AvatarPrimitive.Root
       title={name}
       className={cn(
-        'inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full font-semibold',
+        'avatar inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full font-medium',
         SIZES[size],
         className,
       )}
-      style={{ background, color }}
+      style={{ '--avatar-hue': hue } as CSSProperties}
     >
       {src ? <AvatarPrimitive.Image src={src} alt="" className="size-full object-cover" /> : null}
       <AvatarPrimitive.Fallback aria-hidden="true">{initials(name)}</AvatarPrimitive.Fallback>
@@ -82,7 +81,7 @@ export function AvatarStack({
       {extra > 0 ? (
         <span
           className={cn(
-            'inline-flex items-center justify-center rounded-full bg-surface-2 font-semibold text-fg-muted ring-2 ring-surface',
+            'inline-flex items-center justify-center rounded-full bg-surface-2 font-medium text-fg-muted ring-2 ring-surface',
             SIZES[size],
           )}
         >

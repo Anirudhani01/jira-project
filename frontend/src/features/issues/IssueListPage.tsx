@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 
 import { NotFoundPage } from '../../app/pages/NotFoundPage';
+import { cn } from '../../lib/cn';
 import { Button } from '../../components/ui/Button';
 import { UxSearchEmpty } from '../../components/ux/UxSearchEmpty';
 import { EmptyState, Skeleton } from '../../components/ui/Card';
@@ -32,9 +33,6 @@ import { IssueListTable } from './IssueListTable';
 const FILTERS = [...ISSUE_LIST_FILTER_KEYS, ISSUE_LIST_QUERY_KEY] as const;
 
 const SORT_PARAM = 'sort';
-
-const selectClass =
-  'min-w-[7rem] rounded-md border border-line bg-surface px-3 py-2 text-sm text-fg hover:border-line-strong';
 
 function IssueListSkeleton() {
   return (
@@ -106,25 +104,34 @@ export function IssueListPage() {
     setSearch(params);
   };
 
-  const select = (name: string, label: string, options: { value: string; label: string }[]) => (
-    <label className="flex items-center gap-2 text-sm text-fg-muted">
-      {label}
-      <select
-        className={selectClass}
-        value={search.get(name) ?? ''}
-        onChange={(e) => {
-          setFilter(name, e.target.value);
-        }}
+  /** One compact pill: "Status  Any". A set filter shows an accent border. */
+  const select = (name: string, label: string, options: { value: string; label: string }[]) => {
+    const active = Boolean(search.get(name));
+    return (
+      <label
+        className={cn(
+          'inline-flex h-8 items-center rounded-md border bg-surface pl-3 text-sm text-fg-muted transition-colors hover:border-fg-subtle has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent',
+          active ? 'border-accent' : 'border-line-strong',
+        )}
       >
-        <option value="">Any</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
+        {label}
+        <select
+          className={cn('select-bare', active ? 'text-fg' : 'text-fg-muted')}
+          value={search.get(name) ?? ''}
+          onChange={(e) => {
+            setFilter(name, e.target.value);
+          }}
+        >
+          <option value="">Any</option>
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  };
 
   const items = issues.data?.pages.flatMap((page) => page.items) ?? [];
   const hasFilters = issueListFiltersActive(search);
@@ -154,42 +161,44 @@ export function IssueListPage() {
         }
       />
 
-      <div className="space-y-4 rounded-lg border border-line bg-surface p-4 sm:p-5">
-        <form
-          role="search"
-          className="flex flex-wrap items-center gap-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const value = new FormData(event.currentTarget).get('q');
-            setFilter('q', typeof value === 'string' ? value.trim() : '');
-          }}
-        >
-          <div className="relative min-w-[14rem] flex-1">
-            <Search
-              className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-fg-subtle"
-              aria-hidden="true"
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <form
+            role="search"
+            className="min-w-0 flex-1"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const value = new FormData(event.currentTarget).get('q');
+              setFilter('q', typeof value === 'string' ? value.trim() : '');
+            }}
+          >
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-subtle"
+                aria-hidden="true"
+              />
+              <Input
+                key={search.get('q') ?? ''}
+                name="q"
+                type="search"
+                aria-label="Search issues"
+                maxLength={200}
+                placeholder="Search by text or key (e.g. WEB-12)"
+                defaultValue={search.get('q') ?? ''}
+                className="pl-9"
+              />
+            </div>
+          </form>
+          {items.length > 0 ? (
+            <IssueListColumnPicker
+              visible={columns}
+              onSetColumn={setIssueListColumn}
+              onReset={resetColumns}
             />
-            <Input
-              key={search.get('q') ?? ''}
-              name="q"
-              type="search"
-              aria-label="Search issues"
-              maxLength={200}
-              placeholder="Search by text or key (e.g. WEB-12)"
-              defaultValue={search.get('q') ?? ''}
-              className="pl-8"
-            />
-          </div>
-          <Button type="submit" variant="secondary" size="sm">
-            Search
-          </Button>
-        </form>
+          ) : null}
+        </div>
 
-        <div
-          className="flex flex-wrap items-center gap-x-5 gap-y-4 border-t border-line pt-5"
-          role="group"
-          aria-label="Filters"
-        >
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filters">
           {select('status_category', 'Status', [
             { value: 'todo', label: 'To do' },
             { value: 'in_progress', label: 'In progress' },
@@ -219,18 +228,22 @@ export function IssueListPage() {
             ...(sprints.data ?? []).map((s) => ({ value: s.id, label: s.name })),
           ])}
           {hasNonQueryFilters ? (
-            <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+            <Button type="button" variant="ghost" onClick={clearFilters}>
               <X className="size-4" aria-hidden="true" />
               Clear filters
             </Button>
           ) : null}
+          {items.length > 0 ? (
+            <p className="ml-auto text-sm tabular-nums text-fg-muted">
+              {items.length}
+              {issues.hasNextPage ? '+' : ''} issue{items.length === 1 ? '' : 's'}
+            </p>
+          ) : null}
         </div>
 
-        {hasFilters ? (
-          <div
-            className="flex flex-wrap gap-2 border-t border-line pt-4"
-            aria-label="Active filters"
-          >
+        {/* Filters show on their own pills; chips remain only for the sort and the search text. */}
+        {sort !== DEFAULT_ISSUE_LIST_SORT || searchQuery ? (
+          <div className="flex flex-wrap gap-2" aria-label="Active filters">
             {sort !== DEFAULT_ISSUE_LIST_SORT ? (
               <FilterChip
                 label={`Sort: ${sort}`}
@@ -239,25 +252,14 @@ export function IssueListPage() {
                 }}
               />
             ) : null}
-            {FILTERS.map((name) => {
-              const value = search.get(name);
-              if (!value) return null;
-              const display = filterChipLabel(name, value, {
-                types: types.data ?? [],
-                priorities: priorities.data ?? [],
-                labels: labels.data ?? [],
-                sprints: sprints.data ?? [],
-              });
-              return (
-                <FilterChip
-                  key={name}
-                  label={display}
-                  onRemove={() => {
-                    setFilter(name, '');
-                  }}
-                />
-              );
-            })}
+            {searchQuery ? (
+              <FilterChip
+                label={`Search: ${searchQuery}`}
+                onRemove={() => {
+                  setFilter(ISSUE_LIST_QUERY_KEY, '');
+                }}
+              />
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -304,18 +306,6 @@ export function IssueListPage() {
 
       {items.length > 0 ? (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-fg-muted">
-              {items.length}
-              {issues.hasNextPage ? '+' : ''} issue{items.length === 1 ? '' : 's'}
-            </p>
-            <IssueListColumnPicker
-              visible={columns}
-              onSetColumn={setIssueListColumn}
-              onReset={resetColumns}
-            />
-          </div>
-
           <div className="max-h-[min(70vh,48rem)] overflow-auto rounded-lg border border-line">
             <IssueListTable
               org={org}
@@ -362,7 +352,7 @@ export function IssueListPage() {
 
 function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-2 px-2.5 py-1 text-xs text-fg">
+    <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-2 px-3 py-1 text-xs text-fg">
       {label}
       <button
         type="button"
@@ -374,36 +364,4 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
       </button>
     </span>
   );
-}
-
-function filterChipLabel(
-  name: string,
-  value: string,
-  ctx: {
-    types: { id: string; name: string }[];
-    priorities: { id: string; name: string }[];
-    labels: { id: string; name: string }[];
-    sprints: { id: string; name: string }[];
-  },
-): string {
-  switch (name) {
-    case 'status_category':
-      return `Status: ${value.replace('_', ' ')}`;
-    case 'type':
-      return `Type: ${ctx.types.find((t) => t.id === value)?.name ?? value}`;
-    case 'priority':
-      return `Priority: ${ctx.priorities.find((p) => p.id === value)?.name ?? value}`;
-    case 'assignee':
-      return value === 'me' ? 'Assignee: Me' : 'Assignee: Unassigned';
-    case 'label':
-      return `Label: ${ctx.labels.find((l) => l.id === value)?.name ?? value}`;
-    case 'sprint':
-      return value === 'backlog'
-        ? 'Sprint: Backlog'
-        : `Sprint: ${ctx.sprints.find((s) => s.id === value)?.name ?? value}`;
-    case 'q':
-      return `Search: ${value}`;
-    default:
-      return value;
-  }
 }

@@ -32,7 +32,7 @@ export function ProjectTemplateView({
               <Icon className="size-9" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <h1 id="template-title" className="text-2xl font-semibold text-fg sm:text-3xl">
+              <h1 id="template-title" className="text-2xl font-medium text-fg sm:text-3xl">
                 {template.label}
               </h1>
               <p className="mt-1 text-base text-fg-muted">{template.description}</p>
@@ -43,11 +43,11 @@ export function ProjectTemplateView({
         <div className="grid gap-8 px-6 py-8 sm:px-8 lg:grid-cols-2 lg:items-start">
           <div className="space-y-6">
             <div>
-              <h2 className="text-sm font-semibold text-fg">About this template</h2>
+              <h2 className="text-sm font-medium text-fg">About this template</h2>
               <p className="mt-2 text-sm leading-relaxed text-fg-muted">{template.summary}</p>
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-fg">What you get</h2>
+              <h2 className="text-sm font-medium text-fg">What you get</h2>
               <ul className="mt-3 space-y-2">
                 {template.includes.map((item) => (
                   <li

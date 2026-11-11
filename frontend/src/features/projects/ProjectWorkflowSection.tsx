@@ -5,7 +5,7 @@ import {
   DataGridBody,
   DataGridDividedCell,
   DataGridDividedHeadCell,
-  DataGridEqualColumns,
+  DataGridColumns,
   DataGridHead,
   DataGridRow,
   DataGridTable,
@@ -34,7 +34,7 @@ function WorkflowReadOnlyTables({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 id="workflow-title" className="text-lg font-semibold text-fg">
+            <h2 id="workflow-title" className="text-lg font-medium text-fg">
               {data.name}
             </h2>
             <Badge tone="neutral">View only</Badge>
@@ -55,13 +55,13 @@ function WorkflowReadOnlyTables({
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-muted">Statuses</h3>
+        <h3 className="text-xs font-medium text-fg-muted">Statuses</h3>
         {orderedStatuses.length === 0 ? (
           <p className="text-sm text-fg-muted">No statuses defined.</p>
         ) : (
           <DataGrid>
             <DataGridTable aria-label="Workflow statuses">
-              <DataGridEqualColumns columnCount={3}>
+              <DataGridColumns template="5rem minmax(10rem, 1fr) 10rem">
                 <DataGridHead>
                   <DataGridDividedHeadCell>Order</DataGridDividedHeadCell>
                   <DataGridDividedHeadCell>Name</DataGridDividedHeadCell>
@@ -85,20 +85,20 @@ function WorkflowReadOnlyTables({
                     </DataGridRow>
                   ))}
                 </DataGridBody>
-              </DataGridEqualColumns>
+              </DataGridColumns>
             </DataGridTable>
           </DataGrid>
         )}
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-muted">Transitions</h3>
+        <h3 className="text-xs font-medium text-fg-muted">Transitions</h3>
         {transitions.length === 0 ? (
           <p className="text-sm text-fg-muted">No transitions defined.</p>
         ) : (
           <DataGrid>
             <DataGridTable aria-label="Workflow transitions">
-              <DataGridEqualColumns columnCount={3}>
+              <DataGridColumns template="minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(10rem, 1.5fr)">
                 <DataGridHead>
                   <DataGridDividedHeadCell>From</DataGridDividedHeadCell>
                   <DataGridDividedHeadCell>To</DataGridDividedHeadCell>
@@ -119,22 +119,20 @@ function WorkflowReadOnlyTables({
                     </DataGridRow>
                   ))}
                 </DataGridBody>
-              </DataGridEqualColumns>
+              </DataGridColumns>
             </DataGridTable>
           </DataGrid>
         )}
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-muted">
-          Board columns
-        </h3>
+        <h3 className="text-xs font-medium text-fg-muted">Board columns</h3>
         {data.columns.length === 0 ? (
           <p className="text-sm text-fg-muted">No columns configured.</p>
         ) : (
           <DataGrid>
             <DataGridTable aria-label="Board columns">
-              <DataGridEqualColumns columnCount={2}>
+              <DataGridColumns template="minmax(10rem, 16rem) minmax(0, 1fr)">
                 <DataGridHead>
                   <DataGridDividedHeadCell>Column</DataGridDividedHeadCell>
                   <DataGridDividedHeadCell>Statuses</DataGridDividedHeadCell>
@@ -164,7 +162,7 @@ function WorkflowReadOnlyTables({
                     </DataGridRow>
                   ))}
                 </DataGridBody>
-              </DataGridEqualColumns>
+              </DataGridColumns>
             </DataGridTable>
           </DataGrid>
         )}

@@ -5,7 +5,7 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '../../lib/cn';
 
 export const buttonVariants = cva(
-  'inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium transition-colors disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-colors disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
@@ -16,7 +16,7 @@ export const buttonVariants = cva(
         danger: 'bg-danger text-accent-fg hover:opacity-90',
         link: 'text-accent underline-offset-2 hover:underline',
       },
-      size: { sm: 'h-7 px-2.5 text-[13px]', md: 'h-8 px-3 text-sm', lg: 'h-10 px-4 text-sm' },
+      size: { sm: 'h-7 px-3 text-sm', md: 'h-8 px-3 text-sm', lg: 'h-10 px-4 text-sm' },
     },
     defaultVariants: { variant: 'secondary', size: 'md' },
   },

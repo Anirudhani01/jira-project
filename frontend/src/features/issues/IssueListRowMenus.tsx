@@ -17,7 +17,7 @@ import type { Issue, IssueType, Priority, ProjectMember } from '../../lib/api/ty
 import { useApplyTransition, useTransitions, useUpdateIssue } from './api';
 
 const memberTriggerClass = cn(
-  'inline-flex max-w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm',
+  'inline-flex max-w-full items-center gap-2 rounded-md px-2 py-2 text-sm',
   'hover:bg-surface-hover outline-none ring-accent focus-visible:ring-2',
 );
 
@@ -55,7 +55,7 @@ export function IssueListStatusMenu({
         <button
           type="button"
           aria-label={`Status: ${issue.status.name}. Choose a new status`}
-          className="inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1.5 outline-none ring-accent hover:bg-surface-hover focus-visible:ring-2"
+          className="inline-flex max-w-full items-center gap-2 whitespace-nowrap rounded-md px-2 py-2 outline-none ring-accent hover:bg-surface-hover focus-visible:ring-2"
         >
           <StatusLozenge name={issue.status.name} category={issue.status.category} />
           <ChevronDown className="size-3.5 text-fg-muted" aria-hidden="true" />
@@ -208,7 +208,7 @@ export function IssueListReporterMenu({
 }
 
 const fieldTriggerClass = cn(
-  'inline-flex max-w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-fg',
+  'inline-flex max-w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-fg',
   'hover:bg-surface-hover outline-none ring-accent focus-visible:ring-2',
 );
 

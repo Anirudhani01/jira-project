@@ -36,7 +36,7 @@ export function BoardPageHeader({
     return (
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 space-y-1">
-          <h1 id={titleId} className="text-2xl font-semibold text-fg">
+          <h1 id={titleId} className="text-2xl font-medium text-fg">
             {title}
           </h1>
           {sprintName ? <p className="text-sm text-fg-muted">{sprintName}</p> : null}
@@ -58,7 +58,7 @@ export function BoardPageHeader({
   return (
     <header className="board-page-header space-y-2">
       <nav aria-label="Breadcrumb" className="board-page-breadcrumb text-sm">
-        <ol className="flex flex-wrap items-center gap-1.5">
+        <ol className="flex flex-wrap items-center gap-2">
           <li>
             <Link to={`/o/${org}`}>{orgName}</Link>
           </li>
@@ -76,7 +76,7 @@ export function BoardPageHeader({
       </nav>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-baseline gap-3">
-          <h1 id={titleId} className="board-page-title text-2xl font-semibold tracking-tight">
+          <h1 id={titleId} className="board-page-title text-2xl font-medium tracking-tight">
             {title}
           </h1>
           {sprintName ? (
@@ -88,7 +88,7 @@ export function BoardPageHeader({
             asChild
             variant="secondary"
             size="sm"
-            className="board-btn-secondary gap-1.5 rounded-lg"
+            className="board-btn-secondary gap-2 rounded-lg"
           >
             <Link to={`/o/${org}/p/${projectKey}/issues`}>
               <LayoutList className="size-4" aria-hidden="true" />

@@ -37,7 +37,7 @@ export function DialogContent({
       >
         <div className="mb-3 flex items-start justify-between gap-4">
           <div>
-            <DialogPrimitive.Title className="text-lg font-semibold">{title}</DialogPrimitive.Title>
+            <DialogPrimitive.Title className="text-lg font-medium">{title}</DialogPrimitive.Title>
             {description ? (
               <DialogPrimitive.Description className="text-sm text-fg-muted">
                 {description}
@@ -88,7 +88,7 @@ export function DropdownMenuItem({
     <DropdownPrimitive.Item
       asChild={asChild}
       className={cn(
-        'flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-surface-hover',
+        'flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-2 outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-surface-hover',
         className,
       )}
       {...props}
@@ -106,7 +106,7 @@ export function DropdownMenuCheckboxItem({
     <DropdownPrimitive.CheckboxItem
       checked={checked}
       className={cn(
-        'relative flex cursor-pointer select-none items-center gap-2 rounded-sm py-1.5 pl-7 pr-2 outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-surface-hover',
+        'relative flex cursor-pointer select-none items-center gap-2 rounded-sm py-2 pl-7 pr-2 outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-surface-hover',
         className,
       )}
       {...props}
@@ -121,8 +121,34 @@ export function DropdownMenuCheckboxItem({
   );
 }
 
+export const DropdownMenuRadioGroup = DropdownPrimitive.RadioGroup;
+
+/** One choice of a group where exactly one is selected (shown with a check on the left). */
+export function DropdownMenuRadioItem({
+  className,
+  children,
+  ...props
+}: ComponentPropsWithoutRef<typeof DropdownPrimitive.RadioItem>) {
+  return (
+    <DropdownPrimitive.RadioItem
+      className={cn(
+        'relative flex cursor-pointer select-none items-center gap-2 rounded-sm py-2 pl-7 pr-2 outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-surface-hover',
+        className,
+      )}
+      {...props}
+    >
+      <span className="pointer-events-none absolute left-2 flex size-4 items-center justify-center">
+        <DropdownPrimitive.ItemIndicator>
+          <Check className="size-4 text-fg" aria-hidden="true" />
+        </DropdownPrimitive.ItemIndicator>
+      </span>
+      {children}
+    </DropdownPrimitive.RadioItem>
+  );
+}
+
 export const DropdownMenuLabel = ({ children }: { children: ReactNode }) => (
-  <DropdownPrimitive.Label className="px-2 py-1 text-xs font-semibold text-fg-muted">
+  <DropdownPrimitive.Label className="px-2 py-1 text-xs font-medium text-fg-muted">
     {children}
   </DropdownPrimitive.Label>
 );
@@ -184,7 +210,7 @@ export function TabsTrigger({
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        '-mb-px border-b-2 border-transparent px-3 py-1.5 text-sm font-medium text-fg-muted hover:text-fg data-[state=active]:border-accent data-[state=active]:text-fg',
+        '-mb-px border-b-2 border-transparent px-3 py-2 text-sm font-medium text-fg-muted hover:text-fg data-[state=active]:border-accent data-[state=active]:text-fg',
         className,
       )}
       {...props}

@@ -24,7 +24,7 @@ export function VerifyEmailPage() {
     return (
       <AuthLayout>
         <section aria-labelledby="verify-done" className="space-y-4">
-          <h1 id="verify-done" className="text-2xl font-semibold text-fg">
+          <h1 id="verify-done" className="text-2xl font-medium text-fg">
             Email verified
           </h1>
           <p role="status" className="text-fg-muted">
@@ -51,7 +51,7 @@ export function VerifyEmailPage() {
   return (
     <AuthLayout>
       <section aria-labelledby="verify-title" className="space-y-6">
-        <h1 id="verify-title" className="text-2xl font-semibold text-fg">
+        <h1 id="verify-title" className="text-2xl font-medium text-fg">
           Verify your email address
         </h1>
         <FormError>{failure}</FormError>

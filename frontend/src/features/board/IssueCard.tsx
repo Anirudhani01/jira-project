@@ -43,11 +43,11 @@ function LabelChip({
   if (boardChrome) {
     return (
       <span
-        className="board-issue-label max-w-[5.5rem] truncate rounded px-1.5 py-0.5 text-[10px] font-medium"
+        className="board-issue-label max-w-[5.5rem] truncate rounded px-2 py-0.5 text-xs font-medium"
         style={{
-          backgroundColor: `color-mix(in srgb, ${color} 14%, #ffffff)`,
-          color: '#334155',
-          border: `1px solid color-mix(in srgb, ${color} 35%, #cbd5e1)`,
+          backgroundColor: `color-mix(in srgb, ${color} 14%, var(--surface))`,
+          color: 'var(--fg)',
+          border: `1px solid color-mix(in srgb, ${color} 35%, var(--line))`,
         }}
         title={name}
       >
@@ -57,7 +57,7 @@ function LabelChip({
   }
   return (
     <span
-      className="max-w-[5.5rem] truncate rounded-sm px-1.5 py-0.5 text-[10px] font-medium text-fg"
+      className="max-w-[5.5rem] truncate rounded-sm px-2 py-0.5 text-xs font-medium text-fg"
       style={{ backgroundColor: `${color}33`, borderLeft: `3px solid ${color}` }}
       title={name}
     >
@@ -184,7 +184,7 @@ export function IssueCard({
     'group text-sm transition-shadow',
     boardChrome
       ? 'board-issue-card rounded-lg border border-[var(--board-border)] bg-[var(--board-surface)] p-2 shadow-[0_1px_2px_rgb(15_23_42/6%)]'
-      : 'rounded-md border border-line bg-surface p-2.5 shadow-sm',
+      : 'rounded-md border border-line bg-surface p-3 shadow-sm',
     !overlay && draggable.isDragging && 'pointer-events-none opacity-40 shadow-none',
     !overlay &&
       droppable.isOver &&
@@ -205,7 +205,7 @@ export function IssueCard({
           title="Story points"
           aria-label={`${String(card.story_points)} story points`}
           className={cn(
-            'ml-auto rounded-full px-1.5 text-[10px] font-semibold',
+            'ml-auto rounded-full px-2 text-xs font-medium',
             boardChrome
               ? 'bg-[var(--board-accent-soft)] text-[var(--board-muted)]'
               : 'bg-surface-2 text-fg-muted',
@@ -219,7 +219,7 @@ export function IssueCard({
       ))}
       {card.labels.length > 3 ? (
         <span
-          className={cn('text-[10px]', boardChrome ? 'text-[var(--board-muted)]' : 'text-fg-muted')}
+          className={cn('text-xs', boardChrome ? 'text-[var(--board-muted)]' : 'text-fg-muted')}
         >
           +{card.labels.length - 3}
         </span>
@@ -228,7 +228,7 @@ export function IssueCard({
         {card.assignee ? (
           <Avatar name={card.assignee.display_name} size="xs" />
         ) : boardChrome ? null : (
-          <span className="text-[11px] text-fg-muted">Unassigned</span>
+          <span className="text-xs text-fg-muted">Unassigned</span>
         )}
       </span>
     </>
@@ -250,11 +250,11 @@ export function IssueCard({
           )}
           <div className="flex min-h-[4.25rem] min-w-0 flex-1 flex-col gap-1">
             <div className="flex items-start justify-between gap-1">
-              <div className="flex min-w-0 items-center gap-1.5">
+              <div className="flex min-w-0 items-center gap-2">
                 <TypeIcon kind={card.type.kind} name={card.type.name} className="size-4 shrink-0" />
                 <Link
                   {...detailLink}
-                  className="board-issue-key truncate font-mono text-xs font-semibold no-underline outline-none hover:underline focus-visible:ring-2 focus-visible:ring-[var(--board-accent)]"
+                  className="board-issue-key truncate font-mono text-xs font-medium no-underline outline-none hover:underline focus-visible:ring-2 focus-visible:ring-[var(--board-accent)]"
                 >
                   {card.key}
                 </Link>
@@ -273,21 +273,21 @@ export function IssueCard({
             </div>
             <Link
               {...detailLink}
-              className="board-issue-summary line-clamp-2 min-h-[2.35rem] text-[13px] leading-snug text-[var(--board-text)] no-underline outline-none hover:text-[var(--board-link)] focus-visible:ring-2 focus-visible:ring-[var(--board-accent)]"
+              className="board-issue-summary line-clamp-2 min-h-[2.35rem] text-sm leading-snug text-[var(--board-text)] no-underline outline-none hover:text-[var(--board-link)] focus-visible:ring-2 focus-visible:ring-[var(--board-accent)]"
             >
               {card.summary}
             </Link>
             {card.parent && parentDetailLink ? (
               <Link
                 {...parentDetailLink}
-                className="inline-flex max-w-full items-center gap-1 truncate rounded bg-[var(--board-accent-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--board-link)] no-underline hover:underline"
+                className="inline-flex max-w-full items-center gap-1 truncate rounded bg-[var(--board-accent-soft)] px-2 py-0.5 text-xs font-medium text-[var(--board-link)] no-underline hover:underline"
                 title={card.parent.summary}
               >
                 <span className="font-mono">{card.parent.key}</span>
                 <span className="truncate text-[var(--board-muted)]">{card.parent.summary}</span>
               </Link>
             ) : null}
-            <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-0.5">{footerMeta}</div>
+            <div className="mt-auto flex flex-wrap items-center gap-2 pt-0.5">{footerMeta}</div>
           </div>
         </div>
       </li>
@@ -296,7 +296,7 @@ export function IssueCard({
 
   return (
     <li ref={setRefs} data-issue-row data-issue-key={card.key} className={cardShellClass}>
-      <div className="flex gap-1.5">
+      <div className="flex gap-2">
         {canMove && !overlay ? (
           <DragHandle
             dragLabel={dragLabel}
@@ -306,8 +306,8 @@ export function IssueCard({
         ) : (
           <span className="w-5 shrink-0" aria-hidden="true" />
         )}
-        <div className="min-w-0 flex-1 space-y-1.5">
-          <div className="flex items-start gap-1.5">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex items-start gap-2">
             <TypeIcon kind={card.type.kind} name={card.type.name} className="mt-0.5" />
             <div className="min-w-0 flex-1">
               <Link
@@ -315,7 +315,7 @@ export function IssueCard({
                 className="block rounded-sm outline-none ring-accent hover:bg-surface-hover focus-visible:ring-2"
               >
                 <span className="font-mono text-xs font-medium text-accent">{card.key}</span>
-                <p className="line-clamp-2 text-[13px] leading-snug text-fg group-hover:underline">
+                <p className="line-clamp-2 text-sm leading-snug text-fg group-hover:underline">
                   {card.summary}
                 </p>
               </Link>
@@ -335,7 +335,7 @@ export function IssueCard({
           {card.parent && parentDetailLink ? (
             <Link
               {...parentDetailLink}
-              className="inline-flex max-w-full items-center gap-1 rounded-sm bg-accent-soft px-1.5 py-0.5 text-[11px] font-medium text-accent hover:underline"
+              className="inline-flex max-w-full items-center gap-1 rounded-sm bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent hover:underline"
               title={card.parent.summary}
             >
               <span className="truncate font-mono">{card.parent.key}</span>
@@ -343,7 +343,7 @@ export function IssueCard({
             </Link>
           ) : null}
 
-          <div className="flex flex-wrap items-center gap-1.5">{footerMeta}</div>
+          <div className="flex flex-wrap items-center gap-2">{footerMeta}</div>
         </div>
       </div>
     </li>

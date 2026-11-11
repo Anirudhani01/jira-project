@@ -48,7 +48,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             )}
           >
             <div className="flex-1">
-              <ToastPrimitive.Title className="text-sm font-semibold">
+              <ToastPrimitive.Title className="text-sm font-medium">
                 {item.title}
               </ToastPrimitive.Title>
               {item.description ? (

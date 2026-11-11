@@ -26,7 +26,7 @@ export function UxPermissionDenied({
       aria-labelledby={titleId}
       className={cn('space-y-4 rounded-lg border border-line bg-surface-2 px-6 py-8', className)}
     >
-      <h2 id={titleId} className="text-lg font-semibold text-fg">
+      <h2 id={titleId} className="text-lg font-medium text-fg">
         You don&apos;t have access to {capability}
       </h2>
       {reason ? <p className="max-w-prose text-sm text-fg-muted">{reason}</p> : null}

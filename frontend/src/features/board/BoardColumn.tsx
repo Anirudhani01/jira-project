@@ -33,16 +33,11 @@ function WipBar({ count, limit, over }: { count: number; limit: number | null; o
         aria-label={`Work in progress ${count} of ${limit}`}
       >
         <div
-          className={cn('h-full rounded-full transition-all', barTone)}
+          className={cn('h-full rounded-full', barTone)}
           style={{ width: `${String(ratio * 100)}%` }}
         />
       </div>
-      <p
-        className={cn(
-          'text-[11px] tabular-nums',
-          over ? 'font-semibold text-danger' : 'text-fg-muted',
-        )}
-      >
+      <p className={cn('text-xs tabular-nums', over ? 'font-medium text-danger' : 'text-fg-muted')}>
         {count} / {limit}
         {over ? ' · over limit' : null}
       </p>
@@ -191,8 +186,8 @@ export function BoardColumnView({
     >
       <header
         className={cn(
-          'space-y-2 border-b border-line px-3 py-2.5',
-          boardChrome && 'board-column-header border-[var(--board-border)] px-3 py-2.5',
+          'space-y-2 border-b border-line px-3 py-3',
+          boardChrome && 'board-column-header border-[var(--board-border)] px-3 py-3',
         )}
       >
         <div className="flex items-center justify-between gap-2">
@@ -203,7 +198,7 @@ export function BoardColumnView({
             <h2
               id={`col-${column.id}`}
               className={cn(
-                'truncate text-sm font-semibold text-fg',
+                'truncate text-sm font-medium text-fg',
                 boardChrome && 'text-[var(--board-text)]',
               )}
             >
@@ -268,7 +263,7 @@ export function BoardColumnView({
       <ul
         className={cn(
           'board-column-list flex min-h-[12rem] flex-1 flex-col gap-2 overflow-y-auto p-2',
-          boardChrome && 'gap-2.5 p-3',
+          boardChrome && 'gap-3 p-3',
         )}
       >
         {column.issues.length === 0 ? (
@@ -292,7 +287,7 @@ export function BoardColumnView({
         <footer
           className={cn(
             'border-t border-line p-2',
-            boardChrome && 'board-column-footer border-[var(--board-border)] p-2.5',
+            boardChrome && 'board-column-footer border-[var(--board-border)] p-3',
           )}
         >
           <Button

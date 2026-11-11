@@ -380,10 +380,7 @@ export function ProjectWorkflowEditor({
       <FormError>{failure}</FormError>
 
       <section aria-labelledby={`${formId}-statuses`}>
-        <h3
-          id={`${formId}-statuses`}
-          className="text-xs font-semibold uppercase tracking-wide text-fg-muted"
-        >
+        <h3 id={`${formId}-statuses`} className="text-xs font-medium text-fg-muted">
           Statuses
         </h3>
         {errors?.initialStatus ? (
@@ -534,10 +531,7 @@ export function ProjectWorkflowEditor({
       ) : null}
 
       <section aria-labelledby={`${formId}-transitions`}>
-        <h3
-          id={`${formId}-transitions`}
-          className="text-xs font-semibold uppercase tracking-wide text-fg-muted"
-        >
+        <h3 id={`${formId}-transitions`} className="text-xs font-medium text-fg-muted">
           Transitions
         </h3>
         <ul className="mt-2 space-y-2">
@@ -640,10 +634,7 @@ export function ProjectWorkflowEditor({
       </section>
 
       <section aria-labelledby={`${formId}-columns`}>
-        <h3
-          id={`${formId}-columns`}
-          className="text-xs font-semibold uppercase tracking-wide text-fg-muted"
-        >
+        <h3 id={`${formId}-columns`} className="text-xs font-medium text-fg-muted">
           Board columns
         </h3>
         <DndContext

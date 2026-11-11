@@ -170,7 +170,7 @@ export function BoardColumnsEditor({
   return (
     <Card className="space-y-4 p-5 sm:p-6" aria-labelledby={`${formId}-title`}>
       <div>
-        <h2 id={`${formId}-title`} className="text-lg font-semibold text-fg">
+        <h2 id={`${formId}-title`} className="text-lg font-medium text-fg">
           Board columns
         </h2>
         <p className="mt-1 text-sm text-fg-muted">

@@ -11,7 +11,7 @@ import {
 
 function linkClass(isActive: boolean) {
   return cn(
-    'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm no-underline outline-none transition-colors',
+    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm no-underline outline-none transition-colors',
     'text-[var(--admin-muted)] hover:bg-[var(--admin-accent-soft)] hover:text-[var(--admin-text)]',
     'focus-visible:ring-2 focus-visible:ring-[var(--admin-accent)] focus-visible:ring-offset-1',
     isActive &&
@@ -54,10 +54,8 @@ export function AdminSidebarNav({
   return (
     <div className="flex h-full flex-col gap-5 p-3">
       <div className="space-y-1 border-b border-[var(--admin-border)] pb-4">
-        <p className="px-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
-          Administration
-        </p>
-        <p className="truncate px-2.5 text-sm font-medium text-[var(--admin-text)]">{orgName}</p>
+        <p className="px-3 text-xs font-medium text-[var(--admin-muted)]">Administration</p>
+        <p className="truncate px-3 text-sm font-medium text-[var(--admin-text)]">{orgName}</p>
         <NavLink
           to={back.to}
           className={cn(
@@ -73,9 +71,7 @@ export function AdminSidebarNav({
       <nav aria-label="Administration" className="flex flex-1 flex-col gap-5 overflow-y-auto">
         {groups.map((group) => (
           <div key={group.id}>
-            <p className="mb-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
-              {group.label}
-            </p>
+            <p className="mb-2 px-3 text-xs font-medium text-[var(--admin-muted)]">{group.label}</p>
             <div className="flex flex-col gap-0.5">
               {group.items.map((item) => (
                 <NavItemLink key={item.id} item={item} {...(onNavigate ? { onNavigate } : {})} />

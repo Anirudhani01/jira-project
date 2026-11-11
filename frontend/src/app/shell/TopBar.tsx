@@ -1,4 +1,4 @@
-import { ChevronDown, CircleHelp, LayoutGrid, Menu, Monitor, Plus } from 'lucide-react';
+import { ChevronDown, CircleHelp, LayoutGrid, Menu, Plus } from 'lucide-react';
 import { Link, useLocation } from 'react-router';
 
 import { Button, IconButton } from '../../components/ui/Button';
@@ -33,7 +33,7 @@ function GuestNav() {
           Sign in
         </Link>
       )}
-      <Button variant="primary" size="sm" className="rounded-lg px-4" asChild>
+      <Button variant="primary" size="sm" className="px-4" asChild>
         <Link to="/signup">Sign up</Link>
       </Button>
     </div>
@@ -45,7 +45,7 @@ function SignedInActions({ boardShell }: { boardShell: boolean }) {
   const { openCreateIssue, openHelp } = useShortcuts();
 
   return (
-    <div className="flex min-w-0 shrink items-center gap-1">
+    <div className="ml-auto flex min-w-0 shrink items-center gap-1">
       {ctx?.projectKey ? (
         boardShell ? (
           <DropdownMenu>
@@ -53,11 +53,11 @@ function SignedInActions({ boardShell }: { boardShell: boolean }) {
               <Button
                 variant="primary"
                 size="sm"
-                className="board-btn-primary hidden gap-1 rounded-lg px-3 sm:inline-flex"
+                className="board-btn-primary hidden gap-1 px-3 sm:inline-flex"
               >
                 <Plus className="size-4" aria-hidden="true" />
                 Create
-                <ChevronDown className="size-3.5 opacity-80" aria-hidden="true" />
+                <ChevronDown className="size-4 opacity-80" aria-hidden="true" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -100,13 +100,7 @@ function SignedInActions({ boardShell }: { boardShell: boolean }) {
       >
         <CircleHelp className="size-4" aria-hidden="true" />
       </IconButton>
-      {boardShell ? (
-        <IconButton label="Display options" size="sm" className="hidden sm:inline-flex" disabled>
-          <Monitor className="size-4" aria-hidden="true" />
-        </IconButton>
-      ) : (
-        <ThemeToggle />
-      )}
+      <ThemeToggle />
       <ProfileMenu />
     </div>
   );
@@ -140,7 +134,7 @@ export function TopBar({
         aria-label="Primary"
         className={
           boardShell
-            ? 'board-topbar-nav flex h-[72px] min-w-0 max-w-full items-center gap-1 px-3 sm:gap-2 sm:px-5 lg:gap-3 lg:px-6'
+            ? 'board-topbar-nav flex h-14 min-w-0 max-w-full items-center gap-1 px-3 sm:gap-2 sm:px-5 lg:gap-3 lg:px-6'
             : 'flex h-14 min-w-0 max-w-full items-center gap-2 overflow-x-hidden px-3 sm:px-5 lg:gap-3 lg:px-6'
         }
       >
@@ -160,19 +154,19 @@ export function TopBar({
           to="/"
           className={
             boardShell
-              ? 'flex min-w-0 shrink items-center gap-2 text-lg font-semibold tracking-tight text-fg no-underline hover:text-accent'
+              ? 'flex min-w-0 shrink items-center gap-2 text-lg font-medium tracking-tight text-fg no-underline hover:text-accent'
               : orgDashboardHome
-                ? 'flex min-w-0 shrink items-center gap-2 text-lg font-semibold tracking-tight text-fg no-underline hover:text-accent'
-                : 'flex shrink-0 items-center gap-2 text-lg font-semibold tracking-tight text-fg no-underline hover:text-accent'
+                ? 'flex min-w-0 shrink items-center gap-2 text-lg font-medium tracking-tight text-fg no-underline hover:text-accent'
+                : 'flex shrink-0 items-center gap-2 text-lg font-medium tracking-tight text-fg no-underline hover:text-accent'
           }
         >
           <span
             className={
               orgDashboardHome
-                ? 'flex size-8 items-center justify-center rounded-lg bg-[var(--org-dash-accent)] text-white'
+                ? 'flex size-8 items-center justify-center rounded-md bg-[var(--org-dash-accent)] text-[var(--accent-fg)]'
                 : boardShell
-                  ? 'board-logo flex size-8 shrink-0 items-center justify-center rounded-lg'
-                  : 'flex size-8 items-center justify-center rounded-lg bg-accent text-accent-fg'
+                  ? 'board-logo flex size-8 shrink-0 items-center justify-center rounded-md'
+                  : 'flex size-8 items-center justify-center rounded-md bg-accent text-accent-fg'
             }
           >
             <LayoutGrid className="size-4" aria-hidden="true" />

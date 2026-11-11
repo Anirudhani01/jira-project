@@ -49,7 +49,7 @@ export function NotificationBell({ org }: { org: string }) {
           <Bell className="size-4" aria-hidden="true" />
           <span className="sr-only">Notifications</span>
           {count > 0 ? (
-            <span className="rounded-full bg-danger px-1.5 text-xs font-medium text-white">
+            <span className="rounded-full bg-danger px-2 text-xs font-medium text-white">
               <span className="sr-only">{count} unread</span>
               <span aria-hidden="true">{count > 99 ? '99+' : count}</span>
             </span>
@@ -58,7 +58,7 @@ export function NotificationBell({ org }: { org: string }) {
       </PopoverTrigger>
       <PopoverContent aria-label="Notifications" className="w-96 max-w-[calc(100vw-1rem)] p-0">
         <div className="flex items-center justify-between border-b border-line px-3 py-2">
-          <h2 className="text-sm font-semibold text-fg">Notifications</h2>
+          <h2 className="text-sm font-medium text-fg">Notifications</h2>
           <button
             type="button"
             disabled={count === 0 || all.isPending}
@@ -85,9 +85,7 @@ export function NotificationBell({ org }: { org: string }) {
           ) : null}
           {groups.map((group) => (
             <section key={group.label} aria-label={group.label} className="mb-2 last:mb-0">
-              <h3 className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-fg-muted">
-                {group.label}
-              </h3>
+              <h3 className="px-2 py-1 text-xs font-medium text-fg-muted">{group.label}</h3>
               <ul className="space-y-0.5">
                 {group.items.map((n) => {
                   const Icon = ICONS[n.type] ?? Bell;
@@ -100,7 +98,7 @@ export function NotificationBell({ org }: { org: string }) {
                           setOpen(false);
                         }}
                         className={cn(
-                          'flex items-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-surface-2',
+                          'flex items-start gap-2 rounded-md px-2 py-2 text-sm hover:bg-surface-2',
                           n.read ? 'text-fg-muted' : 'font-medium text-fg',
                         )}
                       >
@@ -115,7 +113,7 @@ export function NotificationBell({ org }: { org: string }) {
                         {n.read ? null : (
                           <span
                             aria-hidden="true"
-                            className="mt-1.5 size-2 shrink-0 rounded-full bg-accent"
+                            className="mt-2 size-2 shrink-0 rounded-full bg-accent"
                           />
                         )}
                       </Link>
