@@ -23,6 +23,7 @@ import {
 } from './api';
 import { BoardColumnsEditor } from './BoardColumnsEditor';
 import { ProjectMembersSection } from './ProjectMembersSection';
+import { ProjectKeyRename } from './ProjectKeyRename';
 import { ProjectEstimatesSection } from './ProjectEstimatesSection';
 import { ProjectWorkflowSection } from './ProjectWorkflowSection';
 
@@ -123,6 +124,7 @@ export function ProjectPage() {
               <dt className="text-fg-muted">Description</dt>
               <dd className="text-fg">{p.description ?? 'No description'}</dd>
             </dl>
+            <ProjectKeyRename org={org} projectKey={p.key} archived={p.archived} />
           </Card>
         </TabsContent>
 

@@ -1,6 +1,6 @@
 import { MoreHorizontal, Pencil } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router';
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router';
 
 import { NotFoundPage } from '../../app/pages/NotFoundPage';
 import { Button, IconButton } from '../../components/ui/Button';
@@ -33,6 +33,7 @@ import { FixVersionField } from './FixVersionField';
 import { StoryPointsField } from './StoryPointsField';
 import { IssueActivitySection } from './IssueActivitySection';
 import { IssueChildrenSection } from './IssueChildrenSection';
+import { MoveIssueDialog } from './MoveIssueDialog';
 import { IssueDescriptionSection } from './IssueDescriptionSection';
 import { useProject, useProjectMembers } from '../projects/api';
 import { StoryPointsConflictBanner } from '../storyPoints/StoryPointsPolicyHint';
@@ -119,6 +120,8 @@ function InlineEditPanel({
  * conflict banner offers to reload the latest version. */
 export function IssueDetailPage({ presentation = 'page' }: { presentation?: 'page' | 'modal' }) {
   const { org = '', issueKey = '' } = useParams();
+  const location = useLocation();
+  const locationState: unknown = location.state;
   const issue = useIssue(org, issueKey);
   const projectKey = issue.data?.project_key ?? issueKey.split('-')[0] ?? '';
   const project = useProject(org, projectKey);
@@ -126,6 +129,23 @@ export function IssueDetailPage({ presentation = 'page' }: { presentation?: 'pag
   if (issue.isPending) return <LoadingState label="Loading issue" />;
   if (issue.error instanceof ApiError && issue.error.status === 404) return <NotFoundPage />;
   if (issue.isError) return <ErrorState error={issue.error} />;
+  if (issue.data.key !== issueKey.toUpperCase()) {
+    // The old key of a renamed project or a moved issue: continue on the current key.
+    const segments = location.pathname.split('/');
+    const at = segments.findLastIndex(
+      (segment) => segment.toLowerCase() === issueKey.toLowerCase(),
+    );
+    if (at > 0) {
+      segments[at] = issue.data.key;
+      return (
+        <Navigate
+          to={{ pathname: segments.join('/'), search: location.search, hash: location.hash }}
+          state={locationState}
+          replace
+        />
+      );
+    }
+  }
   const permissions = project.data?.permissions ?? [];
   const writable = !project.data?.archived;
   return (
@@ -186,6 +206,9 @@ function IssueView({
   const [draft, setDraft] = useState('');
   const [labelDraft, setLabelDraft] = useState<string[] | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
+  // Sub-tasks stay with their parent; the server also checks issue.create on the target.
+  const canMove = canEdit && issue.type.kind !== 'subtask';
   const toast = useToast();
   const conflictNotified = useRef(false);
   const conflict = update.error instanceof ApiError && update.error.status === 412;
@@ -674,7 +697,7 @@ function IssueView({
             )}
           </Card>
 
-          {canDelete ? (
+          {canDelete || canMove ? (
             <div className="flex justify-end">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -683,20 +706,35 @@ function IssueView({
                   </IconButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    className="text-danger focus:text-danger"
-                    onSelect={() => {
-                      setDeleteOpen(true);
-                    }}
-                  >
-                    Delete issue
-                  </DropdownMenuItem>
+                  {canMove ? (
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setMoveOpen(true);
+                      }}
+                    >
+                      Move to project…
+                    </DropdownMenuItem>
+                  ) : null}
+                  {canDelete ? (
+                    <DropdownMenuItem
+                      className="text-danger focus:text-danger"
+                      onSelect={() => {
+                        setDeleteOpen(true);
+                      }}
+                    >
+                      Delete issue
+                    </DropdownMenuItem>
+                  ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           ) : null}
         </aside>
       </div>
+
+      {canMove ? (
+        <MoveIssueDialog org={org} issue={issue} open={moveOpen} onOpenChange={setMoveOpen} />
+      ) : null}
 
       {canDelete ? (
         <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
