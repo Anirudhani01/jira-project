@@ -131,6 +131,29 @@ describe('audit log', () => {
     expect(withAction.at(-1)?.search.includes('cursor')).toBe(false);
   });
 
+  it('filters by a quick date range from the picker and clears it again', async () => {
+    const calls = mockApi({
+      ...auditMocks(),
+      'GET /orgs/acme/audit-events': () => json({ items: [EVENT], next_cursor: null }),
+    });
+    const requests = () => calls.filter((c) => c.path.includes('/audit-events'));
+    const { router } = renderApp('/o/acme/admin/audit');
+    await screen.findByRole('cell', { name: 'Alex Admin' });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^Date range/ }));
+    await user.click(await screen.findByRole('button', { name: 'Last 24 hours' }));
+    await waitFor(() => {
+      expect(requests().at(-1)?.search).toMatch(/from=/);
+    });
+    expect(screen.getByRole('list', { name: 'Active filters' })).toHaveTextContent('From:');
+
+    await user.click(screen.getByRole('button', { name: 'Clear date range' }));
+    await waitFor(() => {
+      expect(router.state.location.search).not.toMatch(/from=|to=/);
+    });
+    expect(screen.queryByRole('list', { name: 'Active filters' })).not.toBeInTheDocument();
+  });
+
   it('omits invalid date params from the audit API request', async () => {
     const calls = mockApi({
       ...auditMocks(),

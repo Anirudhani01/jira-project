@@ -13,6 +13,7 @@ import {
   mockSignedInOrgContext,
   OWNER_PERMISSIONS,
 } from './auth-activity-fixtures';
+import { expectNoSeriousViolations } from './helpers';
 
 const ORG_SLUG = 'acme-e2e-auth';
 const SCREENSHOT_DIR =
@@ -24,6 +25,47 @@ test.describe('Authentication Activity (A3.2 Phase 5)', () => {
       localStorage.setItem('theme', 'light');
     });
   });
+
+  for (const theme of ['light', 'dark', 'paper'] as const) {
+    test(`date range picker (${theme}): opens as an accessible dialog and a quick range filters the list`, async ({
+      page,
+    }) => {
+      await page.addInitScript((value) => {
+        localStorage.setItem('theme', value);
+      }, theme);
+      await mockSignedInOrgContext(page, {
+        orgSlug: ORG_SLUG,
+        role: 'owner',
+        permissions: OWNER_PERMISSIONS,
+      });
+      const { calls } = await mockAuthenticationActivityApi(page, () => ({
+        body: { items: [loginSucceededItem()], next_cursor: null },
+      }));
+      await page.goto(`/o/${ORG_SLUG}/admin/security/activity`);
+      await expect(page.locator('#auth-activity-table-heading')).toBeVisible();
+
+      await page.getByRole('button', { name: /^Date range/ }).click();
+      const dialog = page.getByRole('dialog', { name: 'Date range' });
+      await expect(dialog).toBeVisible();
+      // On a short window the popover must stay inside the viewport and scroll within itself.
+      const box = await dialog.boundingBox();
+      expect(box).not.toBeNull();
+      expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(
+        (page.viewportSize()?.height ?? 0) + 1,
+      );
+      // Keyboard focus starts on a day of the calendar, not on the first quick range.
+      await expect(dialog.locator('[data-day]:focus')).toHaveCount(1);
+      await expectNoSeriousViolations(page);
+      fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+      await page.screenshot({ path: path.join(SCREENSHOT_DIR, `date-range-picker-${theme}.png`) });
+
+      await dialog.getByRole('button', { name: 'Last 7 days' }).click();
+      await expect(dialog).toBeHidden();
+      await expect.poll(() => calls.some((url) => url.searchParams.has('from'))).toBe(true);
+      await expect(page).toHaveURL(/from=/);
+      await expect(page.getByRole('list', { name: 'Active filters' })).toContainText('From:');
+    });
+  }
 
   test('owner and admin can open the page; member is denied without activity fetch', async ({
     page,
@@ -127,12 +169,14 @@ test.describe('Authentication Activity (A3.2 Phase 5)', () => {
     await expect(page).toHaveURL(/member=/);
 
     await page.goto(`/o/${ORG_SLUG}/admin/security/activity`);
-    await expect(page.getByRole('button', { name: 'Load more' })).toBeVisible();
-    await page.getByRole('button', { name: 'Load more' }).click();
+    const pagination = page.getByRole('navigation', { name: 'Pagination' });
+    await expect(pagination.getByRole('button', { name: 'Next' })).toBeEnabled();
+    await pagination.getByRole('button', { name: 'Next' }).click();
     await expect
       .poll(() => calls.some((u) => u.searchParams.get('cursor') === 'cursor-page-2'))
       .toBe(true);
     await expect(page.getByRole('table').getByText('Signed out')).toBeVisible();
+    await pagination.getByRole('button', { name: 'Previous' }).click();
 
     await page
       .getByRole('button', { name: /Show metadata for Sign-in succeeded for Owner User/i })

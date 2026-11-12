@@ -3,10 +3,10 @@ import type { SetURLSearchParams } from 'react-router';
 
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
+import { DateRangePicker } from '../../components/ui/DateRangePicker';
 import { cn } from '../../lib/cn';
 import type { Member } from '../../lib/api/types';
-import { datetimeLocalToIso, isoToDatetimeLocalValue } from '../audit/auditDateParams';
+import { applyDateRangeParams } from '../audit/auditDateParams';
 
 import { AUTH_ACTIVITY_EVENT_TYPES, formatAuthActivityEventType } from './authActivityEventTypes';
 import {
@@ -47,7 +47,6 @@ export function AuthenticationActivityFilters({
   const sortedMembers = [...members].sort((a, b) =>
     a.display_name.localeCompare(b.display_name, undefined, { sensitivity: 'base' }),
   );
-  const inputClass = 'mt-1 w-full max-w-full sm:mt-0 sm:w-auto';
 
   const chips = AUTH_ACTIVITY_FILTER_KEYS.flatMap((name) => {
     const raw = searchParams.get(name);
@@ -112,38 +111,22 @@ export function AuthenticationActivityFilters({
             <span className="text-xs text-danger">Unsupported event type; not applied.</span>
           ) : null}
         </label>
-        <label className="flex min-w-0 flex-col gap-1">
-          From
-          <Input
-            type="datetime-local"
-            aria-label="From"
-            value={isoToDatetimeLocalValue(searchParams.get('from'))}
-            onChange={(e) => {
-              const iso = datetimeLocalToIso(e.target.value);
-              setFilterParam(setSearch, 'from', iso ?? '');
+        <div className="flex min-w-0 flex-col gap-1">
+          <DateRangePicker
+            label="Date range"
+            from={searchParams.get('from')}
+            to={searchParams.get('to')}
+            onChange={(range) => {
+              setSearch((prev) => applyDateRangeParams(prev, range), { replace: true });
             }}
-            className={inputClass}
           />
           {parsed.invalid.from ? (
-            <span className="text-xs text-danger">Invalid date; not applied.</span>
+            <span className="text-xs text-danger">From: Invalid date; not applied.</span>
           ) : null}
-        </label>
-        <label className="flex min-w-0 flex-col gap-1">
-          To
-          <Input
-            type="datetime-local"
-            aria-label="To"
-            value={isoToDatetimeLocalValue(searchParams.get('to'))}
-            onChange={(e) => {
-              const iso = datetimeLocalToIso(e.target.value);
-              setFilterParam(setSearch, 'to', iso ?? '');
-            }}
-            className={inputClass}
-          />
           {parsed.invalid.to ? (
-            <span className="text-xs text-danger">Invalid date; not applied.</span>
+            <span className="text-xs text-danger">To: Invalid date; not applied.</span>
           ) : null}
-        </label>
+        </div>
         {hasActiveAuthActivityFilters(searchParams) ? (
           <Button
             type="button"

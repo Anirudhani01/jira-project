@@ -1,15 +1,15 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 
 import { UxPermissionDenied } from '../../components/ux/UxPermissionDenied';
-import { Button } from '../../components/ui/Button';
 import { ErrorState, LoadingState } from '../../components/ui/States';
 import { isRbacForbidden, toUxPermissionDeniedProps } from '../../lib/ux/permissionDenied';
 import { useMembers, useOrg } from '../orgs/api';
 import { AdminOrgManagePageFrame } from '../admin/pages/AdminOrgManagePageFrame';
 
-import { useAuthenticationActivity } from './api';
+import { DEFAULT_AUTH_ACTIVITY_PAGE_SIZE, useAuthenticationActivityPage } from './api';
 import { AuthenticationActivityFilters } from './AuthenticationActivityFilters';
+import { AuthenticationActivityPagination } from './AuthenticationActivityPagination';
 import {
   AuthenticationActivityMobileCard,
   AuthenticationActivityTableRow,
@@ -29,12 +29,23 @@ function AuthenticationActivityContent() {
   const canViewAudit =
     organization.isSuccess && organization.data.permissions.includes('org.audit.view');
   const membersQuery = useMembers(org, { enabled: canViewAudit });
-  const activity = useAuthenticationActivity(org, apiFilters, canViewAudit);
-  const items = activity.data?.pages.flatMap((page) => page.items) ?? [];
+  const [pageSize, setPageSize] = useState(DEFAULT_AUTH_ACTIVITY_PAGE_SIZE);
+  // Cursors of the pages seen so far, per filters + page size: changing either starts at page 1.
+  const scope = `${JSON.stringify(apiFilters)}|${String(pageSize)}`;
+  const [cursorsByScope, setCursorsByScope] = useState<Record<string, (string | null)[]>>({});
+  const cursors = cursorsByScope[scope] ?? [null];
+  const pageIndex = cursors.length - 1;
+  const activity = useAuthenticationActivityPage(
+    org,
+    apiFilters,
+    { cursor: cursors[pageIndex] ?? null, limit: pageSize },
+    canViewAudit,
+  );
+  const items = activity.data?.items ?? [];
+  const nextCursor = activity.data?.next_cursor ?? null;
   const filtersActive = hasActiveAuthActivityFilters(searchParams);
   const showInitialLoading = activity.isPending && items.length === 0;
-  const showRefetchLoading =
-    activity.isFetching && !activity.isFetchingNextPage && items.length > 0;
+  const showRefetchLoading = activity.isFetching && items.length > 0;
 
   if (!canViewAudit) {
     return <UxPermissionDenied {...toUxPermissionDeniedProps('org-audit', { orgSlug: org })} />;
@@ -142,15 +153,22 @@ function AuthenticationActivityContent() {
           </>
         ) : null}
 
-        {activity.hasNextPage ? (
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={activity.isFetchingNextPage}
-            onClick={() => void activity.fetchNextPage()}
-          >
-            {activity.isFetchingNextPage ? 'Loading…' : 'Load more'}
-          </Button>
+        {items.length > 0 ? (
+          <AuthenticationActivityPagination
+            pageIndex={pageIndex}
+            pageSize={pageSize}
+            itemCount={items.length}
+            hasPrevious={pageIndex > 0}
+            hasNext={nextCursor !== null}
+            loading={activity.isFetching}
+            onPrevious={() => {
+              setCursorsByScope((prev) => ({ ...prev, [scope]: cursors.slice(0, -1) }));
+            }}
+            onNext={() => {
+              setCursorsByScope((prev) => ({ ...prev, [scope]: [...cursors, nextCursor] }));
+            }}
+            onPageSizeChange={setPageSize}
+          />
         ) : null}
       </section>
     </div>

@@ -5,20 +5,21 @@ export function parseIsoDateParam(value: string | null | undefined): Date | null
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-/** Format an ISO instant for a `datetime-local` input (local timezone). */
-export function isoToDatetimeLocalValue(iso: string | null | undefined): string {
-  const date = parseIsoDateParam(iso ?? null);
-  if (!date) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-/** Convert `datetime-local` value to ISO for the URL/API, or null when empty/invalid. */
-export function datetimeLocalToIso(local: string): string | null {
-  if (!local.trim()) return null;
-  const date = new Date(local);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toISOString();
+/** The filter params with `from` and `to` set to the given ISO instants (or removed when null),
+ * all other params kept. */
+export function applyDateRangeParams(
+  params: URLSearchParams,
+  range: { from: string | null; to: string | null },
+): URLSearchParams {
+  const next = new URLSearchParams(params);
+  for (const [name, value] of [
+    ['from', range.from],
+    ['to', range.to],
+  ] as const) {
+    if (value) next.set(name, value);
+    else next.delete(name);
+  }
+  return next;
 }
 
 export function formatChipDate(iso: string): string {
