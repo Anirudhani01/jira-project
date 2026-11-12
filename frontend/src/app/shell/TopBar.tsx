@@ -72,7 +72,7 @@ function SignedInActions({ boardShell }: { boardShell: boolean }) {
           </DropdownMenu>
         ) : (
           <Button
-            variant="primary"
+            variant="secondary"
             size="sm"
             className="hidden sm:inline-flex"
             onClick={openCreateIssue}
@@ -124,10 +124,10 @@ export function TopBar({
     <header
       className={
         orgDashboardHome
-          ? 'org-dash-topbar max-w-full overflow-x-hidden border-b border-[var(--org-dash-border)] bg-[var(--org-dash-surface)]'
+          ? 'sticky top-0 z-40 org-dash-topbar max-w-full overflow-x-hidden border-b border-[var(--org-dash-border)] bg-[var(--org-dash-surface)]'
           : boardShell
-            ? 'board-topbar max-w-full overflow-x-clip border-b'
-            : 'max-w-full overflow-x-hidden border-b border-line bg-surface'
+            ? 'sticky top-0 z-40 board-topbar max-w-full overflow-x-clip border-b'
+            : 'sticky top-0 z-40 max-w-full overflow-x-hidden border-b border-line bg-surface'
       }
     >
       <nav
@@ -163,10 +163,10 @@ export function TopBar({
           <span
             className={
               orgDashboardHome
-                ? 'flex size-8 items-center justify-center rounded-md bg-[var(--org-dash-accent)] text-[var(--accent-fg)]'
+                ? 'flex size-8 items-center justify-center rounded-md bg-logo text-accent-fg'
                 : boardShell
                   ? 'board-logo flex size-8 shrink-0 items-center justify-center rounded-md'
-                  : 'flex size-8 items-center justify-center rounded-md bg-accent text-accent-fg'
+                  : 'flex size-8 items-center justify-center rounded-md bg-logo text-accent-fg'
             }
           >
             <LayoutGrid className="size-4" aria-hidden="true" />

@@ -5,6 +5,7 @@ import type {
   Project,
   ProjectMember,
   ProjectSettings,
+  ProjectListItem,
   ProjectSummary,
   ReplaceWorkflowRequest,
   UpdateProjectSettingsRequest,
@@ -25,9 +26,9 @@ export function useProjects(org: string, options?: { enabled?: boolean; archived
     queryKey: archived ? ([...projectsKey(org), 'archived'] as const) : projectsKey(org),
     enabled: (options?.enabled ?? true) && org.length > 0,
     queryFn: () =>
-      apiFetch<{ items: ProjectSummary[] }>(`${base(org)}${archived ? '?archived=true' : ''}`).then(
-        (r) => r.items,
-      ),
+      apiFetch<{ items: ProjectListItem[] }>(
+        `${base(org)}${archived ? '?archived=true' : ''}`,
+      ).then((r) => r.items),
   });
 }
 

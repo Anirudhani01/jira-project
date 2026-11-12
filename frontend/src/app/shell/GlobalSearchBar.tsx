@@ -187,10 +187,10 @@ export function GlobalSearchBar({
           }
         }}
         className={cn(
-          'h-9 w-full rounded-lg border border-line bg-surface-2/80 pl-9 pr-16 text-sm text-fg outline-none',
+          'h-9 w-full rounded-lg border border-control bg-surface-2/80 pl-9 pr-16 text-sm text-fg outline-none',
           'placeholder:text-fg-subtle focus:border-line-strong focus:bg-surface focus:ring-2 focus:ring-accent/25',
           orgDashboard &&
-            'org-dash-search border-[var(--org-dash-border)] bg-[var(--org-dash-surface)] focus:border-[var(--org-dash-accent)] focus:ring-[color-mix(in_srgb,var(--org-dash-accent)_25%,transparent)]',
+            'org-dash-search border-[var(--control-border)] bg-[var(--org-dash-surface)] focus:border-[var(--org-dash-accent)] focus:ring-[color-mix(in_srgb,var(--org-dash-accent)_25%,transparent)]',
           boardChrome && 'board-search max-sm:pr-3 focus:ring-0',
         )}
       />

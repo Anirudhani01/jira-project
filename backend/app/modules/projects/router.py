@@ -16,6 +16,7 @@ from app.modules.projects.schemas import (
     AddProjectMemberRequest,
     ColumnResponse,
     CreateProjectRequest,
+    ProjectListItem,
     ProjectListResponse,
     ProjectMemberListResponse,
     ProjectMemberResponse,
@@ -67,14 +68,17 @@ async def list_projects(
     rows = await service.list_projects(services, access, archived=archived)
     return ProjectListResponse(
         items=[
-            ProjectSummary(
+            ProjectListItem(
                 key=p.key,
                 name=p.name,
                 board_type=p.board_type,
                 archived=p.archived_at is not None,
                 my_role=role,
+                issue_count=progress.issue_count,
+                done_count=progress.done_count,
+                active_sprint=progress.active_sprint,
             )
-            for p, role in rows
+            for p, role, progress in rows
         ]
     )
 

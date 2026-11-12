@@ -18,7 +18,11 @@ import { ProjectKeyRedirect } from '../features/projects/ProjectKeyRedirect';
 import { ProjectPage } from '../features/projects/ProjectPage';
 import { AcceptInvitationPage } from '../features/orgs/pages/AcceptInvitationPage';
 import { OrgHomePage } from '../features/orgs/pages/OrgHomePage';
+import { OrgDashboardLayout } from '../features/orgs/OrgDashboardLayout';
+import { OrgMembersPage } from '../features/orgs/pages/OrgMembersPage';
+import { OrgSettingsPage } from '../features/orgs/pages/OrgSettingsPage';
 import { OrgWorkspaceLayout } from '../features/orgs/OrgWorkspaceLayout';
+import { AuditPage } from '../features/audit/AuditPage';
 import { orgAdminChildRoutes } from '../features/admin/adminRoutes';
 
 import { AppShell } from './AppShell';
@@ -48,7 +52,16 @@ export const appShellChildRoutes: RouteObject[] = [
         path: 'o/:org',
         element: <OrgWorkspaceLayout />,
         children: [
-          { index: true, element: <OrgHomePage /> },
+          {
+            // Header + tabs stay; only the content below them changes (Administration keeps the rest).
+            element: <OrgDashboardLayout />,
+            children: [
+              { index: true, element: <OrgHomePage /> },
+              { path: 'settings', element: <OrgSettingsPage /> },
+              { path: 'settings/members', element: <OrgMembersPage /> },
+              { path: 'settings/audit', element: <AuditPage /> },
+            ],
+          },
           orgAdminChildRoutes,
           { path: 'projects/new', element: <CreateProjectPage /> },
           {

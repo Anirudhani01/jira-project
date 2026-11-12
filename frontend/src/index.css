@@ -7,21 +7,23 @@
    One neutral ramp per theme, three text roles, ONE accent. The org dashboard, admin and
    board shells below read these tokens; they no longer carry colours of their own. */
 :root {
-  --bg: #f7f7f8;
+  --bg: #f4f6fa;
   --surface: #ffffff;
-  --surface-2: #f0f0f2; /* sunken: columns, wells */
-  --surface-hover: #f5f5f6;
-  --line: #e4e4e7;
-  --line-strong: #cfcfd4;
-  --fg: #18181b;
-  --fg-muted: #52525b;
-  --fg-subtle: #71717a;
+  --surface-2: #e9eef5; /* sunken: columns, wells */
+  --surface-hover: #f8fafc;
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  --fg: #0f172a;
+  --fg-muted: #475569;
+  --fg-subtle: #586a82;
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
-  --accent-soft: #eaf1ff;
+  --accent-soft: #e8f0ff;
   --accent-fg: #ffffff;
   --accent-on-soft: #1d4ed8; /* accent used as text on --accent-soft */
   --link: #1d4ed8;
+  --control-border: #64748b; /* edge of inputs and buttons: 3:1 on surfaces (WCAG 1.4.11) */
+  --logo-bg: var(--accent);
   --danger: #c81e1e;
   --danger-soft: #fdecec;
   --warning: #a35a00;
@@ -30,8 +32,8 @@
   --success-soft: #e3f5ea;
   --info: #0b6fa8;
   --info-soft: #e1f2fb;
-  --status-todo: #71717a;
-  --status-todo-soft: #f0f0f2;
+  --status-todo: #586a82;
+  --status-todo-soft: #e9eef5;
   --status-in-progress: #0b6fa8;
   --status-in-progress-soft: #e1f2fb;
   --status-in-review: #6a45d6;
@@ -74,6 +76,8 @@
   --accent-fg: #faf9f5;
   --accent-on-soft: #111111;
   --link: #111111;
+  --control-border: #8a867b;
+  --logo-bg: #111111;
   --status-todo: #66645e;
   --status-todo-soft: #ecebe5;
   --task: #111111;
@@ -94,12 +98,14 @@
   --fg: #ededed;
   --fg-muted: #a1a1a6;
   --fg-subtle: #8a8a90;
-  --accent: #4f8cff;
-  --accent-hover: #78a6ff;
-  --accent-soft: #17264a;
-  --accent-fg: #07142b;
-  --accent-on-soft: #bfd6ff;
-  --link: #8ab4ff;
+  --accent: #b69cff;
+  --accent-hover: #cdbcff;
+  --accent-soft: #2a2347;
+  --accent-fg: #1b1330;
+  --accent-on-soft: #d9ccff;
+  --link: #c7b3ff;
+  --control-border: #6c6c74;
+  --logo-bg: #ededed;
   --danger: #ff8a8a;
   --danger-soft: #3a1c22;
   --warning: #f5b351;
@@ -141,6 +147,8 @@
   --color-surface-hover: var(--surface-hover);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
+  --color-control: var(--control-border);
+  --color-logo: var(--logo-bg);
   --color-fg: var(--fg);
   --color-fg-muted: var(--fg-muted);
   --color-fg-subtle: var(--fg-subtle);
@@ -273,11 +281,27 @@
   color: var(--admin-text);
 }
 
-.admin-shell .admin-page :focus-visible {
+/* The organization dashboard tabs (Settings, Audit log, Members) reuse the administration pages
+   in place, so the dashboard shell offers the same --admin-* aliases of the shell tokens. */
+.org-dashboard-shell {
+  --admin-bg: var(--shell-bg);
+  --admin-surface: var(--shell-surface);
+  --admin-text: var(--shell-text);
+  --admin-muted: var(--shell-muted);
+  --admin-border: var(--shell-border);
+  --admin-accent: var(--shell-accent);
+  --admin-accent-soft: var(--shell-accent-soft);
+  --admin-accent-hover: var(--shell-accent-hover);
+  --admin-accent-on-soft: var(--accent-on-soft);
+}
+
+.admin-shell .admin-page :focus-visible,
+.org-dashboard-shell .admin-page :focus-visible {
   outline-color: var(--admin-accent);
 }
 
-.admin-shell .admin-card {
+.admin-shell .admin-card,
+.org-dashboard-shell .admin-card {
   border-color: var(--admin-border);
   background: var(--admin-surface);
   box-shadow: var(--shadow-sm);
@@ -298,7 +322,7 @@
   color: var(--board-text);
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .board-shell .board-topbar {
@@ -336,7 +360,7 @@
 }
 
 .board-shell .board-search {
-  border-color: var(--board-border);
+  border-color: var(--control-border);
   background: var(--board-surface);
 }
 
@@ -366,7 +390,7 @@
 }
 
 .board-shell .board-btn-secondary {
-  border: 1px solid var(--board-border);
+  border: 1px solid var(--control-border);
   background: var(--board-surface) !important;
   color: var(--board-text) !important;
 }
@@ -415,7 +439,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.125rem;
-  border: 1px solid var(--board-border);
+  border: 1px solid var(--control-border);
   border-radius: 9999px;
   background: var(--board-surface);
   padding: 0.25rem 0.625rem 0.25rem 0.75rem;
@@ -505,9 +529,31 @@ body:has(.board-shell) {
   --board-col-dot-done: var(--success);
 }
 
-.board-shell .board-column {
-  border-radius: 0.75rem;
+.board-shell .board-column-well {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 4%, transparent);
+}
+
+/* The dark theme's sunken surface is darker than the page; the board wells stay lighter than the
+   cards sitting in them. */
+:root[data-theme='dark'] .board-shell {
+  --board-col-bg: var(--line);
+}
+
+/* Drag handle and card menu appear on hover or focus where a pointer can hover; touch and
+   keyboard users always see them. */
+@media (hover: hover) {
+  .board-shell .board-issue-card .board-issue-drag,
+  .board-shell .board-issue-card .board-issue-menu {
+    opacity: 0;
+  }
+
+  .board-shell .board-issue-card:hover .board-issue-drag,
+  .board-shell .board-issue-card:hover .board-issue-menu,
+  .board-shell .board-issue-card:focus-within .board-issue-drag,
+  .board-shell .board-issue-card:focus-within .board-issue-menu,
+  .board-shell .board-issue-card .board-issue-menu[data-state='open'] {
+    opacity: 1;
+  }
 }
 
 .board-shell .board-col-dot {
@@ -705,6 +751,8 @@ textarea:focus-visible {
     font-size: 16px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    /* The top bar is pinned (57px): keep keyboard focus and anchor jumps out from under it. */
+    scroll-padding-top: 4.5rem;
   }
   body {
     min-height: 100vh;

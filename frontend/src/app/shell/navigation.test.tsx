@@ -66,9 +66,10 @@ describe('navigation v2', () => {
     renderApp('/o/acme');
     const nav = await screen.findByRole('navigation', { name: 'Global' });
     const titles = within(nav)
-      .getAllByText(/^(Recent|Starred|Projects|More)$/)
+      .getAllByText(/^(Starred|Projects|Manage)$/)
       .map((node) => node.textContent);
-    expect(titles).toEqual(['Recent', 'Starred', 'Projects', 'More']);
+    expect(titles).toEqual(['Projects', 'Starred', 'Manage']);
+    expect(within(nav).queryByText('Recent')).toBeNull();
     expect(within(nav).getByRole('link', { name: 'For you' })).toBeInTheDocument();
     expect(await within(nav).findByRole('link', { name: /Website/ })).toHaveAttribute(
       'href',
@@ -77,14 +78,29 @@ describe('navigation v2', () => {
     expect(within(nav).getByRole('link', { name: 'Create project' })).toBeInTheDocument();
   });
 
-  it('records visited projects in Recent', async () => {
+  it('keeps recently opened issues off the sidebar (they live on the org page)', async () => {
     mount();
-    renderApp('/o/acme/p/WEB/board');
-    const nav = await screen.findByRole('navigation', { name: 'Global' });
-    expect(await within(nav).findByRole('link', { name: 'WEB' })).toHaveAttribute(
-      'href',
-      '/o/acme/p/WEB/board',
+    localStorage.setItem(
+      `jira.nav.${SESSION.user.id}.acme.recent`,
+      JSON.stringify([{ kind: 'issue', key: 'WEB-4', at: 1 }]),
     );
+    renderApp('/o/acme');
+    const nav = await screen.findByRole('navigation', { name: 'Global' });
+    expect(await within(nav).findByRole('link', { name: /Website/ })).toBeInTheDocument();
+    expect(within(nav).queryByRole('link', { name: 'WEB-4' })).toBeNull();
+    expect(within(nav).queryByText('Recent')).toBeNull();
+  });
+
+  it('hides the Create project shortcut without project.create', async () => {
+    mockApi({
+      'GET /auth/session': () => json(SESSION),
+      'GET /orgs/acme': () => json({ ...ORG, permissions: ['org.view'] }),
+      'GET /orgs/acme/projects': () => json({ items: [] }),
+    });
+    renderApp('/o/acme');
+    const nav = await screen.findByRole('navigation', { name: 'Global' });
+    await within(nav).findByText('Projects');
+    expect(within(nav).queryByRole('link', { name: 'Create project' })).toBeNull();
   });
 
   it('stars a project from its header and lists it under Starred, per user', async () => {
@@ -112,13 +128,14 @@ describe('navigation v2', () => {
     renderApp('/o/acme');
     const user = userEvent.setup();
     const nav = await screen.findByRole('navigation', { name: 'Global' });
-    expect(within(nav).getByText('Recent')).toBeInTheDocument();
+    expect(within(nav).getByText('Starred')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Customize sidebar' }));
     const dialog = await screen.findByRole('dialog', { name: 'Customize sidebar' });
-    await user.click(within(dialog).getByRole('checkbox', { name: 'Recent' }));
+    expect(within(dialog).queryByRole('checkbox', { name: 'Recent' })).toBeNull();
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Starred' }));
     await user.click(within(dialog).getByRole('button', { name: 'Done' }));
     await waitFor(() => {
-      expect(within(nav).queryByText('Recent')).toBeNull();
+      expect(within(nav).queryByText('Starred')).toBeNull();
     });
   });
 

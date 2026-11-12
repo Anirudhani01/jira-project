@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { fetchProjectSecondaryStats } from './fetchProjectSecondaryStats';
+import { fetchProjectMemberCount } from './fetchProjectMemberCount';
 
-export type ProjectCardStats = { issueCount: number; memberCount: number };
+export type ProjectCardStats = { memberCount: number };
 
 const statsKey = (org: string, keys: string[]) =>
   [
@@ -14,7 +14,8 @@ const statsKey = (org: string, keys: string[]) =>
   ] as const;
 
 /**
- * Loads per-project issue/member counts after the project list is shown.
+ * Loads per-project member counts after the project list is shown (issue and done counts
+ * already come with the list).
  * Fetches one project at a time to avoid a parallel request storm.
  */
 export function useProjectCardStats(org: string, keys: string[], enabled: boolean) {
@@ -25,7 +26,7 @@ export function useProjectCardStats(org: string, keys: string[], enabled: boolea
     queryFn: async () => {
       const map = new Map<string, ProjectCardStats>();
       for (const key of keys) {
-        map.set(key, await fetchProjectSecondaryStats(org, key));
+        map.set(key, { memberCount: await fetchProjectMemberCount(org, key) });
       }
       return map;
     },

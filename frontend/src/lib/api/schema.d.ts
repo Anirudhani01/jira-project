@@ -2117,10 +2117,36 @@ export interface components {
             /** Sort Order */
             sort_order: number;
         };
+        /**
+         * ProjectListItem
+         * @description A project in the list, with the issue totals its dashboard card shows.
+         *
+         *     ``issue_count`` counts non-deleted issues: all of a kanban project's, or only those of the
+         *     active sprint for a scrum project (0 while no sprint is active). ``done_count`` is how many
+         *     of them are in a ``done`` status category. ``active_sprint`` is the active sprint's name.
+         */
+        ProjectListItem: {
+            /** Active Sprint */
+            active_sprint: string | null;
+            /** Archived */
+            archived: boolean;
+            /** Board Type */
+            board_type: string;
+            /** Done Count */
+            done_count: number;
+            /** Issue Count */
+            issue_count: number;
+            /** Key */
+            key: string;
+            /** My Role */
+            my_role: string | null;
+            /** Name */
+            name: string;
+        };
         /** ProjectListResponse */
         ProjectListResponse: {
             /** Items */
-            items: components["schemas"]["ProjectSummary"][];
+            items: components["schemas"]["ProjectListItem"][];
         };
         /** ProjectMemberListResponse */
         ProjectMemberListResponse: {

@@ -8,9 +8,9 @@ for (const theme of ['light', 'dark'] as const) {
     const slug = await signUpAndCreateOrg(page, request, 'org-home');
     await page.goto(`/o/${slug}`);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    await expect(page.getByText('Welcome back,')).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Organization sections' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Organization overview' })).toBeVisible();
+    await expect(page.getByLabel('Organization totals')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Recently opened' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Get started' })).toBeVisible();
     await expect(
       page.getByRole('heading', { name: 'Plan, track, and ship great work' }),

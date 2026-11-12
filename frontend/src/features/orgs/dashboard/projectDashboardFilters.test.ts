@@ -3,6 +3,7 @@ import type { ProjectSummary } from '../../../lib/api/types';
 import {
   applyProjectDashboardFilters,
   DEFAULT_PROJECT_DASHBOARD_FILTERS,
+  parseProjectDashboardFilters,
   projectDashboardFiltersActive,
   projectDashboardNonQueryFiltersActive,
 } from './projectDashboardFilters';
@@ -38,6 +39,19 @@ describe('projectDashboardFiltersActive', () => {
         ...DEFAULT_PROJECT_DASHBOARD_FILTERS,
         status: 'archived',
       }),
+    ).toBe(true);
+  });
+});
+
+describe('parseProjectDashboardFilters', () => {
+  it('shows the table by default and the cards only when asked', () => {
+    expect(parseProjectDashboardFilters(new URLSearchParams('')).view).toBe('list');
+    expect(parseProjectDashboardFilters(new URLSearchParams('view=list')).view).toBe('list');
+    expect(parseProjectDashboardFilters(new URLSearchParams('view=grid')).view).toBe('grid');
+    expect(
+      projectDashboardNonQueryFiltersActive(
+        parseProjectDashboardFilters(new URLSearchParams('view=grid')),
+      ),
     ).toBe(true);
   });
 });

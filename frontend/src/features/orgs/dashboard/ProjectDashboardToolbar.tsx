@@ -12,7 +12,7 @@ import type {
 } from './projectDashboardFilters';
 
 const selectClass =
-  'h-9 min-w-0 rounded-lg border border-[var(--org-dash-border)] bg-[var(--org-dash-surface)] px-3 text-sm text-[var(--org-dash-text)] outline-none focus:border-[var(--org-dash-accent)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--org-dash-accent)_20%,transparent)]';
+  'h-9 min-w-0 rounded-lg border border-[var(--control-border)] bg-[var(--org-dash-surface)] px-3 text-sm text-[var(--org-dash-text)] outline-none focus:border-[var(--org-dash-accent)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--org-dash-accent)_20%,transparent)]';
 
 export function ProjectDashboardToolbar({
   filters,

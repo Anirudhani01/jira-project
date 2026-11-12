@@ -12,7 +12,8 @@ import { AdminSystemEmailPage } from './pages/AdminSystemEmailPage';
 import { AdminSystemNotificationsPage } from './pages/AdminSystemNotificationsPage';
 import { AdminShellLayout } from './AdminShellLayout';
 
-/** Canonical and legacy Administration routes under `/o/:org` (shared AdminShellLayout). */
+/** Administration routes under `/o/:org/admin` (shared AdminShellLayout). The dashboard tabs
+ * `/settings`, `/settings/members` and `/settings/audit` live in OrgDashboardLayout instead. */
 export const orgAdminChildRoutes: RouteObject = {
   element: <AdminShellLayout />,
   children: [
@@ -29,8 +30,5 @@ export const orgAdminChildRoutes: RouteObject = {
     { path: 'admin/workflow', element: <AdminWorkflowHubPage /> },
     { path: 'admin/system/notifications', element: <AdminSystemNotificationsPage /> },
     { path: 'admin/system/email', element: <AdminSystemEmailPage /> },
-    { path: 'settings', element: <OrgSettingsPage /> },
-    { path: 'settings/members', element: <OrgMembersPage /> },
-    { path: 'settings/audit', element: <AuditPage /> },
   ],
 };

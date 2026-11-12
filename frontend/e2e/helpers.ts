@@ -111,7 +111,7 @@ export function e2eIdentity(prefix: string) {
 
 /** Issue links include the summary in the accessible name — match by key substring. */
 export function issueLink(page: Page, issueKey: string) {
-  // Scoped to the page content: the sidebar's Recent list can link to the same issue.
+  // Scoped to the page content, so navigation chrome never matches.
   return page.locator('#main').getByRole('link', { name: issueKey, exact: true });
 }
 

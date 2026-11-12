@@ -1,8 +1,8 @@
 import { Link } from 'react-router';
 
-import { Avatar } from '../../../components/ui/Avatar';
 import { Card } from '../../../components/ui/Card';
 import { ErrorState, LoadingState } from '../../../components/ui/States';
+import { cn } from '../../../lib/cn';
 import type { AuditEvent, Member } from '../../../lib/api/types';
 import { useAuditEvents } from '../../audit/api';
 
@@ -15,25 +15,28 @@ const PREVIEW_LIMIT = 5;
 function ActivityRow({
   event,
   membersById,
+  latest,
 }: {
   event: AuditEvent;
   membersById: Map<string, string>;
+  latest: boolean;
 }) {
   const orgFormat = useOrgFormatters();
-  const name = event.actor_user_id
-    ? (membersById.get(event.actor_user_id) ?? 'Team member')
-    : 'System';
   return (
-    <li className="flex gap-3 border-b border-[var(--org-dash-border)] py-3 last:border-0">
-      <Avatar name={name} size="sm" className="shrink-0" />
-      <div className="min-w-0 flex-1">
-        <p className="text-sm leading-snug text-[var(--org-dash-text)]">
-          {describeAuditEvent(event, membersById)}
-        </p>
-        <time className="text-xs text-[var(--org-dash-muted)]" dateTime={event.created_at}>
-          {orgFormat.formatRelativeTime(event.created_at)}
-        </time>
-      </div>
+    <li className="relative pb-5 pl-4 last:pb-0">
+      <span
+        aria-hidden
+        className={cn(
+          'absolute -left-[7px] top-1.5 size-3 rounded-full border-2 border-[var(--org-dash-surface)]',
+          latest ? 'bg-[var(--org-dash-accent)]' : 'bg-fg-subtle',
+        )}
+      />
+      <p className="text-sm leading-snug text-[var(--org-dash-text)]">
+        {describeAuditEvent(event, membersById)}
+      </p>
+      <time className="text-[13px] text-[var(--org-dash-muted)]" dateTime={event.created_at}>
+        {orgFormat.formatRelativeTime(event.created_at)}
+      </time>
     </li>
   );
 }
@@ -59,11 +62,16 @@ function AuditActivityPreview({
         <p className="mt-3 text-sm text-[var(--org-dash-muted)]">No recent activity yet.</p>
       ) : null}
       {items.length > 0 ? (
-        <ul className="mt-1 divide-y divide-[var(--org-dash-border)]">
-          {items.map((event) => (
-            <ActivityRow key={event.id} event={event} membersById={membersById} />
+        <ol className="ml-[5px] mt-4 border-l-2 border-[var(--org-dash-border)]">
+          {items.map((event, index) => (
+            <ActivityRow
+              key={event.id}
+              event={event}
+              membersById={membersById}
+              latest={index === 0}
+            />
           ))}
-        </ul>
+        </ol>
       ) : null}
     </>
   );
@@ -82,8 +90,8 @@ export function OrgRecentActivityCard({
 }) {
   if (!canViewAudit) {
     return (
-      <Card className="org-dash-card p-4">
-        <h2 className="text-sm font-medium text-[var(--org-dash-text)]">Recent activity</h2>
+      <Card className="org-dash-card p-5">
+        <h2 className="text-base font-semibold text-[var(--org-dash-text)]">Activity</h2>
         <p className="mt-2 text-sm text-[var(--org-dash-muted)]">
           Activity is visible to organization owners and admins.
         </p>
@@ -92,12 +100,12 @@ export function OrgRecentActivityCard({
   }
 
   return (
-    <Card className="org-dash-card p-4">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-medium text-[var(--org-dash-text)]">Recent activity</h2>
+    <Card className="org-dash-card p-5">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-base font-semibold text-[var(--org-dash-text)]">Activity</h2>
         <Link
           to={`/o/${orgSlug}/settings/audit`}
-          className="org-dash-link text-xs font-medium no-underline hover:underline"
+          className="org-dash-link text-[13px] font-medium no-underline hover:underline"
         >
           View all
         </Link>

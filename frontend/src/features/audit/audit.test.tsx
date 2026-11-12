@@ -53,15 +53,19 @@ function auditMocks(extra: Record<string, unknown> = {}) {
 }
 
 describe('audit log', () => {
-  it('lists events on legacy and canonical routes with one page heading', async () => {
+  it('lists events on the dashboard tab and the admin route, each with one h1', async () => {
     mockApi({
       ...auditMocks(),
       'GET /orgs/acme/audit-events': () => json({ items: [EVENT], next_cursor: null }),
     });
     const legacy = renderApp('/o/acme/settings/audit');
+    // On the dashboard tab the organization name is the h1 and the page title is an h2.
     expect(
-      await screen.findByRole('heading', { name: 'Audit Logs', level: 1 }),
+      await screen.findByRole('heading', { name: 'Audit Logs', level: 2 }),
     ).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole('navigation', { name: 'Organization sections' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Administration' })).toBeNull();
     expect(await screen.findByRole('cell', { name: 'Alex Admin' })).toBeInTheDocument();
     expect(screen.queryByText('secret-agent')).toBeNull();
     legacy.unmount();
@@ -199,8 +203,9 @@ describe('audit log', () => {
     expect(await screen.findByRole('region', { name: /don't have access/i })).toHaveTextContent(
       /owners and admins/,
     );
+    // The dashboard header reads the member list for its totals; the restricted log itself loads
+    // neither audit events nor anything else.
     expect(calls.some((c) => c.path.includes('/audit-events'))).toBe(false);
-    expect(calls.some((c) => c.path.includes('/members'))).toBe(false);
   });
 
   it('shows an active-filter chip, removes it, and expands row metadata', async () => {

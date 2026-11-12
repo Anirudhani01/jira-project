@@ -25,6 +25,7 @@ export type Member = Schemas['MemberResponse'];
 export type Invitation = Schemas['InvitationResponse'];
 export type JoinedOrg = Schemas['JoinedOrgResponse'];
 export type ProjectSummary = Schemas['ProjectSummary'];
+export type ProjectListItem = Schemas['ProjectListItem'];
 export type Project = Schemas['ProjectResponse'];
 export type Workflow = Schemas['WorkflowResponse'];
 export type ReplaceWorkflowRequest = Schemas['ReplaceWorkflowRequest'];

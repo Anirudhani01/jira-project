@@ -11,89 +11,35 @@ import {
   DropdownMenuTrigger,
 } from '../../../components/ui/Overlay';
 import { cn } from '../../../lib/cn';
-import type { ProjectSummary } from '../../../lib/api/types';
+import type { ProjectListItem } from '../../../lib/api/types';
+import { useStarred } from '../../../app/shell/navPrefs';
 import { useSetArchived } from '../../projects/api';
 
 import type { ProjectCardStats } from './hooks/useProjectCardStats';
 
-function boardTypeLabel(type: ProjectSummary['board_type']) {
+export function boardTypeLabel(type: ProjectListItem['board_type']) {
   return type === 'scrum' ? 'Scrum' : 'Kanban';
 }
 
-function roleLabel(role: string | null | undefined) {
+export function roleLabel(role: string | null | undefined) {
   if (!role) return null;
   return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
-function ProjectStatsLine({
-  stats,
-  pending,
-}: {
-  stats: ProjectCardStats | undefined;
-  pending: boolean;
-}) {
-  if (pending && !stats) {
-    return (
-      <p className="text-xs text-[var(--org-dash-muted)]" aria-busy="true">
-        Loading stats…
-      </p>
-    );
-  }
-  if (!stats) return null;
-  const issues = stats.issueCount === 1 ? '1 issue' : `${stats.issueCount} issues`;
-  const members = stats.memberCount === 1 ? '1 member' : `${stats.memberCount} members`;
-  return (
-    <p className="text-xs tabular-nums text-[var(--org-dash-muted)]">
-      {issues} · {members}
-    </p>
-  );
+export function memberCountLabel(count: number) {
+  return count === 1 ? '1 member' : `${count} members`;
 }
 
-export function ProjectDashboardCard({
-  org,
-  project,
-  description,
-  stats,
-  statsPending = false,
-  view,
-}: {
-  org: string;
-  project: ProjectSummary;
-  description?: string | null;
-  stats?: ProjectCardStats;
-  statsPending?: boolean;
-  view: 'grid' | 'list';
-}) {
+/** The "⋯" menu of a project: open, settings, star and archive. Shared by cards and table rows. */
+export function ProjectActionsMenu({ org, project }: { org: string; project: ProjectListItem }) {
   const boardHref = `/o/${org}/p/${project.key}/board`;
   const settingsHref = `/o/${org}/p/${project.key}`;
-  const label = `${project.key} — ${project.name}`;
   const archive = useSetArchived(org, project.key);
   const canArchive = project.my_role === 'admin';
+  const { isStarred, toggle: toggleStar } = useStarred(org);
+  const starred = isStarred(project.key);
 
-  const meta = (
-    <div className="flex flex-wrap items-center gap-2 text-xs">
-      <span className="org-dash-on-accent-soft rounded-md bg-[var(--org-dash-accent-soft)] px-2 py-0.5 font-medium">
-        {boardTypeLabel(project.board_type)}
-      </span>
-      {project.my_role ? (
-        <span className="rounded-md bg-surface-2 px-2 py-0.5 font-medium text-fg-muted capitalize">
-          {roleLabel(project.my_role)}
-        </span>
-      ) : null}
-      {project.archived ? (
-        <span className="rounded-md bg-warning-soft px-2 py-0.5 font-medium text-warning">
-          Archived
-        </span>
-      ) : (
-        <span className="inline-flex items-center gap-1 text-[var(--org-dash-muted)]">
-          <span className="size-1.5 rounded-full bg-success" aria-hidden />
-          Active
-        </span>
-      )}
-    </div>
-  );
-
-  const menu = (
+  return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <IconButton label={`Actions for ${project.name}`} size="sm" className="shrink-0">
@@ -106,6 +52,13 @@ export function ProjectDashboardCard({
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link to={settingsHref}>Project settings</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => {
+            toggleStar({ key: project.key, name: project.name });
+          }}
+        >
+          {starred ? 'Unstar project' : 'Star project'}
         </DropdownMenuItem>
         {canArchive ? (
           <DropdownMenuItem
@@ -120,38 +73,54 @@ export function ProjectDashboardCard({
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
 
-  if (view === 'list') {
+function ProjectStatsLine({
+  project,
+  stats,
+  pending,
+}: {
+  project: ProjectListItem;
+  stats: ProjectCardStats | undefined;
+  pending: boolean;
+}) {
+  const issues = project.issue_count === 1 ? '1 issue' : `${project.issue_count} issues`;
+  if (!stats && pending) {
     return (
-      <Card className="org-dash-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <Link
-          to={boardHref}
-          className="flex min-w-0 flex-1 items-center gap-3 no-underline outline-none focus-visible:ring-2 focus-visible:ring-[var(--org-dash-accent)]"
-          aria-label={label}
-        >
-          <Avatar name={project.name} size="md" className="shrink-0 rounded-md" />
-          <div className="min-w-0">
-            <p className="truncate font-medium text-[var(--org-dash-text)]">{project.name}</p>
-            <p className="font-mono text-xs text-[var(--org-dash-muted)]">{project.key}</p>
-            {description ? (
-              <p className="mt-1 line-clamp-1 text-sm text-[var(--org-dash-muted)]">
-                {description}
-              </p>
-            ) : null}
-            <ProjectStatsLine stats={stats} pending={statsPending} />
-          </div>
-        </Link>
-        <div className="flex items-center gap-2 sm:justify-end">
-          {meta}
-          {menu}
-        </div>
-      </Card>
+      <p className="text-xs text-[var(--org-dash-muted)]" aria-busy="true">
+        {issues} · …
+      </p>
     );
   }
+  return (
+    <p className="text-xs tabular-nums text-[var(--org-dash-muted)]">
+      {stats ? `${issues} · ${memberCountLabel(stats.memberCount)}` : issues}
+    </p>
+  );
+}
+
+/** Project card of the grid view. */
+export function ProjectDashboardCard({
+  org,
+  project,
+  description,
+  stats,
+  statsPending = false,
+}: {
+  org: string;
+  project: ProjectListItem;
+  description?: string | null;
+  stats?: ProjectCardStats;
+  statsPending?: boolean;
+}) {
+  const boardHref = `/o/${org}/p/${project.key}/board`;
+  const label = `${project.key} — ${project.name}`;
 
   return (
-    <Card className="org-dash-card relative flex h-full flex-col gap-3 p-4">
-      <div className="absolute right-2 top-2">{menu}</div>
+    <Card className="org-dash-card relative flex flex-col gap-3 p-4">
+      <div className="absolute right-2 top-2">
+        <ProjectActionsMenu org={org} project={project} />
+      </div>
       <Link
         to={boardHref}
         className="group flex flex-1 flex-col gap-3 no-underline outline-none focus-visible:ring-2 focus-visible:ring-[var(--org-dash-accent)]"
@@ -171,8 +140,27 @@ export function ProjectDashboardCard({
             {description}
           </p>
         ) : null}
-        <ProjectStatsLine stats={stats} pending={statsPending} />
-        <div className="mt-auto">{meta}</div>
+        <ProjectStatsLine project={project} stats={stats} pending={statsPending} />
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="org-dash-on-accent-soft rounded-md bg-[var(--org-dash-accent-soft)] px-2 py-0.5 font-medium">
+            {boardTypeLabel(project.board_type)}
+          </span>
+          {project.my_role && project.my_role !== 'admin' ? (
+            <span className="rounded-md bg-surface-2 px-2 py-0.5 font-medium text-fg-muted capitalize">
+              {roleLabel(project.my_role)}
+            </span>
+          ) : null}
+          {project.archived ? (
+            <span className="rounded-md bg-warning-soft px-2 py-0.5 font-medium text-warning">
+              Archived
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-[var(--org-dash-muted)]">
+              <span className="size-1.5 rounded-full bg-success" aria-hidden />
+              Active
+            </span>
+          )}
+        </div>
       </Link>
     </Card>
   );

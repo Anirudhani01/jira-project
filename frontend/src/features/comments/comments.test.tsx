@@ -212,6 +212,128 @@ describe('activity timeline', () => {
     expect(texts[3]).toMatch(/changed status/);
   });
 
+  it('shows status changes as coloured chips with an arrow, using the workflow categories', async () => {
+    const status = (id: string, name: string, category: string, position: number) => ({
+      id,
+      name,
+      category,
+      position,
+    });
+    mockApi({
+      ...CONFIG,
+      'GET /orgs/acme/projects/WEB/workflow': () =>
+        json({
+          name: 'Default',
+          revision: 1,
+          initial_status_id: 's-todo',
+          statuses: [
+            status('s-todo', 'To Do', 'todo', 1),
+            status('s-qa', 'QA Blocked', 'in_progress', 2),
+            status('s-done', 'Done', 'done', 3),
+          ],
+          transitions: [],
+          columns: [],
+        }),
+      'GET /orgs/acme/issues/WEB-1/activity': () =>
+        json({
+          items: [
+            {
+              ...activityEntry(1, '2026-10-28T00:30:00Z', { action: 'transitioned' }),
+              old_value: { id: 's-todo', name: 'To Do' },
+              new_value: { id: 's-qa', name: 'QA Blocked' },
+            },
+            {
+              ...activityEntry(2, '2026-10-28T01:30:00Z', { action: 'transitioned' }),
+              old_value: { id: 's-qa', name: 'QA Blocked' },
+              new_value: { id: 's-done', name: 'Done' },
+            },
+            {
+              ...activityEntry(3, '2026-10-28T02:30:00Z', { action: 'transitioned' }),
+              old_value: null,
+              new_value: { id: 's-todo', name: 'To Do' },
+            },
+          ],
+          next_cursor: null,
+        }),
+      'GET /orgs/acme/issues/WEB-1/comments': () => json({ items: [], next_cursor: null }),
+    });
+    renderApp('/o/acme/issues/WEB-1');
+    const rows = await screen.findAllByRole('listitem');
+    expect(rows).toHaveLength(3);
+    // Readable as a sentence, drawn as chip → chip.
+    expect(rows[0]).toHaveTextContent('changed status from To Do to QA Blocked');
+    expect(rows[1]).toHaveTextContent('changed status from QA Blocked to Done');
+    expect(rows[2]).toHaveTextContent('changed status to To Do');
+    const todo = within(rows[0] as HTMLElement).getByText('To Do');
+    expect(todo.className).toContain('--status-todo-soft');
+    // A custom status takes its colour from the workflow category (in progress).
+    await waitFor(() => {
+      expect(within(rows[0] as HTMLElement).getByText('QA Blocked').className).toContain(
+        '--status-in-progress-soft',
+      );
+    });
+    expect(within(rows[1] as HTMLElement).getByText('Done').className).toContain(
+      '--status-done-soft',
+    );
+  });
+
+  it('colours the sprint and the issue type in activity entries', async () => {
+    mockApi({
+      ...CONFIG,
+      'GET /orgs/acme/issues/WEB-1/activity': () =>
+        json({
+          items: [
+            {
+              ...activityEntry(1, '2026-10-28T00:30:00Z', { action: 'created', field: null }),
+              old_value: null,
+              new_value: { type: { id: 't-task', name: 'Task' } },
+            },
+            {
+              ...activityEntry(2, '2026-10-28T01:30:00Z', {
+                action: 'sprint_changed',
+                field: 'sprint',
+              }),
+              old_value: null,
+              new_value: { id: 'sp1', name: 'Sprint 1' },
+            },
+            {
+              ...activityEntry(3, '2026-10-28T02:30:00Z', {
+                action: 'sprint_changed',
+                field: 'sprint',
+              }),
+              old_value: { id: 'sp1', name: 'Sprint 1' },
+              new_value: { id: 'sp2', name: 'Sprint 2' },
+            },
+            {
+              ...activityEntry(4, '2026-10-28T03:30:00Z', {
+                action: 'sprint_changed',
+                field: 'sprint',
+              }),
+              old_value: { id: 'sp2', name: 'Sprint 2' },
+              new_value: null,
+            },
+          ],
+          next_cursor: null,
+        }),
+      'GET /orgs/acme/issues/WEB-1/comments': () => json({ items: [], next_cursor: null }),
+    });
+    renderApp('/o/acme/issues/WEB-1');
+    const rows = await screen.findAllByRole('listitem');
+    expect(rows).toHaveLength(4);
+    expect(rows[0]).toHaveTextContent('created this issue Task');
+    expect(within(rows[0] as HTMLElement).getByRole('img', { name: 'Task' })).toBeInTheDocument();
+    expect(rows[1]).toHaveTextContent('added to Sprint 1');
+    expect(rows[2]).toHaveTextContent('moved from Sprint 1 to Sprint 2');
+    expect(rows[3]).toHaveTextContent('removed from Sprint 2');
+    // Sprint names are accent chips.
+    expect(within(rows[1] as HTMLElement).getByText('Sprint 1').className).toContain(
+      'bg-accent-soft',
+    );
+    expect(within(rows[2] as HTMLElement).getByText('Sprint 2').className).toContain(
+      'bg-accent-soft',
+    );
+  });
+
   it('breaks an exact-timestamp tie by rendering the activity entry before the comment', async () => {
     const SAME = '2026-10-28T01:00:00Z';
     mockApi({

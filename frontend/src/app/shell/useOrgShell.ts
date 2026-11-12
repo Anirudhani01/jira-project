@@ -17,9 +17,15 @@ export function useShowOrgSidebar(): boolean {
   return inOrg && !inProject && !inAdmin;
 }
 
-/** Organization home dashboard at `/o/:org` (scoped blue shell in M1+). */
+/** The organization dashboard: `/o/:org` and its tabs (Members, Audit log, Settings) that open in
+ * place under the same header. */
 export function useOrgDashboardHome(): boolean {
-  return useMatch({ path: '/o/:org', end: true }) !== null;
+  const org = useMatch('/o/:org/*');
+  if (!org) return false;
+  const rest = (org.params['*'] ?? '').replace(/\/$/, '');
+  return (
+    rest === '' || rest === 'settings' || rest === 'settings/members' || rest === 'settings/audit'
+  );
 }
 
 /** Global left navigation: everywhere inside an organization except Administration, which has

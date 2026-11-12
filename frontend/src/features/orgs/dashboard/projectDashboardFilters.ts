@@ -18,7 +18,7 @@ export const DEFAULT_PROJECT_DASHBOARD_FILTERS: ProjectDashboardFilters = {
   boardType: 'all',
   status: 'active',
   sort: 'name-asc',
-  view: 'grid',
+  view: 'list', // the table; 'grid' shows project cards
 };
 
 export function parseProjectDashboardFilters(params: URLSearchParams): ProjectDashboardFilters {
@@ -36,7 +36,7 @@ export function parseProjectDashboardFilters(params: URLSearchParams): ProjectDa
       status === 'archived' || status === 'all' ? status : DEFAULT_PROJECT_DASHBOARD_FILTERS.status,
     sort:
       sort === 'name-desc' || sort === 'key-asc' ? sort : DEFAULT_PROJECT_DASHBOARD_FILTERS.sort,
-    view: view === 'list' ? 'list' : DEFAULT_PROJECT_DASHBOARD_FILTERS.view,
+    view: view === 'grid' ? 'grid' : DEFAULT_PROJECT_DASHBOARD_FILTERS.view,
   };
 }
 
@@ -59,10 +59,10 @@ export function projectDashboardNonQueryFiltersActive(filters: ProjectDashboardF
   );
 }
 
-export function applyProjectDashboardFilters(
-  projects: ProjectSummary[],
+export function applyProjectDashboardFilters<T extends ProjectSummary>(
+  projects: T[],
   filters: ProjectDashboardFilters,
-): ProjectSummary[] {
+): T[] {
   const q = filters.q.trim().toLowerCase();
   let items = projects.filter((p) => {
     if (filters.status === 'active' && p.archived) return false;
