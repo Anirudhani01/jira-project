@@ -564,7 +564,7 @@ body:has(.board-shell) {
 .avatar {
   --avatar-base: hsl(var(--avatar-hue, 215) 62% 48%);
   background: color-mix(in srgb, var(--avatar-base) 16%, var(--surface));
-  color: color-mix(in srgb, var(--avatar-base) 72%, var(--fg));
+  color: color-mix(in srgb, var(--avatar-base) 35%, var(--fg));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--avatar-base) 26%, var(--line));
 }
 

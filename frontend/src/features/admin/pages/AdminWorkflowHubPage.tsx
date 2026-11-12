@@ -13,7 +13,7 @@ import { ProjectWorkflowSection } from '../../projects/ProjectWorkflowSection';
 import { AdminOrgManagePageFrame } from './AdminOrgManagePageFrame';
 
 const HUB_DESCRIPTION =
-  'Each project has its own workflow. Expand a project to see its statuses, transitions and board columns, and edit them from the project settings.';
+  'Each project has its own workflow, cloned from the default workflow when the project was created. Expand a project to see its statuses, transitions and board columns, and edit them from the project settings.';
 
 function formatBoardType(boardType: string): string {
   return boardType === 'scrum' ? 'Scrum' : 'Kanban';
