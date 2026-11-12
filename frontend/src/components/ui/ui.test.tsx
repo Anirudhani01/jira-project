@@ -63,6 +63,9 @@ describe('Avatar', () => {
     expect(initials('Ann Example')).toBe('AE');
     expect(initials('  bob ')).toBe('B');
     expect(initials('')).toBe('?');
+    expect(initials('Mobile (Scrum)')).toBe('MS');
+    expect(initials('(Scrum)')).toBe('S');
+    expect(initials('— —')).toBe('?');
     render(<Avatar name="Ann Example" />);
     expect(screen.getByText('Ann Example')).toBeInTheDocument();
   });

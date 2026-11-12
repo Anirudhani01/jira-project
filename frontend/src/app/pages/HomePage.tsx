@@ -13,10 +13,10 @@ export function HomePage() {
   }
   return (
     <section aria-labelledby="home-title" className="space-y-2">
-      <h1 id="home-title" className="text-2xl font-semibold">
+      <h1 id="home-title" className="text-2xl font-medium">
         Welcome
       </h1>
-      <p className="text-slate-600">
+      <p className="text-fg-muted">
         Sign in to see your organizations. Projects, issues and boards arrive in later milestones.
       </p>
     </section>

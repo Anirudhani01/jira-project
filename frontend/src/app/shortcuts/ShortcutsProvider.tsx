@@ -276,7 +276,7 @@ export function ShortcutsProvider({ children }: { children: ReactNode }) {
       {awaitingGo ? (
         <p
           role="status"
-          className="fixed bottom-4 left-4 z-50 rounded-md bg-fg px-3 py-1.5 text-sm text-bg shadow-lg"
+          className="fixed bottom-4 left-4 z-50 rounded-md bg-fg px-3 py-2 text-sm text-bg shadow-lg"
         >
           Go to: H for you, B board, L backlog, I issues
         </p>

@@ -100,7 +100,7 @@ function buildPartialPatch(
 function EffectiveSummary({ settings }: { settings: ProjectSettings }) {
   return (
     <div className="space-y-1">
-      <h3 className="text-sm font-semibold text-fg">Effective for this project</h3>
+      <h3 className="text-sm font-medium text-fg">Effective for this project</h3>
       <p className="text-sm text-fg">
         {formatEnabledLabel(settings.effective.story_points_enabled)} · maximum{' '}
         {settings.effective.story_points_max}
@@ -130,7 +130,7 @@ function ReadOnlyEstimates({
     <div className="space-y-4 text-sm">
       <EffectiveSummary settings={settings} />
       <div>
-        <h3 className="font-semibold text-fg">Organization defaults</h3>
+        <h3 className="font-medium text-fg">Organization defaults</h3>
         <p className="mt-1 text-fg-muted">
           {formatEnabledLabel(orgEnabled)} · maximum {orgMax}
         </p>
@@ -236,7 +236,7 @@ function EstimatesForm({
     <form onSubmit={(e) => void onSubmit(e)} noValidate className="max-w-lg space-y-5">
       <EffectiveSummary settings={settings} />
       <div className="text-sm">
-        <h3 className="font-semibold text-fg">Organization defaults</h3>
+        <h3 className="font-medium text-fg">Organization defaults</h3>
         <p className="mt-1 text-fg-muted">
           {formatEnabledLabel(orgEnabled)} · maximum {orgMax}
         </p>
@@ -371,7 +371,7 @@ export function ProjectEstimatesSection({
     const conflictError = projectSettings.error;
     return (
       <Card className="space-y-4 p-5 sm:p-6">
-        <h2 className="text-lg font-semibold text-fg">Estimates</h2>
+        <h2 className="text-lg font-medium text-fg">Estimates</h2>
         <p className="text-sm text-fg-muted">
           Project override data could not be loaded because it conflicts with organization settings.
           Resolve the conflict below using organization policy as the source of truth.
@@ -398,7 +398,7 @@ export function ProjectEstimatesSection({
 
   return (
     <Card className="space-y-4 p-5 sm:p-6">
-      <h2 className="text-lg font-semibold text-fg">Estimates</h2>
+      <h2 className="text-lg font-medium text-fg">Estimates</h2>
       <p className="text-sm text-fg-muted">
         Story point limits for this project. Organization defaults apply unless you set overrides
         below.

@@ -1,10 +1,13 @@
-import { FolderKanban, UserPlus, ListTodo } from 'lucide-react';
+import { ChevronRight, FolderKanban, ListTodo, UserPlus } from 'lucide-react';
 import { Link } from 'react-router';
 
 import { Card } from '../../../components/ui/Card';
 import { cn } from '../../../lib/cn';
 
-function GetStartedCard({
+const ROW =
+  'flex items-center gap-3 px-4 py-3 text-left no-underline outline-none focus-visible:bg-[var(--surface-hover)]';
+
+function Step({
   icon: Icon,
   title,
   description,
@@ -19,48 +22,41 @@ function GetStartedCard({
   disabled?: boolean;
   disabledReason?: string;
 }) {
-  const body = (
-    <Card
-      className={cn(
-        'org-dash-card flex h-full flex-col gap-3 p-4 transition-colors',
-        !disabled && 'hover:border-[var(--org-dash-accent)]',
-      )}
-    >
-      <span className="org-dash-on-accent-soft flex size-10 items-center justify-center rounded-lg bg-[var(--org-dash-accent-soft)]">
-        <Icon className="size-5" aria-hidden />
+  const content = (
+    <>
+      <Icon className="size-4 shrink-0 text-[var(--org-dash-muted)]" aria-hidden />
+      <span className="min-w-0 flex-1">
+        <h3
+          className={cn(
+            'text-sm font-medium',
+            disabled ? 'text-[var(--org-dash-muted)]' : 'text-[var(--org-dash-text)]',
+          )}
+        >
+          {title}
+        </h3>
+        <p className="text-sm text-[var(--org-dash-muted)]">{description}</p>
       </span>
-      <div>
-        <h3 className="text-sm font-semibold text-[var(--org-dash-text)]">{title}</h3>
-        <p className="mt-1 text-sm leading-relaxed text-[var(--org-dash-muted)]">{description}</p>
-      </div>
-    </Card>
+      {disabled ? null : (
+        <ChevronRight className="size-4 shrink-0 text-[var(--org-dash-muted)]" aria-hidden />
+      )}
+    </>
   );
 
   if (disabled) {
     return (
-      <div className="h-full cursor-not-allowed" title={disabledReason} aria-disabled="true">
-        <Card className="org-dash-card flex h-full flex-col gap-3 p-4 opacity-90">
-          <span className="org-dash-on-accent-soft flex size-10 items-center justify-center rounded-lg bg-[var(--org-dash-accent-soft)]">
-            <Icon className="size-5" aria-hidden />
-          </span>
-          <div>
-            <h3 className="text-sm font-semibold text-[var(--org-dash-muted)]">{title}</h3>
-            <p className="mt-1 text-sm leading-relaxed text-[var(--org-dash-muted)]">
-              {description}
-            </p>
-          </div>
-        </Card>
-      </div>
+      <li>
+        <div className={cn(ROW, 'cursor-not-allowed')} title={disabledReason} aria-disabled="true">
+          {content}
+        </div>
+      </li>
     );
   }
-
   return (
-    <Link
-      to={to}
-      className="block h-full no-underline outline-none focus-visible:ring-2 focus-visible:ring-[var(--org-dash-accent)]"
-    >
-      {body}
-    </Link>
+    <li>
+      <Link to={to} className={cn(ROW, 'transition-colors hover:bg-[var(--surface-hover)]')}>
+        {content}
+      </Link>
+    </li>
   );
 }
 
@@ -80,34 +76,36 @@ export function OrgGetStartedSection({
     : `/o/${orgSlug}/projects/new`;
 
   return (
-    <section aria-labelledby="get-started-title" className="space-y-4">
-      <h2 id="get-started-title" className="text-base font-semibold text-[var(--org-dash-text)]">
+    <section aria-labelledby="get-started-title" className="space-y-3">
+      <h2 id="get-started-title" className="text-base font-medium text-[var(--org-dash-text)]">
         Get started
       </h2>
-      <div className="grid gap-4 md:grid-cols-3">
-        <GetStartedCard
-          icon={FolderKanban}
-          title="Create a project"
-          description="Start by creating a project for your team."
-          to={`/o/${orgSlug}/projects/new`}
-          disabled={!canCreateProject}
-          disabledReason="You do not have permission to create projects"
-        />
-        <GetStartedCard
-          icon={UserPlus}
-          title="Invite your team"
-          description="Add team members and set up roles."
-          to={`/o/${orgSlug}/settings/members`}
-          disabled={!canInviteMembers}
-          disabledReason="You do not have permission to invite members"
-        />
-        <GetStartedCard
-          icon={ListTodo}
-          title="Track work"
-          description="Create issues and start tracking progress."
-          to={trackHref}
-        />
-      </div>
+      <Card className="org-dash-card overflow-hidden">
+        <ul className="divide-y divide-[var(--org-dash-border)]">
+          <Step
+            icon={FolderKanban}
+            title="Create a project"
+            description="Start by creating a project for your team"
+            to={`/o/${orgSlug}/projects/new`}
+            disabled={!canCreateProject}
+            disabledReason="You do not have permission to create projects"
+          />
+          <Step
+            icon={UserPlus}
+            title="Invite your team"
+            description="Add team members and set up roles"
+            to={`/o/${orgSlug}/settings/members`}
+            disabled={!canInviteMembers}
+            disabledReason="You do not have permission to invite members"
+          />
+          <Step
+            icon={ListTodo}
+            title="Track work"
+            description="Create issues and start tracking progress"
+            to={trackHref}
+          />
+        </ul>
+      </Card>
     </section>
   );
 }

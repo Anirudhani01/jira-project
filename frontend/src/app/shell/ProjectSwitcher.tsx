@@ -1,4 +1,4 @@
-import { ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 
 import { Avatar } from '../../components/ui/Avatar';
@@ -54,7 +54,12 @@ export function ProjectSwitcher() {
           >
             <span className="font-mono text-xs text-fg-muted">{project.key}</span>
             <span className="truncate">{project.name}</span>
-            {currentKey === project.key.toUpperCase() ? ' ✓' : ''}
+            {currentKey === project.key.toUpperCase() ? (
+              <Check
+                className="ml-auto size-4 shrink-0 text-fg-muted"
+                aria-label="Current project"
+              />
+            ) : null}
           </DropdownMenuItem>
         ))}
         {projects.isSuccess && items.length === 0 ? (

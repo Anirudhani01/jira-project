@@ -34,7 +34,11 @@ M3_PATHS = {
     "/api/v1/orgs/{org_slug}",
     "/api/v1/orgs/{org_slug}/settings",
     "/api/v1/orgs/{org_slug}/issue-types",
+    "/api/v1/orgs/{org_slug}/issue-types/order",
+    "/api/v1/orgs/{org_slug}/issue-types/{type_id}",
     "/api/v1/orgs/{org_slug}/priorities",
+    "/api/v1/orgs/{org_slug}/priorities/order",
+    "/api/v1/orgs/{org_slug}/priorities/{priority_id}",
     "/api/v1/orgs/{org_slug}/audit-events",
     "/api/v1/orgs/{org_slug}/authentication-activity",
 }
@@ -76,6 +80,7 @@ M9_PATHS = {
     "/api/v1/orgs/{org_slug}/projects/{project_key}/board",
     "/api/v1/orgs/{org_slug}/projects/{project_key}/board/columns",
     "/api/v1/orgs/{org_slug}/issues/{issue_key}/move",
+    "/api/v1/orgs/{org_slug}/issues/{issue_key}/relocate",
 }
 
 M10_PATHS = {

@@ -18,16 +18,15 @@ function useDataGridColumns(): string {
   return template;
 }
 
-const HEAD_CELL =
-  'flex items-center px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-fg-muted sm:px-6';
-const BODY_CELL = 'flex min-w-0 items-center justify-start px-5 py-4 sm:px-6 sm:py-5';
+const HEAD_CELL = 'flex items-center px-4 py-2 text-left text-xs font-medium text-fg-muted';
+const BODY_CELL = 'flex min-h-12 min-w-0 items-center justify-start px-4 py-2';
 
 export function dataGridEqualColumnsTemplate(columnCount: number): string {
   return `repeat(${columnCount}, minmax(0, 1fr))`;
 }
 
-/** Vertical dividers between equal-width columns (`last:border-r-0` on the final cell). */
-export const dataGridDividedCellClass = 'border-r border-line last:border-r-0';
+/** Rows are separated by hairlines only; vertical dividers between cells read as a spreadsheet. */
+export const dataGridDividedCellClass = '';
 
 /** Scrollable bordered shell for a grid-based table. */
 export function DataGrid({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {

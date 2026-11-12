@@ -396,11 +396,46 @@ export interface paths {
         /** List Issue Types */
         get: operations["list_issue_types_api_v1_orgs__org_slug__issue_types_get"];
         put?: never;
+        /** Create Issue Type */
+        post: operations["create_issue_type_api_v1_orgs__org_slug__issue_types_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/issue-types/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Reorder Issue Types */
+        put: operations["reorder_issue_types_api_v1_orgs__org_slug__issue_types_order_put"];
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/issue-types/{type_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Issue Type */
+        patch: operations["update_issue_type_api_v1_orgs__org_slug__issue_types__type_id__patch"];
         trace?: never;
     };
     "/api/v1/orgs/{org_slug}/issues": {
@@ -540,6 +575,27 @@ export interface paths {
          * @description Board move: status change (needs ``If-Match``) and/or reorder (does not).
          */
         post: operations["move_issue_api_v1_orgs__org_slug__issues__issue_key__move_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/issues/{issue_key}/relocate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Relocate Issue
+         * @description Move the issue to another project. Requires ``If-Match: "v<version>"`` (428/412).
+         *     The old key keeps resolving to the issue.
+         */
+        post: operations["relocate_issue_api_v1_orgs__org_slug__issues__issue_key__relocate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -687,11 +743,46 @@ export interface paths {
         /** List Priorities */
         get: operations["list_priorities_api_v1_orgs__org_slug__priorities_get"];
         put?: never;
+        /** Create Priority */
+        post: operations["create_priority_api_v1_orgs__org_slug__priorities_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/priorities/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Reorder Priorities */
+        put: operations["reorder_priorities_api_v1_orgs__org_slug__priorities_order_put"];
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/priorities/{priority_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Priority */
+        patch: operations["update_priority_api_v1_orgs__org_slug__priorities__priority_id__patch"];
         trace?: never;
     };
     "/api/v1/orgs/{org_slug}/projects": {
@@ -1595,6 +1686,16 @@ export interface components {
              */
             type_id: string;
         };
+        /** CreateIssueTypeRequest */
+        CreateIssueTypeRequest: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "epic" | "standard" | "subtask";
+            /** Name */
+            name: string;
+        };
         /** CreateLabelRequest */
         CreateLabelRequest: {
             /** Color */
@@ -1608,6 +1709,13 @@ export interface components {
             name: string;
             /** Slug */
             slug: string;
+        };
+        /** CreatePriorityRequest */
+        CreatePriorityRequest: {
+            /** Color */
+            color: string;
+            /** Name */
+            name: string;
         };
         /** CreateProjectRequest */
         CreateProjectRequest: {
@@ -1769,6 +1877,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Is Active */
+            is_active: boolean;
             /** Kind */
             kind: string;
             /** Name */
@@ -2000,6 +2110,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Is Active */
+            is_active: boolean;
             /** Name */
             name: string;
             /** Sort Order */
@@ -2123,6 +2235,28 @@ export interface components {
             /** Moved Issues */
             moved_issues: number;
             version: components["schemas"]["VersionResponse"];
+        };
+        /**
+         * RelocateIssueRequest
+         * @description Move one issue to another project of the same organization. ``target_status_id`` picks
+         *     the status in the target workflow; without it the status is matched by name, then by
+         *     category, then the target's initial status.
+         */
+        RelocateIssueRequest: {
+            /** Target Project Key */
+            target_project_key: string;
+            /** Target Status Id */
+            target_status_id?: string | null;
+        };
+        /** ReorderIssueTypesRequest */
+        ReorderIssueTypesRequest: {
+            /** Ids */
+            ids: string[];
+        };
+        /** ReorderPrioritiesRequest */
+        ReorderPrioritiesRequest: {
+            /** Ids */
+            ids: string[];
         };
         /** ReorderVersionsRequest */
         ReorderVersionsRequest: {
@@ -2459,6 +2593,13 @@ export interface components {
             /** Type Id */
             type_id?: string | null;
         };
+        /** UpdateIssueTypeRequest */
+        UpdateIssueTypeRequest: {
+            /** Is Active */
+            is_active?: boolean | null;
+            /** Name */
+            name?: string | null;
+        };
         /** UpdateMemberRequest */
         UpdateMemberRequest: {
             /** Can Create Projects */
@@ -2484,6 +2625,15 @@ export interface components {
             /** Timezone */
             timezone?: string | null;
         };
+        /** UpdatePriorityRequest */
+        UpdatePriorityRequest: {
+            /** Color */
+            color?: string | null;
+            /** Is Active */
+            is_active?: boolean | null;
+            /** Name */
+            name?: string | null;
+        };
         /** UpdateProfileRequest */
         UpdateProfileRequest: {
             /** Display Name */
@@ -2502,7 +2652,7 @@ export interface components {
             /** Description */
             description?: string | null;
             /** Key */
-            readonly key?: unknown;
+            key?: string | null;
             /** Name */
             name?: string | null;
         };
@@ -3407,6 +3557,112 @@ export interface operations {
             };
         };
     };
+    create_issue_type_api_v1_orgs__org_slug__issue_types_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateIssueTypeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueTypeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reorder_issue_types_api_v1_orgs__org_slug__issue_types_order_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderIssueTypesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueTypeListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_issue_type_api_v1_orgs__org_slug__issue_types__type_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                type_id: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateIssueTypeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueTypeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_issues_api_v1_orgs__org_slug__issues_get: {
         parameters: {
             query?: {
@@ -3765,6 +4021,44 @@ export interface operations {
             };
         };
     };
+    relocate_issue_api_v1_orgs__org_slug__issues__issue_key__relocate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
+            path: {
+                issue_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RelocateIssueRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_transitions_api_v1_orgs__org_slug__issues__issue_key__transitions_get: {
         parameters: {
             query?: never;
@@ -4075,6 +4369,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PriorityListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_priority_api_v1_orgs__org_slug__priorities_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePriorityRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriorityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reorder_priorities_api_v1_orgs__org_slug__priorities_order_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderPrioritiesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriorityListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_priority_api_v1_orgs__org_slug__priorities__priority_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                priority_id: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePriorityRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriorityResponse"];
                 };
             };
             /** @description Validation Error */

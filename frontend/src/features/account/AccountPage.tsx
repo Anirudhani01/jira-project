@@ -66,7 +66,7 @@ function ProfileForm({ displayName, email }: { displayName: string; email: strin
   });
   return (
     <Card className="space-y-4 p-6">
-      <h2 id="profile-title" className="text-lg font-semibold text-fg">
+      <h2 id="profile-title" className="text-lg font-medium text-fg">
         Profile
       </h2>
       <p className="text-sm text-fg-muted">Signed in as {email}</p>
@@ -116,7 +116,7 @@ function PasswordForm() {
   });
   return (
     <Card className="space-y-4 p-6">
-      <h2 id="password-title" className="text-lg font-semibold text-fg">
+      <h2 id="password-title" className="text-lg font-medium text-fg">
         Change password
       </h2>
       <p className="text-sm text-fg-muted">
@@ -208,7 +208,7 @@ function SessionsSection() {
   const hasOthers = sessions.data.items.some((s) => !s.current);
   return (
     <Card className="space-y-3 p-6">
-      <h2 id="sessions-title" className="text-lg font-semibold text-fg">
+      <h2 id="sessions-title" className="text-lg font-medium text-fg">
         Active sessions
       </h2>
       <ul className="divide-y divide-line" aria-labelledby="sessions-title">

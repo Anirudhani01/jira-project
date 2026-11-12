@@ -2,7 +2,7 @@ import { cn } from '../../lib/cn';
 
 /** Shared lozenge chrome (matches Badge defaults). */
 export const STATUS_LOZENGE_BASE =
-  'inline-flex items-center gap-1 rounded-sm px-1.5 text-[11px] font-semibold uppercase tracking-wide leading-5 whitespace-nowrap';
+  'inline-flex items-center gap-1 rounded-sm px-2 text-xs font-medium leading-5 whitespace-nowrap';
 
 /** Soft fill + high-contrast label (WCAG AA on 11px lozenges in light theme). */
 const BY_NAME: Record<string, string> = {

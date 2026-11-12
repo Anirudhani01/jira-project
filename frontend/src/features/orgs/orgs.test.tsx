@@ -92,7 +92,10 @@ describe('OrgHomePage', () => {
     });
     renderApp('/o/acme');
     expect(await screen.findByRole('heading', { level: 1, name: 'Acme' })).toBeInTheDocument();
-    expect(screen.getByText('Welcome back,')).toBeInTheDocument();
+    expect(
+      screen.getByText('Projects, members and recent activity for this organization'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Welcome back,')).not.toBeInTheDocument();
     const tabs = screen.getByRole('navigation', { name: 'Organization sections' });
     expect(tabs).toBeInTheDocument();
     expect(tabs.querySelector('a[aria-current="page"]')).toHaveTextContent('Projects');

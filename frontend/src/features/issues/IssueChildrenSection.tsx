@@ -26,7 +26,7 @@ export function IssueChildrenSection({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
-        <h2 id="children-title" className="text-base font-semibold text-fg">
+        <h2 id="children-title" className="text-base font-medium text-fg">
           Child work items
         </h2>
         <p className="text-sm text-fg-muted">

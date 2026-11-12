@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { Button } from '../../components/ui/Button';
 import { Dialog, DialogContent } from '../../components/ui/Overlay';
@@ -7,6 +7,7 @@ import type { BulkResult } from '../../lib/api/types';
 import { createFeedbackInvocationId, showSuccessToast } from '../../lib/ux/mutationFeedback';
 import { mutationErrorMessage } from '../../lib/ux/permissionDenied';
 import { usePriorities } from '../issues/api';
+import { activeCatalogEntries } from '../issues/catalogUtils';
 import { useProjectMembers } from '../projects/api';
 
 import type { MoveTarget } from './BacklogRow';
@@ -43,6 +44,10 @@ export function BulkBar({
   const toast = useToast();
   const members = useProjectMembers(org, project);
   const priorities = usePriorities(org);
+  const activePriorities = useMemo(
+    () => activeCatalogEntries(priorities.data ?? []),
+    [priorities.data],
+  );
   const epics = useEpics(org, project, false);
   const versions = useVersions(org, project, false);
   const can = (permission: string) => permissions.includes(permission);
@@ -72,7 +77,7 @@ export function BulkBar({
             ...(members.data ?? []).map((m) => ({ value: m.user_id, label: m.display_name })),
           ]
         : kind === 'priority'
-          ? (priorities.data ?? []).map((p) => ({ value: p.id, label: p.name }))
+          ? activePriorities.map((p) => ({ value: p.id, label: p.name }))
           : kind === 'epic'
             ? [
                 { value: NONE_VALUE, label: 'No epic' },

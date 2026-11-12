@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Badge } from '../../components/ui/Badge';
 import type { AuditEvent, Member } from '../../lib/api/types';
 
+import { auditTargetDetail } from '../orgs/dashboard/formatAuditActivity';
 import { useOrgFormatters } from '../orgs/useOrgFormatters';
 
 import { formatAuditActor } from './auditActorLabel';
@@ -20,27 +21,28 @@ export function AuditEventRow({
   const orgFormat = useOrgFormatters();
   const [open, setOpen] = useState(false);
   const entries = Object.entries(event.metadata);
+  // A name a person would recognise (key, name, slug); a raw UUID is never shown.
   const targetText = event.target_type
-    ? `${event.target_type} ${event.target_id ?? ''}`.trim()
+    ? `${event.target_type} ${auditTargetDetail(event) ?? ''}`.trim()
     : null;
 
   return (
     <>
-      <tr className="border-b border-[var(--admin-border)] align-top">
-        <td className="py-2 pr-3 whitespace-nowrap text-[var(--admin-muted)]">
+      <tr className="border-b border-[var(--admin-border)] align-middle">
+        <td className="py-3 pr-3 whitespace-nowrap text-[var(--admin-muted)]">
           <time dateTime={event.created_at}>{orgFormat.formatDateTime(event.created_at)}</time>
         </td>
-        <td className="pr-3 text-[var(--admin-text)]">
+        <td className="py-3 pr-3 whitespace-nowrap text-[var(--admin-text)]">
           {formatAuditActor(event.actor_user_id, memberById, membersLoaded)}
         </td>
-        <td className="pr-3 font-mono text-[var(--admin-text)]">{event.action}</td>
-        <td className="pr-3">
+        <td className="py-3 pr-3 font-mono text-[var(--admin-text)]">{event.action}</td>
+        <td className="py-3 pr-3">
           <Badge tone={event.outcome === 'success' ? 'success' : 'danger'}>{event.outcome}</Badge>
         </td>
-        <td className="hidden max-w-[10rem] pr-3 break-words text-[var(--admin-text)] sm:table-cell sm:max-w-none">
+        <td className="hidden max-w-[10rem] py-3 pr-3 break-words text-[var(--admin-text)] sm:table-cell sm:max-w-none">
           {targetText ?? '—'}
         </td>
-        <td className="max-w-[14rem] font-mono text-xs break-all text-[var(--admin-muted)] sm:max-w-md">
+        <td className="max-w-[14rem] py-3 font-mono text-xs break-words text-[var(--admin-muted)] sm:max-w-md">
           {entries.length === 0 ? (
             '—'
           ) : (

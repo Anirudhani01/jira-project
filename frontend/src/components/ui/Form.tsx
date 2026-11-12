@@ -74,7 +74,7 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
 
     return (
       <div className="space-y-1">
-        <label htmlFor={inputId} className="block text-[13px] font-medium text-fg">
+        <label htmlFor={inputId} className="block text-sm font-medium text-fg">
           {label}
         </label>
         <div className="relative">

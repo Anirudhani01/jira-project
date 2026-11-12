@@ -39,7 +39,7 @@ export function ProjectMembersSection({
   return (
     <Card className="space-y-4 p-5 sm:p-6" aria-labelledby="project-members-title">
       <div>
-        <h2 id="project-members-title" className="text-lg font-semibold text-fg">
+        <h2 id="project-members-title" className="text-lg font-medium text-fg">
           Members
         </h2>
         <p className="mt-1 text-sm text-fg-muted">People who can access this project.</p>

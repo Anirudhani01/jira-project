@@ -62,9 +62,8 @@ export function BoardQuickFilters({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-3 rounded-lg border border-line bg-surface p-4 sm:p-5',
-        boardChrome &&
-          'board-filter-toolbar gap-2 border-[var(--board-border)] bg-[var(--board-surface)] p-3 sm:gap-3 sm:p-4',
+        'flex flex-wrap items-center gap-3',
+        boardChrome && 'board-filter-toolbar gap-2 sm:gap-3',
       )}
     >
       <div
@@ -157,7 +156,7 @@ export function BoardQuickFilters({
       {meta.types.length > 0 ? (
         <label
           className={cn(
-            'flex items-center gap-1.5 text-sm text-fg-muted',
+            'flex items-center gap-2 text-sm text-fg-muted',
             boardChrome && 'board-filter-pill text-[var(--board-muted)]',
           )}
         >
@@ -183,7 +182,7 @@ export function BoardQuickFilters({
       {meta.labels.length > 0 ? (
         <label
           className={cn(
-            'flex items-center gap-1.5 text-sm text-fg-muted',
+            'flex items-center gap-2 text-sm text-fg-muted',
             boardChrome && 'board-filter-pill text-[var(--board-muted)]',
           )}
         >

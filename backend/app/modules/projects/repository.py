@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.tenant import require_org_context
 from app.modules.identity.directory import visible_users
-from app.modules.issues.models import Issue
+from app.modules.issues.models import Issue, IssueKeyAlias
 from app.modules.projects.defaults import STATUSES, WORKFLOW_NAME
 from app.modules.projects.models import (
     Board,
@@ -20,6 +20,7 @@ from app.modules.projects.models import (
     BoardColumnStatus,
     Project,
     ProjectIssueCounter,
+    ProjectKeyAlias,
     ProjectMembership,
     Workflow,
     WorkflowStatus,
@@ -29,12 +30,91 @@ from app.modules.projects.workflow_edit import WorkflowGraphState
 
 
 async def find_project(session: AsyncSession, key: str) -> Project | None:
+    """Resolve a project by its current key, or by a key it used to have (alias)."""
     context = require_org_context(session)
-    return (
+    key = key.upper()
+    current = (
         await session.execute(
-            select(Project).where(Project.org_id == context.org_id, Project.key == key.upper())
+            select(Project).where(Project.org_id == context.org_id, Project.key == key)
         )
     ).scalar_one_or_none()
+    if current is not None:
+        return current
+    return (
+        await session.execute(
+            select(Project)
+            .join(
+                ProjectKeyAlias,
+                (ProjectKeyAlias.org_id == Project.org_id)
+                & (ProjectKeyAlias.project_id == Project.id),
+            )
+            .where(Project.org_id == context.org_id, ProjectKeyAlias.key == key)
+        )
+    ).scalar_one_or_none()
+
+
+async def find_moved_issue(
+    session: AsyncSession, project_key: str, seq: int
+) -> tuple[str, int] | None:
+    """Current ``(project key, seq)`` of an issue that used to be ``project_key-seq``."""
+    context = require_org_context(session)
+    row = (
+        await session.execute(
+            select(Project.key, Issue.seq)
+            .select_from(IssueKeyAlias)
+            .join(
+                Issue,
+                (Issue.org_id == IssueKeyAlias.org_id) & (Issue.id == IssueKeyAlias.issue_id),
+            )
+            .join(Project, (Project.org_id == Issue.org_id) & (Project.id == Issue.project_id))
+            .where(
+                IssueKeyAlias.org_id == context.org_id,
+                IssueKeyAlias.project_key == project_key,
+                IssueKeyAlias.seq == seq,
+            )
+        )
+    ).first()
+    return None if row is None else (str(row[0]), int(row[1]))
+
+
+async def key_reserved(
+    session: AsyncSession, key: str, *, except_project_id: uuid.UUID | None = None
+) -> bool:
+    """True when ``key`` is a project's current key or any project's retired key.
+
+    Retired keys stay reserved so an old ``KEY-n`` link can never point at another project.
+    A project may take back one of its own retired keys (``except_project_id``)."""
+    context = require_org_context(session)
+    key = key.upper()
+    live = select(Project.id).where(Project.org_id == context.org_id, Project.key == key)
+    retired = select(ProjectKeyAlias.project_id).where(
+        ProjectKeyAlias.org_id == context.org_id, ProjectKeyAlias.key == key
+    )
+    for query in (live, retired):
+        owner = (await session.execute(query)).scalar_one_or_none()
+        if owner is not None and owner != except_project_id:
+            return True
+    return False
+
+
+async def rename_project_key(session: AsyncSession, project_id: uuid.UUID, key: str) -> bool:
+    """Change ``projects.key`` through the DB function that only lets org owners/admins do it
+    (the runtime role has no UPDATE grant on the column)."""
+    require_org_context(session)
+    return bool(
+        (
+            await session.execute(select(func.app_rename_project_key(project_id, key.upper())))
+        ).scalar_one()
+    )
+
+
+async def insert_project_key_alias(session: AsyncSession, project_id: uuid.UUID, key: str) -> None:
+    context = require_org_context(session)
+    await session.execute(
+        insert(ProjectKeyAlias).values(
+            org_id=context.org_id, project_id=project_id, key=key.upper()
+        )
+    )
 
 
 async def my_project_role(session: AsyncSession, project_id: uuid.UUID) -> str | None:

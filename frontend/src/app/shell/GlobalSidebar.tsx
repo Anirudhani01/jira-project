@@ -41,7 +41,7 @@ const LABELS: Record<SidebarItem, string> = {
 
 function itemClass(isActive: boolean) {
   return cn(
-    'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm no-underline outline-none',
+    'flex items-center gap-3 rounded-md px-3 py-2 text-sm no-underline outline-none',
     'hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent',
     isActive ? 'bg-accent-soft font-medium text-fg' : 'text-fg-muted',
   );
@@ -49,11 +49,7 @@ function itemClass(isActive: boolean) {
 
 function SectionTitle({ children, collapsed }: { children: ReactNode; collapsed: boolean }) {
   if (collapsed) return <hr className="mx-2 my-2 border-line" />;
-  return (
-    <p className="mb-1 mt-3 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
-      {children}
-    </p>
-  );
+  return <p className="mb-1 mt-3 px-3 text-xs font-medium text-fg-subtle">{children}</p>;
 }
 
 function CustomizeDialog({
@@ -150,7 +146,7 @@ function GlobalNav({
           <>
             <SectionTitle collapsed={collapsed}>Recent</SectionTitle>
             {recent.length === 0 && !collapsed ? (
-              <p className="px-2.5 text-xs text-fg-subtle">Nothing yet</p>
+              <p className="px-3 text-xs text-fg-subtle">Nothing yet</p>
             ) : (
               recent
                 .slice(0, collapsed ? 3 : 5)
@@ -172,7 +168,7 @@ function GlobalNav({
           <>
             <SectionTitle collapsed={collapsed}>Starred</SectionTitle>
             {starred.length === 0 && !collapsed ? (
-              <p className="px-2.5 text-xs text-fg-subtle">Star a project to pin it here</p>
+              <p className="px-3 text-xs text-fg-subtle">Star a project to pin it here</p>
             ) : (
               starred.map((project) =>
                 link(
@@ -190,7 +186,7 @@ function GlobalNav({
           <>
             <SectionTitle collapsed={collapsed}>Projects</SectionTitle>
             {projects.isPending && !collapsed ? (
-              <p className="px-2.5 text-xs text-fg-subtle">Loading…</p>
+              <p className="px-3 text-xs text-fg-subtle">Loading…</p>
             ) : null}
             {live.map((project) =>
               link(
@@ -216,7 +212,7 @@ function GlobalNav({
             <span
               aria-disabled="true"
               title="Reports are not available yet"
-              className="flex cursor-not-allowed items-center gap-2.5 px-2.5 py-1.5 text-sm text-fg-subtle opacity-70"
+              className="flex cursor-not-allowed items-center gap-3 px-3 py-2 text-sm text-fg-subtle opacity-70"
             >
               <BarChart3 className="size-4 shrink-0" aria-hidden />
               {collapsed ? <span className="sr-only">Reports</span> : <span>Reports</span>}

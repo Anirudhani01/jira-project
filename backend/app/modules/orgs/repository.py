@@ -258,6 +258,133 @@ async def list_priorities(session: AsyncSession) -> list[Priority]:
     return list(result.scalars())
 
 
+# ------------------------------------------------------------------ catalog writes
+# Issue types and priorities are soft-deactivated (``is_active``), never deleted: existing
+# issues keep referencing them. The tables use ``implicit_returning=False``, so every write
+# is followed by a read of the row (RLS keeps both inside the bound org).
+async def get_issue_type(session: AsyncSession, type_id: uuid.UUID) -> IssueType | None:
+    context = require_org_context(session)
+    return (
+        await session.execute(
+            select(IssueType).where(IssueType.org_id == context.org_id, IssueType.id == type_id)
+        )
+    ).scalar_one_or_none()
+
+
+async def get_priority(session: AsyncSession, priority_id: uuid.UUID) -> Priority | None:
+    context = require_org_context(session)
+    return (
+        await session.execute(
+            select(Priority).where(Priority.org_id == context.org_id, Priority.id == priority_id)
+        )
+    ).scalar_one_or_none()
+
+
+async def next_issue_type_position(session: AsyncSession) -> int:
+    context = require_org_context(session)
+    top = (
+        await session.execute(
+            select(func.max(IssueType.position)).where(IssueType.org_id == context.org_id)
+        )
+    ).scalar_one()
+    return 0 if top is None else int(top) + 1
+
+
+async def next_priority_sort_order(session: AsyncSession) -> int:
+    context = require_org_context(session)
+    top = (
+        await session.execute(
+            select(func.max(Priority.sort_order)).where(Priority.org_id == context.org_id)
+        )
+    ).scalar_one()
+    return 0 if top is None else int(top) + 1
+
+
+async def insert_issue_type(
+    session: AsyncSession, *, name: str, kind: str, position: int
+) -> IssueType:
+    context = require_org_context(session)
+    type_id = uuid.uuid4()
+    await session.execute(
+        insert(IssueType).values(
+            id=type_id, org_id=context.org_id, name=name, kind=kind, position=position
+        )
+    )
+    row = await get_issue_type(session, type_id)
+    if row is None:  # RLS or a concurrent delete hid the row just inserted
+        raise RuntimeError("issue type vanished after insert")
+    return row
+
+
+async def insert_priority(
+    session: AsyncSession, *, name: str, sort_order: int, color: str
+) -> Priority:
+    context = require_org_context(session)
+    priority_id = uuid.uuid4()
+    await session.execute(
+        insert(Priority).values(
+            id=priority_id,
+            org_id=context.org_id,
+            name=name,
+            sort_order=sort_order,
+            color=color,
+        )
+    )
+    row = await get_priority(session, priority_id)
+    if row is None:
+        raise RuntimeError("priority vanished after insert")
+    return row
+
+
+async def update_issue_type(
+    session: AsyncSession, type_id: uuid.UUID, **values: Any
+) -> IssueType | None:
+    context = require_org_context(session)
+    await session.execute(
+        update(IssueType)
+        .where(IssueType.org_id == context.org_id, IssueType.id == type_id)
+        .values(**values)
+    )
+    session.expire_all()
+    return await get_issue_type(session, type_id)
+
+
+async def update_priority(
+    session: AsyncSession, priority_id: uuid.UUID, **values: Any
+) -> Priority | None:
+    context = require_org_context(session)
+    await session.execute(
+        update(Priority)
+        .where(Priority.org_id == context.org_id, Priority.id == priority_id)
+        .values(**values)
+    )
+    session.expire_all()
+    return await get_priority(session, priority_id)
+
+
+async def set_issue_type_positions(session: AsyncSession, ordered_ids: list[uuid.UUID]) -> None:
+    """Rewrite ``position`` to 0..n-1 following ``ordered_ids`` (no uniqueness on position)."""
+    context = require_org_context(session)
+    for position, type_id in enumerate(ordered_ids):
+        await session.execute(
+            update(IssueType)
+            .where(IssueType.org_id == context.org_id, IssueType.id == type_id)
+            .values(position=position)
+        )
+    session.expire_all()
+
+
+async def set_priority_sort_orders(session: AsyncSession, ordered_ids: list[uuid.UUID]) -> None:
+    context = require_org_context(session)
+    for sort_order, priority_id in enumerate(ordered_ids):
+        await session.execute(
+            update(Priority)
+            .where(Priority.org_id == context.org_id, Priority.id == priority_id)
+            .values(sort_order=sort_order)
+        )
+    session.expire_all()
+
+
 # --------------------------------------------------------------------- audit reads
 @dataclass(frozen=True, slots=True)
 class AuditFilter:

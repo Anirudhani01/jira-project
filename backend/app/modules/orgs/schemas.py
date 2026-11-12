@@ -66,6 +66,7 @@ class IssueTypeResponse(BaseModel):
     name: str
     kind: str
     position: int
+    is_active: bool
 
 
 class IssueTypeListResponse(BaseModel):
@@ -77,6 +78,7 @@ class PriorityResponse(BaseModel):
     name: str
     sort_order: int
     color: str
+    is_active: bool
 
 
 class PriorityListResponse(BaseModel):

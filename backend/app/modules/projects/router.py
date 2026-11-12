@@ -9,7 +9,6 @@ from fastapi import APIRouter, Header, Query, Request, Response, status
 from app.authz.deps import OrgAccess, require
 from app.authz.permissions import Permission
 from app.authz.projects import ProjectAccess, require_project
-from app.core.errors import AppError
 from app.modules.identity.deps import CsrfProtected, Services, client_info
 from app.modules.projects import service, settings_service
 from app.modules.projects.models import Project
@@ -140,13 +139,6 @@ async def update_project_settings(
 async def update_project(
     body: UpdateProjectRequest, request: Request, access: ManageProject, services: Services
 ) -> ProjectResponse:
-    if body.key is not None:
-        raise AppError(
-            422,
-            "field_immutable",
-            "The project key cannot be changed.",
-            errors=[{"field": "body.key", "message": "cannot be changed"}],
-        )
     await service.update_project(
         services,
         access,
@@ -155,6 +147,10 @@ async def update_project(
         clear_description="description" in body.model_fields_set and body.description is None,
         client=client_info(request),
     )
+    if body.key is not None:
+        await service.rename_project_key(
+            services, access, new_key=body.key, client=client_info(request)
+        )
     project, current = await service.get_project(services, access)
     return _project(project, current)
 

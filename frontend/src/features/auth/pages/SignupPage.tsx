@@ -59,7 +59,7 @@ export function SignupPage() {
     return (
       <AuthLayout>
         <section aria-labelledby="signup-done" className="space-y-4">
-          <h1 id="signup-done" className="text-2xl font-semibold text-fg">
+          <h1 id="signup-done" className="text-2xl font-medium text-fg">
             Check your email
           </h1>
           <p role="status" className="text-fg-muted">
@@ -81,7 +81,7 @@ export function SignupPage() {
   return (
     <AuthLayout>
       <section aria-labelledby="signup-title" className="space-y-6">
-        <h1 id="signup-title" className="text-2xl font-semibold text-fg">
+        <h1 id="signup-title" className="text-2xl font-medium text-fg">
           Create an account
         </h1>
         <form onSubmit={(e) => void onSubmit(e)} noValidate className="space-y-4">

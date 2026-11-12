@@ -228,7 +228,7 @@ export function BoardPage() {
           {boardChrome ? (
             <div className="board-columns-wrap w-full min-w-0 max-w-full overflow-x-auto pb-2">
               <div className="board-columns-track w-max min-w-full">
-                <div className="board-columns grid min-w-0 grid-flow-col auto-cols-[minmax(260px,1fr)] gap-2.5 xl:grid-flow-row xl:grid-cols-4 xl:gap-3">
+                <div className="board-columns grid min-w-0 grid-flow-col auto-cols-[minmax(260px,1fr)] gap-3 xl:grid-flow-row xl:grid-cols-4 xl:gap-3">
                   {filtered.columns.map((column, index) => (
                     <BoardColumnView
                       key={column.id}

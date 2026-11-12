@@ -98,6 +98,18 @@ export function useCreateProject(org: string) {
   );
 }
 
+/** Org owners/admins only. The old key keeps resolving (the API serves it as an alias). */
+export function useRenameProjectKey(org: string, key: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (newKey: string) =>
+      apiFetch<Project>(projectPath(org, key), { method: 'PATCH', json: { key: newKey } }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['org', org.toLowerCase()] });
+    },
+  });
+}
+
 export function useSetArchived(org: string, key: string) {
   return useProjectsMutation(org, (archived: boolean) =>
     apiFetch<undefined>(`${projectPath(org, key)}/${archived ? 'archive' : 'unarchive'}`, {

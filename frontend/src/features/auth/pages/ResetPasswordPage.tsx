@@ -58,7 +58,7 @@ export function ResetPasswordPage() {
     return (
       <AuthLayout>
         <section aria-labelledby="reset-done" className="space-y-4">
-          <h1 id="reset-done" className="text-2xl font-semibold text-fg">
+          <h1 id="reset-done" className="text-2xl font-medium text-fg">
             Password changed
           </h1>
           <p role="status" className="text-fg-muted">
@@ -83,7 +83,7 @@ export function ResetPasswordPage() {
   return (
     <AuthLayout>
       <section aria-labelledby="reset-title" className="space-y-6">
-        <h1 id="reset-title" className="text-2xl font-semibold text-fg">
+        <h1 id="reset-title" className="text-2xl font-medium text-fg">
           Choose a new password
         </h1>
         {invalidLink ? (

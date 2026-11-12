@@ -98,7 +98,7 @@ export function BacklogPanel({
             <ChevronRight className="size-4" aria-hidden="true" />
           )}
         </button>
-        <h2 id={headingId} className="text-sm font-semibold">
+        <h2 id={headingId} className="text-sm font-medium">
           {title}
         </h2>
         {sprint ? (

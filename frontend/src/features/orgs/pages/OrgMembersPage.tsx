@@ -1,7 +1,22 @@
 import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { useParams } from 'react-router';
 
+import { Badge } from '../../../components/ui/Badge';
+import { Button } from '../../../components/ui/Button';
+import { Card } from '../../../components/ui/Card';
+import {
+  DataGrid,
+  DataGridBody,
+  DataGridCell,
+  DataGridColumns,
+  DataGridHead,
+  DataGridHeadCell,
+  DataGridRow,
+  DataGridTable,
+} from '../../../components/ui/DataGrid';
 import { FormError, SubmitButton, TextField } from '../../../components/ui/Form';
+import { Field } from '../../../components/ui/Input';
+import { PageHeader } from '../../../components/ui/PageHeader';
 import { ErrorState, LoadingState } from '../../../components/ui/States';
 import { NotFoundPage } from '../../../app/pages/NotFoundPage';
 import { ApiError } from '../../../lib/api/errors';
@@ -117,134 +132,193 @@ export function OrgMembersPage({
     );
   };
 
+  const roleOptions = ROLES.filter((r) => isOwner || r !== 'owner');
+  const showMembers = initialSection !== 'invitations';
+  const pending = invitations.data ?? [];
+
   return (
-    <section aria-labelledby="members-title" className="space-y-8">
-      <h1 id="members-title" className="text-2xl font-semibold">
-        Members of {org.data.name}
-      </h1>
+    <section aria-labelledby="members-title" className="space-y-6">
+      <PageHeader
+        titleId="members-title"
+        title={showMembers ? `Members of ${org.data.name}` : 'Invitations'}
+        description={
+          showMembers
+            ? 'People in this organization and what each of them can do'
+            : 'Invite people and manage invitations that are still open'
+        }
+      />
       <FormError>{failureMessage}</FormError>
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr>
-            <th scope="col">Name</th>
-            <th scope="col">Email</th>
-            <th scope="col">Role</th>
-            {canManage ? <th scope="col">Can create projects</th> : null}
-            {canManage ? <th scope="col">Actions</th> : null}
-          </tr>
-        </thead>
-        <tbody>
-          {members.data.map((m) => {
-            const editable = canManage && (isOwner || m.role !== 'owner');
-            return (
-              <tr key={m.user_id}>
-                <td>{m.display_name}</td>
-                <td>{m.email}</td>
-                <td>
-                  {editable ? (
+
+      {showMembers ? (
+        <DataGrid>
+          <DataGridTable aria-label="Members">
+            <DataGridColumns
+              template={
+                canManage
+                  ? 'minmax(10rem, 1fr) minmax(12rem, 1.2fr) 9rem 11rem 6rem'
+                  : 'minmax(10rem, 1fr) minmax(12rem, 1.2fr) 9rem'
+              }
+            >
+              <DataGridHead>
+                <DataGridHeadCell>Name</DataGridHeadCell>
+                <DataGridHeadCell>Email</DataGridHeadCell>
+                <DataGridHeadCell>Role</DataGridHeadCell>
+                {canManage ? <DataGridHeadCell>Can create projects</DataGridHeadCell> : null}
+                {canManage ? (
+                  <DataGridHeadCell>
+                    <span className="sr-only">Actions</span>
+                  </DataGridHeadCell>
+                ) : null}
+              </DataGridHead>
+              <DataGridBody>
+                {members.data.map((m) => {
+                  const editable = canManage && (isOwner || m.role !== 'owner');
+                  return (
+                    <DataGridRow key={m.user_id}>
+                      <DataGridCell className="font-medium text-fg">{m.display_name}</DataGridCell>
+                      <DataGridCell className="text-fg-muted">{m.email}</DataGridCell>
+                      <DataGridCell>
+                        {editable ? (
+                          <select
+                            aria-label={`Role of ${m.display_name}`}
+                            value={m.role}
+                            onChange={(e) => {
+                              update.mutate({ userId: m.user_id, role: e.target.value });
+                            }}
+                          >
+                            {roleOptions.map((r) => (
+                              <option key={r} value={r}>
+                                {r}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <Badge tone="neutral">{m.role}</Badge>
+                        )}
+                      </DataGridCell>
+                      {canManage ? (
+                        <DataGridCell>
+                          <input
+                            type="checkbox"
+                            className="size-4 accent-[var(--accent)]"
+                            aria-label={`${m.display_name} can create projects`}
+                            checked={m.can_create_projects}
+                            disabled={!editable}
+                            onChange={(e) => {
+                              update.mutate({
+                                userId: m.user_id,
+                                can_create_projects: e.target.checked,
+                              });
+                            }}
+                          />
+                        </DataGridCell>
+                      ) : null}
+                      {canManage ? (
+                        <DataGridCell className="justify-end">
+                          {editable ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="text-danger hover:text-danger"
+                              aria-label={`Remove ${m.display_name}`}
+                              onClick={() => {
+                                remove.mutate(m.user_id);
+                              }}
+                            >
+                              Remove
+                            </Button>
+                          ) : null}
+                        </DataGridCell>
+                      ) : null}
+                    </DataGridRow>
+                  );
+                })}
+              </DataGridBody>
+            </DataGridColumns>
+          </DataGridTable>
+        </DataGrid>
+      ) : null}
+
+      {canManage ? (
+        <>
+          <section aria-labelledby="invite-title" className="space-y-3">
+            <h2 id="invite-title" className="text-base font-medium">
+              Invite someone
+            </h2>
+            <Card className="space-y-3 p-4">
+              <FormError>{inviteFormFailure}</FormError>
+              <form onSubmit={onInvite} noValidate className="flex flex-wrap items-end gap-3">
+                <div className="min-w-[16rem] max-w-md flex-1">
+                  <TextField
+                    ref={emailRef}
+                    label="Email to invite"
+                    type="email"
+                    value={email}
+                    error={inviteEmailError}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                    }}
+                  />
+                </div>
+                <Field label="Role">
+                  {(field) => (
                     <select
-                      aria-label={`Role of ${m.display_name}`}
-                      value={m.role}
+                      id={field.id}
+                      value={role}
                       onChange={(e) => {
-                        update.mutate({ userId: m.user_id, role: e.target.value });
+                        setRole(e.target.value);
                       }}
                     >
-                      {ROLES.filter((r) => isOwner || r !== 'owner').map((r) => (
+                      {roleOptions.map((r) => (
                         <option key={r} value={r}>
                           {r}
                         </option>
                       ))}
                     </select>
-                  ) : (
-                    m.role
                   )}
-                </td>
-                {canManage ? (
-                  <td>
-                    <input
-                      type="checkbox"
-                      aria-label={`${m.display_name} can create projects`}
-                      checked={m.can_create_projects}
-                      disabled={!editable}
-                      onChange={(e) => {
-                        update.mutate({ userId: m.user_id, can_create_projects: e.target.checked });
-                      }}
-                    />
-                  </td>
-                ) : null}
-                {canManage ? (
-                  <td>
-                    {editable ? (
-                      <button
+                </Field>
+                <SubmitButton pending={invite.isPending}>Send invitation</SubmitButton>
+              </form>
+              {invite.isSuccess ? (
+                <p role="status" className="text-sm text-fg-muted">
+                  Invitation sent.
+                </p>
+              ) : null}
+            </Card>
+          </section>
+
+          <section aria-labelledby="pending-title" className="space-y-3">
+            <h2 id="pending-title" className="text-base font-medium">
+              Pending invitations
+            </h2>
+            {pending.length === 0 ? (
+              <p className="text-sm text-fg-muted">No invitations are waiting for a reply.</p>
+            ) : (
+              <Card>
+                <ul className="divide-y divide-line">
+                  {pending.map((i) => (
+                    <li key={i.id} className="flex items-center gap-3 px-4 py-2">
+                      <span className="min-w-0 flex-1 truncate text-sm text-fg">{i.email}</span>
+                      <Badge tone="neutral">{i.role}</Badge>
+                      {i.expired ? <Badge tone="warning">Expired</Badge> : null}
+                      <Button
                         type="button"
-                        className="text-red-700 underline"
+                        variant="ghost"
+                        className="text-danger hover:text-danger"
+                        aria-label={`Revoke invitation for ${i.email}`}
                         onClick={() => {
-                          remove.mutate(m.user_id);
+                          revoke.mutate(i.id);
                         }}
                       >
-                        Remove {m.display_name}
-                      </button>
-                    ) : null}
-                  </td>
-                ) : null}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      {canManage ? (
-        <section aria-labelledby="invite-title" className="space-y-4">
-          <h2 id="invite-title" className="text-lg font-semibold">
-            Invite someone
-          </h2>
-          <FormError>{inviteFormFailure}</FormError>
-          <form onSubmit={onInvite} noValidate className="flex max-w-xl items-end gap-3">
-            <TextField
-              ref={emailRef}
-              label="Email to invite"
-              type="email"
-              value={email}
-              error={inviteEmailError}
-              onChange={(e) => {
-                setEmail(e.target.value);
-              }}
-            />
-            <label className="text-sm">
-              Role
-              <select
-                className="ml-2"
-                value={role}
-                onChange={(e) => {
-                  setRole(e.target.value);
-                }}
-              >
-                {ROLES.filter((r) => isOwner || r !== 'owner').map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <SubmitButton pending={invite.isPending}>Send invitation</SubmitButton>
-          </form>
-          {invite.isSuccess ? <p role="status">Invitation sent.</p> : null}
-          <ul className="space-y-1 text-sm">
-            {(invitations.data ?? []).map((i) => (
-              <li key={i.id}>
-                {i.email} ({i.role}){i.expired ? ' — expired' : ''}{' '}
-                <button
-                  type="button"
-                  className="text-red-700 underline"
-                  onClick={() => {
-                    revoke.mutate(i.id);
-                  }}
-                >
-                  Revoke invitation for {i.email}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
+                        Revoke
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
+          </section>
+        </>
       ) : null}
     </section>
   );

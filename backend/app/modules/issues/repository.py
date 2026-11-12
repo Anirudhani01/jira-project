@@ -28,7 +28,14 @@ from sqlalchemy.orm import aliased
 
 from app.db.tenant import require_org_context
 from app.modules.issues.list_sort import keyset_condition, list_order
-from app.modules.issues.models import IdempotencyKey, Issue, IssueActivity, IssueLabel, Label
+from app.modules.issues.models import (
+    IdempotencyKey,
+    Issue,
+    IssueActivity,
+    IssueKeyAlias,
+    IssueLabel,
+    Label,
+)
 from app.modules.issues.rank import spread
 from app.modules.orgs.models import IssueType, Priority
 from app.modules.projects.models import (
@@ -884,3 +891,116 @@ async def set_issue_labels(
                 for label_id in add
             ],
         )
+
+
+# --------------------------------------------------------------------------- relocation
+async def workflow_statuses(session: AsyncSession, workflow_id: uuid.UUID) -> list[WorkflowStatus]:
+    context = require_org_context(session)
+    return list(
+        (
+            await session.execute(
+                select(WorkflowStatus)
+                .where(
+                    WorkflowStatus.org_id == context.org_id,
+                    WorkflowStatus.workflow_id == workflow_id,
+                )
+                .order_by(WorkflowStatus.position)
+            )
+        ).scalars()
+    )
+
+
+async def relocate_issue_row(
+    session: AsyncSession,
+    issue_id: uuid.UUID,
+    version: int,
+    *,
+    project_id: uuid.UUID,
+    workflow_id: uuid.UUID,
+    seq: int,
+    status_id: uuid.UUID,
+    rank: str,
+    done_at: datetime | None,
+) -> int | None:
+    """Move the issue row through the DB function (the runtime role has no UPDATE grant on
+    ``project_id``/``workflow_id``/``seq``). It checks write access to both projects and the
+    version, clears sprint/fix version/parent, and returns the new version (None: refused)."""
+    require_org_context(session)
+    new_version = (
+        await session.execute(
+            select(
+                func.app_relocate_issue(
+                    issue_id, version, project_id, workflow_id, seq, status_id, rank, done_at
+                )
+            )
+        )
+    ).scalar_one()
+    session.expire_all()  # the function wrote behind the ORM's back; reload on next read
+    return None if new_version is None else int(new_version)
+
+
+async def count_active_children(
+    session: AsyncSession, project_id: uuid.UUID, parent_id: uuid.UUID
+) -> int:
+    context = require_org_context(session)
+    return int(
+        (
+            await session.execute(
+                select(func.count())
+                .select_from(Issue)
+                .where(
+                    Issue.org_id == context.org_id,
+                    Issue.project_id == project_id,
+                    Issue.parent_id == parent_id,
+                    Issue.deleted_at.is_(None),
+                )
+            )
+        ).scalar_one()
+    )
+
+
+async def detach_deleted_children(
+    session: AsyncSession, project_id: uuid.UUID, parent_id: uuid.UUID
+) -> None:
+    """Soft-deleted children still reference their parent through a composite FK that
+    includes ``project_id``; clear that link so the parent can change project."""
+    context = require_org_context(session)
+    await session.execute(
+        update(Issue)
+        .where(
+            Issue.org_id == context.org_id,
+            Issue.project_id == project_id,
+            Issue.parent_id == parent_id,
+            Issue.deleted_at.is_not(None),
+        )
+        .values(parent_id=None)
+    )
+
+
+async def find_label_by_name(
+    session: AsyncSession, project_id: uuid.UUID, name: str
+) -> Label | None:
+    context = require_org_context(session)
+    return (
+        await session.execute(
+            select(Label).where(
+                Label.org_id == context.org_id, Label.project_id == project_id, Label.name == name
+            )
+        )
+    ).scalar_one_or_none()
+
+
+async def remove_issue_labels(session: AsyncSession, issue_id: uuid.UUID) -> None:
+    require_org_context(session)
+    await session.execute(delete(IssueLabel).where(IssueLabel.issue_id == issue_id))
+
+
+async def insert_issue_key_alias(
+    session: AsyncSession, project_key: str, seq: int, issue_id: uuid.UUID
+) -> None:
+    context = require_org_context(session)
+    await session.execute(
+        insert(IssueKeyAlias).values(
+            org_id=context.org_id, project_key=project_key.upper(), seq=seq, issue_id=issue_id
+        )
+    )

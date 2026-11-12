@@ -9,7 +9,7 @@ import { ApiError } from '../../../lib/api/errors';
 import { describeError } from '../../../lib/forms';
 import { applyServerErrorsWithFocus } from '../../../lib/ux/formFocus';
 import { AuthLayout } from '../AuthLayout';
-import { authEyebrowClass, authFieldClass, authSubmitClass } from '../authUi';
+import { authFieldClass, authSubmitClass } from '../authUi';
 import { useLogin, useSession } from '../api';
 import { safeNext } from '../safeNext';
 
@@ -62,16 +62,10 @@ export function LoginPage() {
         className="mx-auto w-full max-w-[400px] space-y-8 py-4 lg:py-0"
       >
         <div className="space-y-3">
-          <p className={authEyebrowClass}>Welcome back</p>
-          <h1
-            id="login-title"
-            className="text-[1.75rem] font-bold leading-tight tracking-tight text-fg xl:text-[2rem]"
-          >
+          <h1 id="login-title" className="text-3xl font-medium leading-tight text-fg xl:text-3xl">
             Sign in to your workspace
           </h1>
-          <p className="text-[15px] leading-relaxed text-fg-muted">
-            Use your email and password to access your account.
-          </p>
+          <p className="text-base leading-relaxed text-fg-muted">Use your email and password</p>
         </div>
         <form onSubmit={(e) => void onSubmit(e)} noValidate className="space-y-5">
           <FormError>{failure}</FormError>
@@ -95,6 +89,7 @@ export function LoginPage() {
           />
           <Button
             type="submit"
+            variant="primary"
             disabled={login.isPending}
             aria-busy={login.isPending}
             className={authSubmitClass}
@@ -107,14 +102,14 @@ export function LoginPage() {
             Forgot password?
           </Link>
         </p>
-        <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-fg-subtle">
+        <div className="flex items-center gap-3 text-sm text-fg-subtle">
           <span className="h-px flex-1 bg-line" aria-hidden="true" />
-          <span>OR</span>
+          <span>or</span>
           <span className="h-px flex-1 bg-line" aria-hidden="true" />
         </div>
         <p className="text-center text-sm text-fg-muted">
           No account?{' '}
-          <Link to="/signup" className="font-semibold text-accent hover:underline">
+          <Link to="/signup" className="font-medium text-accent hover:underline">
             Create one
           </Link>
         </p>

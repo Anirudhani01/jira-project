@@ -176,6 +176,8 @@ async def _type_kind(
     issue_type = await repository.find_type(session, type_id)
     if issue_type is None:
         raise invalid_field("type_id", "invalid_type", "Unknown issue type.")
+    if for_selection and not issue_type.is_active:
+        raise invalid_field("type_id", "inactive_type", "This issue type is no longer active.")
     return {"id": str(issue_type.id), "name": issue_type.name}, issue_type.kind
 
 
@@ -185,6 +187,10 @@ async def _priority_ref(
     priority = await repository.find_priority(session, priority_id)
     if priority is None:
         raise invalid_field("priority_id", "invalid_priority", "Unknown priority.")
+    if for_selection and not priority.is_active:
+        raise invalid_field(
+            "priority_id", "inactive_priority", "This priority is no longer active."
+        )
     return {"id": str(priority.id), "name": priority.name}
 
 

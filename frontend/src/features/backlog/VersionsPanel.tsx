@@ -51,7 +51,7 @@ function Row({
         aria-pressed={active}
         onClick={onSelect}
         className={cn(
-          'min-w-0 flex-1 rounded-md border px-2 py-1.5 text-left text-sm',
+          'min-w-0 flex-1 rounded-md border px-2 py-2 text-left text-sm',
           active ? 'border-accent bg-accent-soft' : 'border-transparent hover:bg-surface-hover',
           isOver && 'ring-2 ring-accent',
         )}
@@ -97,7 +97,7 @@ export function VersionsPanel({
   return (
     <section aria-label="Versions" className="space-y-2">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Versions</h2>
+        <h2 className="text-sm font-medium">Versions</h2>
         {canManage ? (
           <Button variant="secondary" size="sm" disabled={!online} onClick={onCreate}>
             <Plus className="size-4" aria-hidden="true" /> Create version
@@ -216,7 +216,7 @@ export function VersionsPanel({
                 ) : null
               }
             >
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-2">
                 <span className="truncate font-medium">{version.name}</span>
                 <Badge tone={TONE[version.status as keyof typeof TONE]}>{version.status}</Badge>
               </span>

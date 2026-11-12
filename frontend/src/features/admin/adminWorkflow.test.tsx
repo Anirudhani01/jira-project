@@ -373,7 +373,7 @@ describe('Admin Workflow Hub permission isolation', () => {
     });
     renderApp('/o/acme/admin/workflow');
     expect(await screen.findByRole('heading', { name: 'Workflows', level: 1 })).toBeInTheDocument();
-    expect(await screen.findByText(/cloned from the default workflow/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Each project has its own workflow/i)).toBeInTheDocument();
     expect(
       await screen.findByRole('button', { name: /Expand workflow details for WEB/i }),
     ).toBeInTheDocument();

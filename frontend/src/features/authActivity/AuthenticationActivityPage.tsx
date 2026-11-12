@@ -48,7 +48,7 @@ function AuthenticationActivityContent() {
       >
         <h2
           id="auth-activity-filters-heading"
-          className="text-lg font-semibold text-[var(--admin-text)]"
+          className="text-lg font-medium text-[var(--admin-text)]"
         >
           Filters
         </h2>
@@ -68,7 +68,7 @@ function AuthenticationActivityContent() {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2
             id="auth-activity-table-heading"
-            className="text-lg font-semibold text-[var(--admin-text)]"
+            className="text-lg font-medium text-[var(--admin-text)]"
           >
             Activity
           </h2>

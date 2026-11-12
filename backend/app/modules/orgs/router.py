@@ -21,7 +21,15 @@ from app.modules.org_auth_activity.schemas import (
     AuthenticationActivityListResponse,
 )
 from app.modules.org_auth_activity.service import AuthActivityFilter
-from app.modules.orgs import members, service
+from app.modules.orgs import catalog_service, members, service
+from app.modules.orgs.catalog_schemas import (
+    CreateIssueTypeRequest,
+    CreatePriorityRequest,
+    ReorderIssueTypesRequest,
+    ReorderPrioritiesRequest,
+    UpdateIssueTypeRequest,
+    UpdatePriorityRequest,
+)
 from app.modules.orgs.repository import AuditFilter, OrgRecord
 from app.modules.orgs.schemas import (
     AcceptInvitationRequest,
@@ -157,7 +165,10 @@ async def list_issue_types(access: ViewOrg, services: Services) -> IssueTypeList
     types = await service.list_issue_types(services, access)
     return IssueTypeListResponse(
         items=[
-            IssueTypeResponse(id=t.id, name=t.name, kind=t.kind, position=t.position) for t in types
+            IssueTypeResponse(
+                id=t.id, name=t.name, kind=t.kind, position=t.position, is_active=t.is_active
+            )
+            for t in types
         ]
     )
 
@@ -167,9 +178,105 @@ async def list_priorities(access: ViewOrg, services: Services) -> PriorityListRe
     priorities = await service.list_priorities(services, access)
     return PriorityListResponse(
         items=[
-            PriorityResponse(id=p.id, name=p.name, sort_order=p.sort_order, color=p.color)
+            PriorityResponse(
+                id=p.id,
+                name=p.name,
+                sort_order=p.sort_order,
+                color=p.color,
+                is_active=p.is_active,
+            )
             for p in priorities
         ]
+    )
+
+
+@router.post(
+    "/orgs/{org_slug}/issue-types",
+    response_model=IssueTypeResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[CsrfProtected],
+)
+async def create_issue_type(
+    body: CreateIssueTypeRequest, request: Request, access: ManageOrg, services: Services
+) -> IssueTypeResponse:
+    return await catalog_service.create_issue_type(
+        services, access, body, client=client_info(request)
+    )
+
+
+@router.put(
+    "/orgs/{org_slug}/issue-types/order",
+    response_model=IssueTypeListResponse,
+    dependencies=[CsrfProtected],
+)
+async def reorder_issue_types(
+    body: ReorderIssueTypesRequest, request: Request, access: ManageOrg, services: Services
+) -> IssueTypeListResponse:
+    items = await catalog_service.reorder_issue_types(
+        services, access, body, client=client_info(request)
+    )
+    return IssueTypeListResponse(items=items)
+
+
+@router.patch(
+    "/orgs/{org_slug}/issue-types/{type_id}",
+    response_model=IssueTypeResponse,
+    dependencies=[CsrfProtected],
+)
+async def update_issue_type(
+    type_id: uuid.UUID,
+    body: UpdateIssueTypeRequest,
+    request: Request,
+    access: ManageOrg,
+    services: Services,
+) -> IssueTypeResponse:
+    return await catalog_service.update_issue_type(
+        services, access, type_id, body, client=client_info(request)
+    )
+
+
+@router.post(
+    "/orgs/{org_slug}/priorities",
+    response_model=PriorityResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[CsrfProtected],
+)
+async def create_priority(
+    body: CreatePriorityRequest, request: Request, access: ManageOrg, services: Services
+) -> PriorityResponse:
+    return await catalog_service.create_priority(
+        services, access, body, client=client_info(request)
+    )
+
+
+@router.put(
+    "/orgs/{org_slug}/priorities/order",
+    response_model=PriorityListResponse,
+    dependencies=[CsrfProtected],
+)
+async def reorder_priorities(
+    body: ReorderPrioritiesRequest, request: Request, access: ManageOrg, services: Services
+) -> PriorityListResponse:
+    items = await catalog_service.reorder_priorities(
+        services, access, body, client=client_info(request)
+    )
+    return PriorityListResponse(items=items)
+
+
+@router.patch(
+    "/orgs/{org_slug}/priorities/{priority_id}",
+    response_model=PriorityResponse,
+    dependencies=[CsrfProtected],
+)
+async def update_priority(
+    priority_id: uuid.UUID,
+    body: UpdatePriorityRequest,
+    request: Request,
+    access: ManageOrg,
+    services: Services,
+) -> PriorityResponse:
+    return await catalog_service.update_priority(
+        services, access, priority_id, body, client=client_info(request)
     )
 
 

@@ -104,7 +104,7 @@ function ViewSettings({
       </PopoverTrigger>
       <PopoverContent className="w-64 space-y-3 p-3">
         <fieldset className="space-y-1">
-          <legend className="text-xs font-semibold text-fg-muted">Density</legend>
+          <legend className="text-xs font-medium text-fg-muted">Density</legend>
           {(['default', 'compact'] as const).map((value) => (
             <label key={value} className="flex items-center gap-2 text-sm">
               <input
@@ -120,7 +120,7 @@ function ViewSettings({
           ))}
         </fieldset>
         <fieldset className="space-y-1">
-          <legend className="text-xs font-semibold text-fg-muted">Fields</legend>
+          <legend className="text-xs font-medium text-fg-muted">Fields</legend>
           {(Object.keys(FIELD_LABELS) as (keyof BacklogFields)[]).map((field) => (
             <label key={field} className="flex items-center gap-2 text-sm">
               <input
@@ -404,7 +404,7 @@ export function BacklogPage() {
   return (
     <section aria-labelledby="backlog-title" className="space-y-4 pb-20">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 id="backlog-title" className="text-2xl font-semibold">
+        <h1 id="backlog-title" className="text-2xl font-medium">
           {loaded.project_key} backlog
         </h1>
         <Link

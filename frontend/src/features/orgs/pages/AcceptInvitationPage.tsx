@@ -55,7 +55,7 @@ export function AcceptInvitationPage() {
     return (
       <AuthLayout>
         <section aria-labelledby="accept-title" className="space-y-4">
-          <h1 id="accept-title" className="text-2xl font-semibold text-fg">
+          <h1 id="accept-title" className="text-2xl font-medium text-fg">
             Join organization
           </h1>
           <p className="text-fg-muted">

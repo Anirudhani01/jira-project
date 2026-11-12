@@ -23,6 +23,7 @@ import {
 } from './api';
 import { BoardColumnsEditor } from './BoardColumnsEditor';
 import { ProjectMembersSection } from './ProjectMembersSection';
+import { ProjectKeyRename } from './ProjectKeyRename';
 import { ProjectEstimatesSection } from './ProjectEstimatesSection';
 import { ProjectWorkflowSection } from './ProjectWorkflowSection';
 
@@ -65,7 +66,6 @@ export function ProjectPage() {
 
       <div className="flex flex-wrap items-center gap-2">
         {p.archived ? <Badge tone="warning">Archived</Badge> : null}
-        <Badge tone="neutral">{p.board_type === 'scrum' ? 'Scrum' : 'Kanban'}</Badge>
       </div>
 
       <nav aria-label="Project views" className="flex flex-wrap gap-2">
@@ -112,7 +112,7 @@ export function ProjectPage() {
 
         <TabsContent value="details" className="pt-4">
           <Card className="space-y-2 p-5 sm:p-6">
-            <h2 className="text-lg font-semibold text-fg">Details</h2>
+            <h2 className="text-lg font-medium text-fg">Details</h2>
             <dl className="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">
               <dt className="text-fg-muted">Key</dt>
               <dd className="text-fg">{p.key}</dd>
@@ -123,6 +123,7 @@ export function ProjectPage() {
               <dt className="text-fg-muted">Description</dt>
               <dd className="text-fg">{p.description ?? 'No description'}</dd>
             </dl>
+            <ProjectKeyRename org={org} projectKey={p.key} archived={p.archived} />
           </Card>
         </TabsContent>
 
@@ -189,7 +190,7 @@ export function ProjectPage() {
 
         <TabsContent value="danger" className="pt-4">
           <Card className="space-y-3 border-danger/40 p-5 sm:p-6">
-            <h2 className="text-lg font-semibold text-danger">Danger zone</h2>
+            <h2 className="text-lg font-medium text-danger">Danger zone</h2>
             <p className="text-sm text-fg-muted">
               {p.archived
                 ? 'This project is archived and read-only. Unarchive it to edit again.'

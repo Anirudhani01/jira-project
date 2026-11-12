@@ -167,7 +167,9 @@ async def test_project_key_format(tenant: Tenant, key: str, status: int) -> None
     assert (await create_project(tenant.http, tenant.slug, key)).status_code == status
 
 
-async def test_key_unique_per_org_case_insensitively_and_immutable(tenant: Tenant) -> None:
+async def test_key_unique_per_org_case_insensitively_and_renamable_by_owner(
+    tenant: Tenant,
+) -> None:
     assert (await create_project(tenant.http, tenant.slug, "WEB")).status_code == 201
     taken = await create_project(tenant.http, tenant.slug, "web")
     assert taken.status_code == 409
@@ -178,8 +180,8 @@ async def test_key_unique_per_org_case_insensitively_and_immutable(tenant: Tenan
     renamed = await send(
         tenant.http, "PATCH", f"/api/v1/orgs/{tenant.slug}/projects/WEB", {"key": "NEW"}
     )
-    assert renamed.status_code == 422
-    assert renamed.json()["code"] == "field_immutable"
+    assert renamed.status_code == 200  # org owners/admins may rename (see test_key_aliases)
+    assert renamed.json()["key"] == "NEW"
 
 
 async def test_project_creation_follows_d9_option_b(tenant: Tenant) -> None:

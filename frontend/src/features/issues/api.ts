@@ -158,6 +158,26 @@ export function useUpdateIssue(org: string, key: string) {
   });
 }
 
+/** Moves the issue to another project (If-Match; the old key keeps resolving). */
+export function useRelocateIssue(org: string, key: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ targetProjectKey, version }: { targetProjectKey: string; version: number }) =>
+      apiFetch<Issue>(`${issuePath(org, key)}/relocate`, {
+        method: 'POST',
+        json: { target_project_key: targetProjectKey },
+        headers: { 'If-Match': `"v${String(version)}"` },
+      }),
+    onSuccess: (issue) => {
+      queryClient.setQueryData(issueKey(org, issue.key), issue);
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: issuesKey(org) });
+      await queryClient.invalidateQueries({ queryKey: ['org', org.toLowerCase(), 'projects'] });
+    },
+  });
+}
+
 export function useDeleteIssue(org: string, key: string) {
   const queryClient = useQueryClient();
   return useMutation({

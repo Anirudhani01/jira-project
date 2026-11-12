@@ -15,7 +15,7 @@ from typing import Any, cast
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.authz.deps import OrgAccess, not_found, org_transaction
+from app.authz.deps import OrgAccess, forbidden, not_found, org_transaction
 from app.authz.permissions import Permission
 from app.authz.projects import ProjectAccess, project_transaction
 from app.core.errors import AppError
@@ -62,6 +62,8 @@ async def create_project(
             session,
             current,
         ):
+            if await repository.key_reserved(session, key):
+                raise _key_taken()
             await repository.create_project(
                 session,
                 NewProject(
@@ -84,14 +86,57 @@ async def create_project(
             )
     except IntegrityError as exc:
         if "uq_projects_org_id_key" in str(exc.orig):
-            raise AppError(
-                409,
-                "project_key_taken",
-                "This project key is already used in the organization.",
-                errors=[{"field": "body.key", "message": "is already used"}],
-            ) from None
+            raise _key_taken() from None
         raise
     return project_id
+
+
+def _key_taken() -> AppError:
+    return AppError(
+        409,
+        "project_key_taken",
+        "This project key is already used in the organization.",
+        errors=[{"field": "body.key", "message": "is already used"}],
+    )
+
+
+async def rename_project_key(
+    services: IdentityServices, access: ProjectAccess, *, new_key: str, client: ClientInfo
+) -> None:
+    """Change the project key. Org owners/admins only: it changes every issue key of the
+    project. The old key becomes an alias (old links keep working, key stays reserved)."""
+    try:
+        async with project_transaction(services, access, Permission.PROJECT_MANAGE) as (
+            session,
+            project,
+            current,
+        ):
+            if current.org.role not in ("owner", "admin"):
+                raise forbidden()
+            if project.archived_at is not None:
+                raise project_archived()
+            new_key = new_key.upper()
+            if new_key == project.key:
+                return
+            if await repository.key_reserved(session, new_key, except_project_id=project.id):
+                raise _key_taken()
+            old_key = project.key
+            await repository.insert_project_key_alias(session, project.id, old_key)
+            if not await repository.rename_project_key(session, project.id, new_key):
+                raise forbidden()
+            await audit.record(
+                session,
+                "project.key_changed",
+                client,
+                actor_user_id=current.org.user_id,
+                target_type="project",
+                target_id=str(project.id),
+                metadata={"from": old_key, "to": new_key},
+            )
+    except IntegrityError as exc:
+        if "uq_projects_org_id_key" in str(exc.orig) or "pk_project_key_aliases" in str(exc.orig):
+            raise _key_taken() from None
+        raise
 
 
 async def list_projects(

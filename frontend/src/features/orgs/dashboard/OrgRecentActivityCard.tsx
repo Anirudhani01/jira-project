@@ -24,7 +24,7 @@ function ActivityRow({
     ? (membersById.get(event.actor_user_id) ?? 'Team member')
     : 'System';
   return (
-    <li className="flex gap-2.5 border-b border-[var(--org-dash-border)] py-3 last:border-0">
+    <li className="flex gap-3 border-b border-[var(--org-dash-border)] py-3 last:border-0">
       <Avatar name={name} size="sm" className="shrink-0" />
       <div className="min-w-0 flex-1">
         <p className="text-sm leading-snug text-[var(--org-dash-text)]">
@@ -83,7 +83,7 @@ export function OrgRecentActivityCard({
   if (!canViewAudit) {
     return (
       <Card className="org-dash-card p-4">
-        <h2 className="text-sm font-semibold text-[var(--org-dash-text)]">Recent activity</h2>
+        <h2 className="text-sm font-medium text-[var(--org-dash-text)]">Recent activity</h2>
         <p className="mt-2 text-sm text-[var(--org-dash-muted)]">
           Activity is visible to organization owners and admins.
         </p>
@@ -94,7 +94,7 @@ export function OrgRecentActivityCard({
   return (
     <Card className="org-dash-card p-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-[var(--org-dash-text)]">Recent activity</h2>
+        <h2 className="text-sm font-medium text-[var(--org-dash-text)]">Recent activity</h2>
         <Link
           to={`/o/${orgSlug}/settings/audit`}
           className="org-dash-link text-xs font-medium no-underline hover:underline"

@@ -117,7 +117,7 @@ export function IssueDescriptionSection({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="description-title" className="text-base font-semibold text-fg">
+        <h2 id="description-title" className="text-base font-medium text-fg">
           Description
         </h2>
         {canEdit && !editing ? (

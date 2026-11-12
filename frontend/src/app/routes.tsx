@@ -14,6 +14,7 @@ import { DesignPage } from './DesignPage';
 import { BacklogPage } from '../features/backlog/BacklogPage';
 import { BoardPage } from '../features/board/BoardPage';
 import { IssueListPage } from '../features/issues/IssueListPage';
+import { ProjectKeyRedirect } from '../features/projects/ProjectKeyRedirect';
 import { ProjectPage } from '../features/projects/ProjectPage';
 import { AcceptInvitationPage } from '../features/orgs/pages/AcceptInvitationPage';
 import { OrgHomePage } from '../features/orgs/pages/OrgHomePage';
@@ -50,10 +51,16 @@ export const appShellChildRoutes: RouteObject[] = [
           { index: true, element: <OrgHomePage /> },
           orgAdminChildRoutes,
           { path: 'projects/new', element: <CreateProjectPage /> },
-          { path: 'p/:key', element: <ProjectPage /> },
-          { path: 'p/:key/issues', element: <IssueListPage /> },
-          { path: 'p/:key/board', element: <BoardPage /> },
-          { path: 'p/:key/backlog', element: <BacklogPage /> },
+          {
+            path: 'p/:key',
+            element: <ProjectKeyRedirect />,
+            children: [
+              { index: true, element: <ProjectPage /> },
+              { path: 'issues', element: <IssueListPage /> },
+              { path: 'board', element: <BoardPage /> },
+              { path: 'backlog', element: <BacklogPage /> },
+            ],
+          },
           { path: 'issues/:issueKey', element: <IssueDetailPage /> },
         ],
       },

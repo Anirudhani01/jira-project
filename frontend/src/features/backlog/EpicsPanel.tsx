@@ -46,7 +46,7 @@ function Entry({
         aria-pressed={active}
         onClick={onSelect}
         className={cn(
-          'w-full rounded-md border px-2 py-1.5 text-left text-sm',
+          'w-full rounded-md border px-2 py-2 text-left text-sm',
           active ? 'border-accent bg-accent-soft' : 'border-transparent hover:bg-surface-hover',
           isOver && 'ring-2 ring-accent',
         )}
@@ -85,7 +85,7 @@ export function EpicsPanel({
   return (
     <section aria-label="Epics" className="space-y-2">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Epics</h2>
+        <h2 className="text-sm font-medium">Epics</h2>
         {canCreate ? (
           <Button variant="secondary" size="sm" onClick={onCreateEpic}>
             <Plus className="size-4" aria-hidden="true" /> Create epic
@@ -138,7 +138,7 @@ export function EpicsPanel({
                 toggle(epic.key);
               }}
             >
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-2">
                 <Zap className="size-3.5 shrink-0 text-[var(--epic)]" aria-hidden="true" />
                 <span className="truncate font-medium">{epic.summary}</span>
               </span>

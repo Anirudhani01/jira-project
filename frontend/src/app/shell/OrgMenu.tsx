@@ -1,4 +1,4 @@
-import { ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router';
 
 import { Button } from '../../components/ui/Button';
@@ -41,8 +41,13 @@ export function OrgMenu() {
               void navigate(`/o/${org.slug}`);
             }}
           >
-            {org.name}
-            {current?.slug === org.slug ? ' ✓' : ''}
+            <span className="truncate">{org.name}</span>
+            {current?.slug === org.slug ? (
+              <Check
+                className="ml-auto size-4 shrink-0 text-fg-muted"
+                aria-label="Current organization"
+              />
+            ) : null}
           </DropdownMenuItem>
         ))}
         {orgs.length === 0 ? (

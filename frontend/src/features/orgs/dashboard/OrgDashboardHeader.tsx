@@ -20,15 +20,12 @@ export function OrgDashboardHeader({
 
   return (
     <header className="org-dash-header space-y-4 sm:space-y-5">
-      <div className="space-y-1.5">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--org-dash-accent)]">
-          Welcome back,
-        </p>
-        <h1 className="text-[1.625rem] font-bold leading-tight tracking-tight text-[var(--org-dash-text)] sm:text-[1.875rem] lg:text-[2rem]">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-medium leading-tight text-[var(--org-dash-text)] sm:text-3xl lg:text-3xl">
           {orgName}
         </h1>
         <p className="max-w-2xl text-sm leading-relaxed text-[var(--org-dash-muted)]">
-          Manage your projects, track progress, and keep your team aligned.
+          Projects, members and recent activity for this organization
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">

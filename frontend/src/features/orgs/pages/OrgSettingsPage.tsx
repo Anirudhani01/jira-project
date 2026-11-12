@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useParams } from 'react-router';
 import { z } from 'zod';
@@ -20,21 +20,46 @@ const schema = z.object({
   name: z.string().trim().min(1, 'Enter a name.').max(100, 'Use at most 100 characters.'),
 });
 
+const MUTED = 'text-[var(--admin-muted)]';
+
 function roleLabel(role: string): string {
   return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
-function OrgProfileSection({ org, canManage }: { org: Org; canManage: boolean }) {
-  if (canManage) {
-    return <OrgRenameForm org={org} />;
-  }
+/** One settings area: title and a line of help on the left, the controls or facts on the right. */
+function Section({
+  id,
+  title,
+  help,
+  children,
+}: {
+  id: string;
+  title: string;
+  help?: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium text-[var(--admin-text)]">Name</p>
-      <p className="text-base text-[var(--admin-text)]">{org.name}</p>
-      <p className="text-sm text-[var(--admin-muted)]">
-        Only organization owners and admins can change the display name.
-      </p>
+    <section
+      aria-labelledby={id}
+      className="grid gap-x-10 gap-y-4 px-5 py-6 sm:px-6 md:grid-cols-[13rem_minmax(0,1fr)]"
+    >
+      <div className="space-y-1">
+        <h2 id={id} className="text-base font-medium text-[var(--admin-text)]">
+          {title}
+        </h2>
+        {help ? <p className={`text-sm ${MUTED}`}>{help}</p> : null}
+      </div>
+      <div className="min-w-0 space-y-4">{children}</div>
+    </section>
+  );
+}
+
+/** A read-only fact: the label column is the same width in every section. */
+function Fact({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid min-h-9 grid-cols-[9rem_minmax(0,1fr)] items-center gap-x-3 text-sm">
+      <dt className={MUTED}>{label}</dt>
+      <dd className="min-w-0 text-[var(--admin-text)]">{children}</dd>
     </div>
   );
 }
@@ -57,46 +82,60 @@ function OrgRenameForm({ org }: { org: Org }) {
       ? describeError(rename.error)
       : null;
   return (
-    <form onSubmit={(e) => void onSubmit(e)} noValidate className="max-w-md space-y-3">
+    <form onSubmit={(e) => void onSubmit(e)} noValidate className="space-y-3">
       <FormError>{failure}</FormError>
+      <div className="flex items-end gap-3">
+        <div className="min-w-0 max-w-sm flex-1">
+          <TextField
+            label="Name"
+            error={form.formState.errors.name?.message}
+            {...form.register('name')}
+          />
+        </div>
+        <SubmitButton pending={rename.isPending}>Save</SubmitButton>
+      </div>
       {rename.isSuccess ? (
         <p role="status" className="text-sm text-[var(--admin-text)]">
           Name saved.
         </p>
       ) : null}
-      <TextField
-        label="Name"
-        error={form.formState.errors.name?.message}
-        {...form.register('name')}
-      />
-      <SubmitButton pending={rename.isPending}>Save</SubmitButton>
     </form>
   );
 }
 
-function OrgSlugDetails({ org }: { org: Org }) {
+function OrgProfile({ org, canManage }: { org: Org; canManage: boolean }) {
   return (
-    <dl className="space-y-3 text-sm">
-      <div>
-        <dt className="font-medium text-[var(--admin-muted)]">Organization address (slug)</dt>
-        <dd className="mt-1 font-mono text-[var(--admin-text)]">{org.slug}</dd>
-      </div>
-      <div>
-        <dt className="font-medium text-[var(--admin-muted)]">Workspace URL</dt>
-        <dd className="mt-1 font-mono text-[var(--admin-text)]">/o/{org.slug}</dd>
-      </div>
-      <p className="text-[var(--admin-muted)]">The organization address cannot be changed.</p>
-    </dl>
+    <>
+      {canManage ? (
+        <OrgRenameForm org={org} />
+      ) : (
+        <dl>
+          <Fact label="Name">{org.name}</Fact>
+        </dl>
+      )}
+      {canManage ? null : (
+        <p className={`text-sm ${MUTED}`}>
+          Only organization owners and admins can change the display name.
+        </p>
+      )}
+      <dl>
+        <Fact label="Organization address">
+          <code className="font-mono">{org.slug}</code>
+        </Fact>
+        <Fact label="Workspace URL">
+          <code className="font-mono">/o/{org.slug}</code>
+        </Fact>
+      </dl>
+      <p className={`text-sm ${MUTED}`}>The organization address cannot be changed.</p>
+    </>
   );
 }
 
 function OrgIdCopy({ orgId }: { orgId: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <code className="break-all rounded-md bg-[var(--admin-surface)] px-2 py-1 font-mono text-sm text-[var(--admin-text)]">
-        {orgId}
-      </code>
+    <div className="flex flex-wrap items-center gap-3">
+      <code className="break-all font-mono">{orgId}</code>
       <Button
         type="button"
         variant="secondary"
@@ -113,10 +152,35 @@ function OrgIdCopy({ orgId }: { orgId: string }) {
         Copy organization ID
       </Button>
       {copied ? (
-        <span role="status" className="text-sm text-[var(--admin-muted)]">
+        <span role="status" className={`text-sm ${MUTED}`}>
           Copied to clipboard.
         </span>
       ) : null}
+    </div>
+  );
+}
+
+/** A pointer to another admin page: what lives there, and a button to go. */
+function RelatedLink({
+  title,
+  description,
+  to,
+  label,
+}: {
+  title: string;
+  description: string;
+  to: string;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-[var(--admin-text)]">{title}</p>
+        <p className={`text-sm ${MUTED}`}>{description}</p>
+      </div>
+      <Button variant="secondary" size="sm" asChild>
+        <Link to={to}>{label}</Link>
+      </Button>
     </div>
   );
 }
@@ -127,126 +191,73 @@ function OrgSettingsContent({ org }: { org: Org }) {
   const adminBase = `/o/${org.slug}/admin`;
 
   return (
-    <div className="space-y-6">
-      <section
-        className="admin-card space-y-4 rounded-xl border p-5 sm:p-6"
-        aria-labelledby="org-settings-profile"
+    <div className="admin-card divide-y divide-[var(--admin-border)] rounded-xl border">
+      <Section
+        id="org-settings-profile"
+        title="Organization profile"
+        help="The name people see, and the address of this workspace"
       >
-        <h2 id="org-settings-profile" className="text-lg font-semibold text-[var(--admin-text)]">
-          Organization profile
-        </h2>
-        <OrgProfileSection org={org} canManage={canManage} />
-        <OrgSlugDetails org={org} />
-      </section>
+        <OrgProfile org={org} canManage={canManage} />
+      </Section>
 
-      <section
-        className="admin-card space-y-4 rounded-xl border p-5 sm:p-6"
-        aria-labelledby="org-settings-details"
-      >
-        <h2 id="org-settings-details" className="text-lg font-semibold text-[var(--admin-text)]">
-          Organization details
-        </h2>
-        <dl className="space-y-4 text-sm">
-          <div>
-            <dt className="font-medium text-[var(--admin-muted)]">Created</dt>
-            <dd className="mt-1 text-[var(--admin-text)]">
-              <time dateTime={org.created_at}>{orgFormat.formatDateTime(org.created_at)}</time>
-            </dd>
-          </div>
-          <div>
-            <dt className="font-medium text-[var(--admin-muted)]">Organization ID</dt>
-            <dd className="mt-2">
-              <OrgIdCopy orgId={org.id} />
-            </dd>
-          </div>
-          <div>
-            <dt className="font-medium text-[var(--admin-muted)]">Your role</dt>
-            <dd className="mt-2">
-              <Badge tone="neutral">{roleLabel(org.role)}</Badge>
-            </dd>
-          </div>
+      <Section id="org-settings-details" title="Organization details">
+        <dl>
+          <Fact label="Created">
+            <time dateTime={org.created_at}>{orgFormat.formatDateTime(org.created_at)}</time>
+          </Fact>
+          <Fact label="Organization ID">
+            <OrgIdCopy orgId={org.id} />
+          </Fact>
+          <Fact label="Your role">
+            <Badge tone="neutral">{roleLabel(org.role)}</Badge>
+          </Fact>
         </dl>
-      </section>
+      </Section>
 
-      <section
-        className="admin-card space-y-3 rounded-xl border p-5 sm:p-6"
-        aria-labelledby="org-settings-defaults"
+      <Section
+        id="org-settings-story-points"
+        title="Story points"
+        help="Defaults for every project"
       >
-        <h2 id="org-settings-defaults" className="text-lg font-semibold text-[var(--admin-text)]">
-          Workspace defaults
-        </h2>
-        <p className="text-sm leading-relaxed text-[var(--admin-muted)]">
-          Issue types, priorities, and other seeded catalogs are managed under Defaults &amp;
-          Catalogs.
-        </p>
-        <Button variant="secondary" size="sm" asChild>
-          <Link to={`${adminBase}/catalogs`}>Open Defaults &amp; Catalogs</Link>
-        </Button>
-      </section>
-
-      <section
-        className="admin-card space-y-3 rounded-xl border p-5 sm:p-6"
-        aria-labelledby="org-settings-people"
-      >
-        <h2 id="org-settings-people" className="text-lg font-semibold text-[var(--admin-text)]">
-          People &amp; access
-        </h2>
-        <p className="text-sm leading-relaxed text-[var(--admin-muted)]">
-          Membership, invitations, roles, and the explicit project-creation grant are managed on the
-          Members page.
-        </p>
-        <Button variant="secondary" size="sm" asChild>
-          <Link to={`${adminBase}/members`}>Open Members</Link>
-        </Button>
-      </section>
-
-      <section
-        className="admin-card space-y-4 rounded-xl border p-5 sm:p-6"
-        aria-labelledby="org-settings-story-points"
-      >
-        <h2
-          id="org-settings-story-points"
-          className="text-lg font-semibold text-[var(--admin-text)]"
-        >
-          Story points
-        </h2>
-        <p className="text-sm leading-relaxed text-[var(--admin-muted)]">
-          Organization defaults apply to every project unless a project sets an explicit override.
-          These settings are authoritative: changing them can invalidate project overrides until
-          project admins resolve conflicts on each project&apos;s Estimates tab.
+        <p className={`text-sm ${MUTED}`}>
+          These apply to every project unless a project overrides them. Changing them can invalidate
+          those overrides until project admins resolve the conflicts on each project&apos;s
+          Estimates tab.
         </p>
         <OrgStoryPointsSection slug={org.slug} canManage={canManage} />
-      </section>
+      </Section>
 
-      <section
-        className="admin-card space-y-4 rounded-xl border p-5 sm:p-6"
-        aria-labelledby="org-settings-regional"
-      >
-        <h2 id="org-settings-regional" className="text-lg font-semibold text-[var(--admin-text)]">
-          Regional preferences
-        </h2>
-        <p className="text-sm leading-relaxed text-[var(--admin-muted)]">
-          Default timezone and locale for this organization. Formatting across the product will use
-          these values in a later release.
+      <Section id="org-settings-regional" title="Regional preferences" help="Timezone and locale">
+        <p className={`text-sm ${MUTED}`}>
+          The default timezone and locale for dates and times across this organization.
         </p>
         <OrgRegionalPreferencesSection slug={org.slug} canManage={canManage} />
-      </section>
+      </Section>
 
-      <section
-        className="admin-card space-y-3 rounded-xl border p-5 sm:p-6"
-        aria-labelledby="org-settings-lifecycle"
-      >
-        <h2 id="org-settings-lifecycle" className="text-lg font-semibold text-[var(--admin-text)]">
-          Organization lifecycle
-        </h2>
-        <p className="text-sm leading-relaxed text-[var(--admin-muted)]">
+      <Section id="org-settings-related" title="Related settings" help="Managed on their own pages">
+        <RelatedLink
+          title="Workspace defaults"
+          description="Issue types, priorities and other catalogs"
+          to={`${adminBase}/catalogs`}
+          label="Open Defaults & Catalogs"
+        />
+        <RelatedLink
+          title="People & access"
+          description="Members, invitations, roles and who can create projects"
+          to={`${adminBase}/members`}
+          label="Open Members"
+        />
+      </Section>
+
+      <Section id="org-settings-lifecycle" title="Organization lifecycle">
+        <p className={`text-sm ${MUTED}`}>
           To change organization ownership, promote another member to owner on the Members page.
           Only existing owners can assign or change the owner role.
         </p>
-        <p className="text-sm leading-relaxed text-[var(--admin-muted)]">
+        <p className={`text-sm ${MUTED}`}>
           Organization deactivation and deletion are not available in this product version.
         </p>
-      </section>
+      </Section>
     </div>
   );
 }
@@ -256,7 +267,7 @@ export function OrgSettingsPage() {
     <AdminOrgManagePageFrame
       title="General"
       titleId="org-settings-title"
-      description="Organization profile and workspace identity."
+      description="Your organization's name, address and defaults"
       requireManage={false}
     >
       <OrgSettingsLoaded />

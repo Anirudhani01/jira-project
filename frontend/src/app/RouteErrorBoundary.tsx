@@ -14,16 +14,16 @@ export function RouteErrorBoundary() {
   const requestId = error instanceof ApiError ? error.requestId : null;
   return (
     <section role="alert" aria-labelledby="error-title" className="space-y-3 p-8">
-      <h1 id="error-title" className="text-2xl font-semibold">
+      <h1 id="error-title" className="text-2xl font-medium">
         Something went wrong
       </h1>
-      <p className="text-slate-600">An unexpected error occurred. Please try again.</p>
+      <p className="text-fg-muted">An unexpected error occurred. Please try again.</p>
       {requestId ? (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-fg-subtle">
           Reference: <code>{requestId}</code>
         </p>
       ) : null}
-      <Link to="/" className="text-blue-700 underline underline-offset-2">
+      <Link to="/" className="text-accent underline underline-offset-2">
         Go to the home page
       </Link>
     </section>

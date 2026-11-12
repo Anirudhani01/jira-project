@@ -54,7 +54,7 @@ function OverviewStat({
         </div>
       ) : (
         <>
-          <p className="mt-1 text-xl font-semibold tabular-nums text-[var(--admin-text)]">
+          <p className="mt-1 text-xl font-medium tabular-nums text-[var(--admin-text)]">
             {value ?? '—'}
           </p>
           {emptyHint && value === 0 ? (
@@ -90,7 +90,7 @@ function QuickLink({ item }: { item: AdminNavItem }) {
   return (
     <Link
       to={to}
-      className="flex items-center gap-2.5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] px-3 py-2.5 text-sm font-medium text-[var(--admin-text)] no-underline shadow-sm transition-colors hover:border-[var(--admin-accent)] hover:bg-[var(--admin-accent-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--admin-accent)]"
+      className="flex items-center gap-3 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] px-3 py-3 text-sm font-medium text-[var(--admin-text)] no-underline shadow-sm transition-colors hover:border-[var(--admin-accent)] hover:bg-[var(--admin-accent-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--admin-accent)]"
     >
       <Icon className="size-4 shrink-0 text-[var(--admin-accent-on-soft)]" aria-hidden />
       <span>{item.label}</span>
@@ -110,9 +110,7 @@ function AdminQuickLinks({ groups }: { groups: AdminNavGroup[] }) {
     <div className="space-y-5">
       {groups.map((group) => (
         <div key={group.id}>
-          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--admin-muted)]">
-            {group.label}
-          </h3>
+          <h3 className="mb-2 text-xs font-medium text-[var(--admin-muted)]">{group.label}</h3>
           <ul className="grid gap-2 sm:grid-cols-2">
             {group.items.map((item) => (
               <li key={item.id}>
@@ -159,7 +157,7 @@ export function AdminOverviewPage() {
         className="admin-card space-y-2 rounded-xl border p-5 sm:p-6"
         aria-labelledby="admin-overview-context"
       >
-        <h2 id="admin-overview-context" className="text-lg font-semibold text-[var(--admin-text)]">
+        <h2 id="admin-overview-context" className="text-lg font-medium text-[var(--admin-text)]">
           Organization
         </h2>
         {org.isPending ? (
@@ -172,7 +170,7 @@ export function AdminOverviewPage() {
             <p className="text-base font-medium text-[var(--admin-text)]">{org.data.name}</p>
             <p className="text-sm text-[var(--admin-muted)]">
               Workspace address:{' '}
-              <code className="rounded bg-[var(--admin-bg)] px-1.5 py-0.5 text-[var(--admin-text)]">
+              <code className="rounded bg-[var(--admin-bg)] px-2 py-0.5 text-[var(--admin-text)]">
                 /o/{org.data.slug}
               </code>
               {' · '}
@@ -185,7 +183,7 @@ export function AdminOverviewPage() {
       <section aria-labelledby="admin-overview-stats-heading" className="space-y-3">
         <h2
           id="admin-overview-stats-heading"
-          className="text-sm font-semibold text-[var(--admin-text)]"
+          className="text-sm font-medium text-[var(--admin-text)]"
         >
           At a glance
         </h2>
@@ -226,7 +224,7 @@ export function AdminOverviewPage() {
         className="admin-card space-y-4 rounded-xl border p-5 sm:p-6"
         aria-labelledby="admin-overview-links"
       >
-        <h2 id="admin-overview-links" className="text-lg font-semibold text-[var(--admin-text)]">
+        <h2 id="admin-overview-links" className="text-lg font-medium text-[var(--admin-text)]">
           Administration areas
         </h2>
         <AdminQuickLinks groups={quickLinkGroups} />

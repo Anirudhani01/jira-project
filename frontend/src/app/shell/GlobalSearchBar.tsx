@@ -196,7 +196,7 @@ export function GlobalSearchBar({
       />
       <kbd
         className={cn(
-          'pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-line bg-surface px-1.5 py-0.5 font-mono text-[10px] text-fg-subtle sm:inline',
+          'pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-line bg-surface px-2 py-0.5 font-mono text-xs text-fg-subtle sm:inline',
           orgDashboard && 'org-dash-kbd border-[var(--org-dash-border)] bg-[var(--org-dash-bg)]',
           boardChrome && 'board-kbd',
         )}

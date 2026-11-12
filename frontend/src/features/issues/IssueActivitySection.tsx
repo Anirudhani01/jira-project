@@ -85,7 +85,7 @@ function CommentRow({
         <div className="mt-2 space-y-2">
           <textarea
             aria-label="Edit comment"
-            className="w-full rounded-md border border-line-strong bg-surface px-2.5 py-1.5 text-sm"
+            className="w-full rounded-md border border-line-strong bg-surface px-3 py-2 text-sm"
             rows={3}
             maxLength={32000}
             value={editDraft}
@@ -218,7 +218,7 @@ function CommentComposer({
       <textarea
         id="new-comment"
         data-shortcut-target="comment"
-        className="w-full rounded-md border border-line-strong bg-surface px-2.5 py-1.5 text-sm"
+        className="w-full rounded-md border border-line-strong bg-surface px-3 py-2 text-sm"
         rows={3}
         maxLength={32000}
         value={draft}
@@ -356,7 +356,7 @@ export function IssueActivitySection({
 
   return (
     <section aria-labelledby="activity-title" className="space-y-4">
-      <h2 id="activity-title" className="text-base font-semibold text-fg">
+      <h2 id="activity-title" className="text-base font-medium text-fg">
         Activity
       </h2>
       {loading ? <LoadingState label="Loading activity" /> : null}

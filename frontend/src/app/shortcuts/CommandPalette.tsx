@@ -10,6 +10,7 @@ import {
   Plus,
   Rows3,
   Sun,
+  FileText,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
@@ -44,7 +45,7 @@ const shortcutFor = (id: string) => {
 };
 
 const ITEM =
-  'flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm data-[selected=true]:bg-surface-hover';
+  'flex cursor-pointer items-center gap-2 rounded-sm px-2 py-2 text-sm data-[selected=true]:bg-surface-hover';
 
 /** Command palette (`Ctrl/Cmd+K`): actions, projects, recent items and issue search in one
  * box. Typing `/` first limits it to issues. Selecting an item runs it and closes the palette. */
@@ -131,6 +132,18 @@ export function CommandPalette({
         setPreference(resolved === 'dark' ? 'light' : 'dark');
       },
     },
+    ...(resolved === 'paper'
+      ? []
+      : [
+          {
+            id: 'theme-paper',
+            label: 'Switch to paper theme',
+            icon: <FileText className="size-4" aria-hidden="true" />,
+            run: () => {
+              setPreference('paper');
+            },
+          },
+        ]),
     {
       id: 'help',
       label: 'Show keyboard shortcuts',
@@ -194,7 +207,7 @@ export function CommandPalette({
                     {action.icon}
                     <span className="flex-1 text-sm text-fg">{action.label}</span>
                     {action.shortcut ? (
-                      <kbd className="rounded border border-line-strong bg-surface-2 px-1.5 font-mono text-xs text-fg-muted">
+                      <kbd className="rounded border border-line-strong bg-surface-2 px-2 font-mono text-xs text-fg-muted">
                         {action.shortcut}
                       </kbd>
                     ) : null}

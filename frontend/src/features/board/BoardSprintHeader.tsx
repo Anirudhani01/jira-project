@@ -62,7 +62,7 @@ function CompleteSprintDialog({
           <label className="flex flex-col gap-1">
             Move open issues to
             <select
-              className="rounded-md border border-line bg-surface px-2 py-1.5"
+              className="rounded-md border border-line bg-surface px-2 py-2"
               value={target}
               onChange={(e) => {
                 setTarget(e.target.value);
@@ -153,7 +153,7 @@ export function BoardSprintHeader({
             className={cn('size-4 shrink-0', boardChrome && 'text-[var(--board-accent)]')}
             aria-hidden="true"
           />
-          <span className={cn('font-semibold text-fg', boardChrome && 'text-[var(--board-text)]')}>
+          <span className={cn('font-medium text-fg', boardChrome && 'text-[var(--board-text)]')}>
             {sprintRef.name}
           </span>
           {detail ? (
