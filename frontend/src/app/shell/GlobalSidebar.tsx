@@ -1,17 +1,17 @@
 import {
   BarChart3,
-  Clock,
   Home,
-  LayoutGrid,
   PanelLeftClose,
   PanelLeftOpen,
+  Plus,
   SlidersHorizontal,
   Star,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
-import { NavLink } from 'react-router';
+import { Link, NavLink } from 'react-router';
 
 import { Avatar } from '../../components/ui/Avatar';
+import { Badge } from '../../components/ui/Badge';
 import { Button, IconButton } from '../../components/ui/Button';
 import { DialogContent, Dialog } from '../../components/ui/Overlay';
 import { useSession } from '../../features/auth/api';
@@ -22,7 +22,6 @@ import { cn } from '../../lib/cn';
 import {
   SIDEBAR_ITEMS,
   useHiddenSidebarItems,
-  useRecents,
   useStarred,
   useTrackRecents,
   type SidebarItem,
@@ -33,7 +32,6 @@ import { useOrgSlug, useShowGlobalSidebar } from './useOrgShell';
 
 const LABELS: Record<SidebarItem, string> = {
   'for-you': 'For you',
-  recent: 'Recent',
   starred: 'Starred',
   projects: 'Projects',
   reports: 'Reports',
@@ -47,9 +45,22 @@ function itemClass(isActive: boolean) {
   );
 }
 
-function SectionTitle({ children, collapsed }: { children: ReactNode; collapsed: boolean }) {
+function SectionTitle({
+  children,
+  collapsed,
+  action,
+}: {
+  children: ReactNode;
+  collapsed: boolean;
+  action?: ReactNode;
+}) {
   if (collapsed) return <hr className="mx-2 my-2 border-line" />;
-  return <p className="mb-1 mt-3 px-3 text-xs font-medium text-fg-subtle">{children}</p>;
+  return (
+    <div className="mb-1 mt-3 flex items-center justify-between pl-3 pr-1">
+      <p className="text-xs font-medium text-fg-subtle">{children}</p>
+      {action}
+    </div>
+  );
 }
 
 function CustomizeDialog({
@@ -114,7 +125,6 @@ function GlobalNav({
   const projects = useProjects(org);
   const canCreateProject = useOrg(org).data?.permissions.includes('project.create') ?? false;
   const { hidden } = useHiddenSidebarItems(org);
-  const { recent } = useRecents(org);
   const { starred } = useStarred(org);
   const [customizing, setCustomizing] = useState(false);
   const visible = (item: SidebarItem) => !hidden.includes(item);
@@ -142,24 +152,36 @@ function GlobalNav({
       <nav aria-label="Global" className="flex flex-col gap-0.5">
         {link(`/o/${org}`, 'For you', <Home className="size-4 shrink-0" aria-hidden />)}
 
-        {visible('recent') ? (
+        {visible('projects') ? (
           <>
-            <SectionTitle collapsed={collapsed}>Recent</SectionTitle>
-            {recent.length === 0 && !collapsed ? (
-              <p className="px-3 text-xs text-fg-subtle">Nothing yet</p>
-            ) : (
-              recent
-                .slice(0, collapsed ? 3 : 5)
-                .map((item) =>
-                  link(
-                    item.kind === 'issue'
-                      ? `/o/${org}/issues/${item.key}`
-                      : `/o/${org}/p/${item.key}/board`,
-                    item.key,
-                    <Clock className="size-4 shrink-0" aria-hidden />,
-                    false,
-                  ),
-                )
+            <SectionTitle
+              collapsed={collapsed}
+              action={
+                canCreateProject ? (
+                  <Link
+                    to={`/o/${org}/projects/new`}
+                    aria-label="Create project"
+                    title="Create project"
+                    onClick={onNavigate}
+                    className="inline-flex size-6 items-center justify-center rounded-md text-fg-muted no-underline outline-none hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <Plus className="size-4" aria-hidden />
+                  </Link>
+                ) : null
+              }
+            >
+              Projects
+            </SectionTitle>
+            {projects.isPending && !collapsed ? (
+              <p className="px-3 text-xs text-fg-subtle">Loading…</p>
+            ) : null}
+            {live.map((project) =>
+              link(
+                `/o/${org}/p/${project.key}/board`,
+                project.name,
+                <Avatar name={project.name} size="xs" className="rounded-md" />,
+                false,
+              ),
             )}
           </>
         ) : null}
@@ -182,40 +204,23 @@ function GlobalNav({
           </>
         ) : null}
 
-        {visible('projects') ? (
-          <>
-            <SectionTitle collapsed={collapsed}>Projects</SectionTitle>
-            {projects.isPending && !collapsed ? (
-              <p className="px-3 text-xs text-fg-subtle">Loading…</p>
-            ) : null}
-            {live.map((project) =>
-              link(
-                `/o/${org}/p/${project.key}/board`,
-                project.name,
-                <Avatar name={project.name} size="xs" className="rounded-md" />,
-                false,
-              ),
-            )}
-            {canCreateProject
-              ? link(
-                  `/o/${org}/projects/new`,
-                  'Create project',
-                  <LayoutGrid className="size-4 shrink-0" aria-hidden />,
-                )
-              : null}
-          </>
-        ) : null}
-
         {visible('reports') ? (
           <>
-            <SectionTitle collapsed={collapsed}>More</SectionTitle>
+            <SectionTitle collapsed={collapsed}>Manage</SectionTitle>
             <span
               aria-disabled="true"
               title="Reports are not available yet"
               className="flex cursor-not-allowed items-center gap-3 px-3 py-2 text-sm text-fg-subtle opacity-70"
             >
               <BarChart3 className="size-4 shrink-0" aria-hidden />
-              {collapsed ? <span className="sr-only">Reports</span> : <span>Reports</span>}
+              {collapsed ? (
+                <span className="sr-only">Reports</span>
+              ) : (
+                <>
+                  <span>Reports</span>
+                  <Badge>Soon</Badge>
+                </>
+              )}
             </span>
           </>
         ) : null}
@@ -262,7 +267,7 @@ function GlobalNav({
   );
 }
 
-/** Global left navigation (For you, Recent, Starred, Projects, More). Collapsible with the
+/** Global left navigation (For you, Projects, Starred, Manage). Collapsible with the
  * button or Ctrl + [ . */
 export function GlobalSidebar() {
   const session = useSession();
@@ -292,7 +297,7 @@ export function GlobalSidebar() {
     <aside
       aria-label="Sidebar"
       className={cn(
-        'hidden shrink-0 border-r border-line bg-surface lg:block',
+        'sticky top-[57px] hidden h-[calc(100vh-57px)] shrink-0 self-start overflow-y-auto border-r border-line bg-surface lg:block',
         collapsed ? 'w-14' : 'w-[240px]',
       )}
     >

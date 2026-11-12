@@ -129,7 +129,7 @@ describe('app shell (PR 2)', () => {
     expect(await screen.findByRole('heading', { name: 'General' })).toBeInTheDocument();
   });
 
-  it('global search on org settings navigates to org home with query on Enter', async () => {
+  it('global search on the org Settings tab navigates to org home with query on Enter', async () => {
     const user = userEvent.setup();
     mockApi({
       'GET /auth/session': () => json(SESSION),
@@ -148,7 +148,7 @@ describe('app shell (PR 2)', () => {
     });
     const { router } = renderApp('/o/acme/settings');
     await screen.findByRole('navigation', { name: 'Primary' });
-    await screen.findByRole('navigation', { name: 'Administration' });
+    await screen.findByRole('navigation', { name: 'Organization sections' });
     await screen.findByRole('heading', { name: 'General' });
     const search = screen.getByRole('combobox', { name: /search projects, issues, or people/i });
     await user.type(search, 'website');

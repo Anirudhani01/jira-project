@@ -23,7 +23,7 @@ export interface RecentItem {
   at: number;
 }
 
-export const SIDEBAR_ITEMS = ['for-you', 'recent', 'starred', 'projects', 'reports'] as const;
+export const SIDEBAR_ITEMS = ['for-you', 'projects', 'starred', 'reports'] as const;
 export type SidebarItem = (typeof SIDEBAR_ITEMS)[number];
 
 const MAX_RECENT = 8;

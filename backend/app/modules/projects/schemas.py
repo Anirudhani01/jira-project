@@ -52,8 +52,21 @@ class ProjectSummary(BaseModel):
     my_role: str | None
 
 
+class ProjectListItem(ProjectSummary):
+    """A project in the list, with the issue totals its dashboard card shows.
+
+    ``issue_count`` counts non-deleted issues: all of a kanban project's, or only those of the
+    active sprint for a scrum project (0 while no sprint is active). ``done_count`` is how many
+    of them are in a ``done`` status category. ``active_sprint`` is the active sprint's name.
+    """
+
+    issue_count: int
+    done_count: int
+    active_sprint: str | None
+
+
 class ProjectListResponse(BaseModel):
-    items: list[ProjectSummary]
+    items: list[ProjectListItem]
 
 
 class ProjectResponse(BaseModel):

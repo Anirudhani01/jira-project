@@ -6,7 +6,7 @@ const TAB_CLASS = ({ isActive }: { isActive: boolean }) =>
   cn(
     'inline-flex items-center border-b-2 px-1 pb-3 pt-1 text-sm font-medium no-underline transition-colors',
     isActive
-      ? 'org-dash-link border-[var(--org-dash-accent)]'
+      ? 'border-[var(--org-dash-text)] text-[var(--org-dash-text)]'
       : 'border-transparent text-[var(--org-dash-muted)] hover:border-[var(--org-dash-border)] hover:text-[var(--org-dash-text)]',
   );
 
@@ -28,7 +28,7 @@ export function OrgDashboardTabs({ orgSlug, showAudit }: { orgSlug: string; show
             Audit log
           </NavLink>
         ) : null}
-        <NavLink to={`/o/${orgSlug}/settings`} className={TAB_CLASS}>
+        <NavLink to={`/o/${orgSlug}/settings`} end className={TAB_CLASS}>
           Settings
         </NavLink>
       </div>

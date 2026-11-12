@@ -97,7 +97,7 @@ export function Combobox({ triggerRef, ...props }: ComboboxProps) {
             aria-describedby={error ? errorId : undefined}
             disabled={disabled}
             className={cn(
-              'flex h-8 w-full items-center justify-between gap-2 rounded-md border border-line-strong bg-surface px-3 text-left text-sm hover:border-fg-subtle disabled:opacity-60',
+              'flex h-8 w-full items-center justify-between gap-2 rounded-md border border-control bg-surface px-3 text-left text-sm hover:border-fg-subtle disabled:opacity-60',
               error && 'border-danger',
             )}
           >

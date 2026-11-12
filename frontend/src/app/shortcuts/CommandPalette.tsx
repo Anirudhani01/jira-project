@@ -183,7 +183,7 @@ export function CommandPalette({
             value={text}
             onValueChange={setText}
             placeholder="Search actions, projects and issues… (type / for issues only)"
-            className="mb-2 h-10 w-full rounded-md border border-line-strong bg-surface px-3 text-sm outline-none placeholder:text-fg-subtle"
+            className="mb-2 h-10 w-full rounded-md border border-control bg-surface px-3 text-sm outline-none placeholder:text-fg-subtle"
           />
           <Command.List className="max-h-80 overflow-y-auto">
             {nothing ? (

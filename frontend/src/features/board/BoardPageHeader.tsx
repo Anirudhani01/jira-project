@@ -76,11 +76,13 @@ export function BoardPageHeader({
       </nav>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-baseline gap-3">
-          <h1 id={titleId} className="board-page-title text-2xl font-medium tracking-tight">
+          <h1 id={titleId} className="board-page-title text-3xl font-semibold tracking-tight">
             {title}
           </h1>
           {sprintName ? (
-            <p className="text-base font-normal text-[var(--board-muted)]">{sprintName}</p>
+            <p className="rounded-full bg-[var(--board-accent-soft)] px-3 py-0.5 text-[13px] font-medium text-[var(--accent-on-soft)]">
+              {sprintName} · active
+            </p>
           ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-1">

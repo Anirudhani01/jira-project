@@ -1,6 +1,9 @@
-import { useState, type SyntheticEvent } from 'react';
+import { ArrowRight, CalendarDays } from 'lucide-react';
+import { createContext, useContext, useMemo, useState, type SyntheticEvent } from 'react';
 
 import { Button } from '../../components/ui/Button';
+import { TypeIcon } from '../../components/ui/IssueIcons';
+import { statusLozengeClassName } from '../../components/ui/statusStyles';
 import { FormError } from '../../components/ui/Form';
 import { ErrorState, LoadingState } from '../../components/ui/States';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Overlay';
@@ -10,15 +13,100 @@ import { permissionDeniedInlineMessage } from '../../lib/ux/permissionDenied';
 import type { Comment, IssueActivity } from '../../lib/api/types';
 import { useLocation } from 'react-router';
 import { useIssueActivity } from './api';
+import { useWorkflow } from '../projects/api';
 
 import { useComments, useCreateComment, useDeleteComment, useUpdateComment } from '../comments/api';
 import { mergeTimeline, type TimelineEntry } from '../comments/timeline';
 
-import { describeIssueActivity } from './activityFormat';
+import {
+  createdTypeOf,
+  describeIssueActivity,
+  sprintChangeOf,
+  statusChangeOf,
+  type StatusRef,
+} from './activityFormat';
 
 function commentMutationError(error: unknown): string | null {
   if (!error) return null;
   return permissionDeniedInlineMessage(error, 'issue-mutation') ?? describeError(error);
+}
+
+/** Status id → category, from the project workflow, so chips get the same colours as elsewhere. */
+const StatusCategoryContext = createContext<ReadonlyMap<string, string>>(new Map());
+
+function StatusChip({ status }: { status: StatusRef }) {
+  const categories = useContext(StatusCategoryContext);
+  const category = (status.id ? categories.get(status.id) : undefined) ?? 'todo';
+  return <span className={statusLozengeClassName(status.name, category)}>{status.name}</span>;
+}
+
+function StatusChange({ from, to }: { from: StatusRef | null; to: StatusRef }) {
+  return (
+    <>
+      changed status{' '}
+      {from ? (
+        <>
+          <span className="sr-only">from </span>
+          <StatusChip status={from} />{' '}
+          <ArrowRight className="mx-0.5 inline size-3.5 align-[-2px] text-fg-subtle" aria-hidden />{' '}
+          <span className="sr-only">to </span>
+        </>
+      ) : (
+        <>to </>
+      )}
+      <StatusChip status={to} />
+    </>
+  );
+}
+
+function SprintChip({ name }: { name: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-sm bg-accent-soft px-2 text-xs font-medium leading-5 text-[var(--accent-on-soft)]">
+      <CalendarDays className="size-3" aria-hidden="true" />
+      {name}
+    </span>
+  );
+}
+
+function SprintChange({ from, to }: { from: string | null; to: string | null }) {
+  if (from && to) {
+    return (
+      <>
+        moved from <SprintChip name={from} />{' '}
+        <ArrowRight className="mx-0.5 inline size-3.5 align-[-2px] text-fg-subtle" aria-hidden />{' '}
+        <span className="sr-only">to </span>
+        <SprintChip name={to} />
+      </>
+    );
+  }
+  if (to) {
+    return (
+      <>
+        added to <SprintChip name={to} />
+      </>
+    );
+  }
+  return <>removed from {from ? <SprintChip name={from} /> : null}</>;
+}
+
+function ActivityDetail({ activity }: { activity: IssueActivity }) {
+  const status = statusChangeOf(activity);
+  if (status) return <StatusChange from={status.from} to={status.to} />;
+  const sprint = sprintChangeOf(activity);
+  if (sprint) return <SprintChange from={sprint.from} to={sprint.to} />;
+  const createdType = createdTypeOf(activity);
+  if (createdType) {
+    return (
+      <>
+        {describeIssueActivity(activity)}{' '}
+        <span className="inline-flex items-center gap-1 align-middle text-xs font-medium text-fg">
+          <TypeIcon name={createdType} />
+          {createdType}
+        </span>
+      </>
+    );
+  }
+  return <>{describeIssueActivity(activity)}</>;
 }
 
 function ActivityRow({ activity }: { activity: IssueActivity }) {
@@ -26,7 +114,9 @@ function ActivityRow({ activity }: { activity: IssueActivity }) {
   return (
     <li className="text-sm text-fg">
       <span className="font-medium">{actor}</span>{' '}
-      <span className="text-fg-muted">{describeIssueActivity(activity)}</span>
+      <span className="text-fg-muted">
+        <ActivityDetail activity={activity} />
+      </span>
       <span className="text-fg-subtle"> · </span>
       <time className="text-fg-muted" dateTime={activity.created_at}>
         {formatRelativeTime(activity.created_at)}
@@ -301,6 +391,15 @@ export function IssueActivitySection({
   const [editDraft, setEditDraft] = useState('');
   const [tab, setTab] = useState<'all' | 'comments' | 'history'>('all');
 
+  // Status colours come from the project workflow (readable by anyone who can view the project);
+  // without it the chips fall back to name-based colours.
+  const projectKey = issueKey.slice(0, Math.max(0, issueKey.lastIndexOf('-')));
+  const workflow = useWorkflow(org, projectKey);
+  const statusCategories = useMemo(
+    () => new Map((workflow.data?.statuses ?? []).map((status) => [status.id, status.category])),
+    [workflow.data],
+  );
+
   const activityItems = (activity.data?.pages ?? []).flatMap((page) => page.items);
   const commentItems = (comments.data?.pages ?? []).flatMap((page) => page.items);
   const timeline = mergeTimeline(activityItems, commentItems);
@@ -355,64 +454,66 @@ export function IssueActivitySection({
   const loading = activity.isPending || comments.isPending;
 
   return (
-    <section aria-labelledby="activity-title" className="space-y-4">
-      <h2 id="activity-title" className="text-base font-medium text-fg">
-        Activity
-      </h2>
-      {loading ? <LoadingState label="Loading activity" /> : null}
-      {activity.isError ? (
-        <ErrorState error={activity.error} onRetry={() => void activity.refetch()} />
-      ) : null}
-      {comments.isError ? (
-        <ErrorState error={comments.error} onRetry={() => void comments.refetch()} />
-      ) : null}
+    <StatusCategoryContext.Provider value={statusCategories}>
+      <section aria-labelledby="activity-title" className="space-y-4">
+        <h2 id="activity-title" className="text-base font-medium text-fg">
+          Activity
+        </h2>
+        {loading ? <LoadingState label="Loading activity" /> : null}
+        {activity.isError ? (
+          <ErrorState error={activity.error} onRetry={() => void activity.refetch()} />
+        ) : null}
+        {comments.isError ? (
+          <ErrorState error={comments.error} onRetry={() => void comments.refetch()} />
+        ) : null}
 
-      <Tabs
-        value={tab}
-        onValueChange={(v) => {
-          setTab(v as typeof tab);
-        }}
-      >
-        <TabsList aria-label="Activity views">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="comments">Comments</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-        </TabsList>
-        <TabsContent value="all" className="pt-4">
-          <TimelineList entries={timeline} {...commentRowProps} />
-          <LoadMoreRow activity={activity} comments={comments} tab="all" />
-          <CommentComposer
-            canComment={canComment}
-            draft={draft}
-            createError={create.error}
-            createPending={create.isPending}
-            onDraftChange={setDraft}
-            onSubmit={submit}
-          />
-        </TabsContent>
-        <TabsContent value="comments" className="pt-4">
-          <TimelineList
-            entries={timeline.filter((e) => e.kind === 'comment')}
-            {...commentRowProps}
-          />
-          <LoadMoreRow activity={activity} comments={comments} tab="comments" />
-          <CommentComposer
-            canComment={canComment}
-            draft={draft}
-            createError={create.error}
-            createPending={create.isPending}
-            onDraftChange={setDraft}
-            onSubmit={submit}
-          />
-        </TabsContent>
-        <TabsContent value="history" className="pt-4">
-          <TimelineList
-            entries={timeline.filter((e) => e.kind === 'activity')}
-            {...commentRowProps}
-          />
-          <LoadMoreRow activity={activity} comments={comments} tab="history" />
-        </TabsContent>
-      </Tabs>
-    </section>
+        <Tabs
+          value={tab}
+          onValueChange={(v) => {
+            setTab(v as typeof tab);
+          }}
+        >
+          <TabsList aria-label="Activity views">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="comments">Comments</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
+          </TabsList>
+          <TabsContent value="all" className="pt-4">
+            <TimelineList entries={timeline} {...commentRowProps} />
+            <LoadMoreRow activity={activity} comments={comments} tab="all" />
+            <CommentComposer
+              canComment={canComment}
+              draft={draft}
+              createError={create.error}
+              createPending={create.isPending}
+              onDraftChange={setDraft}
+              onSubmit={submit}
+            />
+          </TabsContent>
+          <TabsContent value="comments" className="pt-4">
+            <TimelineList
+              entries={timeline.filter((e) => e.kind === 'comment')}
+              {...commentRowProps}
+            />
+            <LoadMoreRow activity={activity} comments={comments} tab="comments" />
+            <CommentComposer
+              canComment={canComment}
+              draft={draft}
+              createError={create.error}
+              createPending={create.isPending}
+              onDraftChange={setDraft}
+              onSubmit={submit}
+            />
+          </TabsContent>
+          <TabsContent value="history" className="pt-4">
+            <TimelineList
+              entries={timeline.filter((e) => e.kind === 'activity')}
+              {...commentRowProps}
+            />
+            <LoadMoreRow activity={activity} comments={comments} tab="history" />
+          </TabsContent>
+        </Tabs>
+      </section>
+    </StatusCategoryContext.Provider>
   );
 }

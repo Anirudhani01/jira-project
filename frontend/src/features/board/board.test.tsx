@@ -103,6 +103,98 @@ describe('board page', () => {
     });
   });
 
+  describe('sprint card (scrum)', () => {
+    const DAY = 86_400_000;
+    const start = new Date(Date.now() - 3.5 * DAY);
+    const SPRINT = {
+      id: 'sp1',
+      project_key: 'WEB',
+      name: 'Sprint 1',
+      goal: 'Ship mobile board polish',
+      state: 'active',
+      start_at: start.toISOString(),
+      end_at: new Date(start.getTime() + 14 * DAY).toISOString(),
+      completed_at: null,
+      issue_count: 4,
+      points_total: 0,
+      points_done: 0,
+    };
+    const scrumMocks = (projects: Response) => ({
+      'GET /auth/session': () => json(SESSION),
+      'GET /orgs/acme/projects/WEB': () =>
+        json({ ...PROJECT, board_type: 'scrum', permissions: ['project.view'] }),
+      'GET /orgs/acme/projects/WEB/board': () =>
+        json({
+          ...board(),
+          board_type: 'scrum',
+          sprint: { id: 'sp1', name: 'Sprint 1', state: 'active' },
+        }),
+      'GET /orgs/acme/projects/WEB/backlog': () =>
+        json({
+          project_key: 'WEB',
+          truncated: false,
+          backlog: [],
+          sprints: [{ sprint: SPRINT, issues: [] }],
+        }),
+      'GET /orgs/acme/projects': () => projects,
+    });
+
+    it('shows the active sprint chip and real progress from the project list', async () => {
+      mockApi(
+        scrumMocks(
+          json({
+            items: [
+              {
+                key: 'WEB',
+                name: 'Website',
+                board_type: 'scrum',
+                archived: false,
+                my_role: 'member',
+                issue_count: 4,
+                done_count: 1,
+                active_sprint: 'Sprint 1',
+              },
+            ],
+          }),
+        ),
+      );
+      renderApp('/o/acme/p/WEB/board');
+      expect(await screen.findByText('Sprint 1 · active')).toBeInTheDocument();
+      const done = await screen.findByRole('progressbar', { name: 'Sprint issues done' });
+      expect(done).toHaveAttribute('aria-valuenow', '1');
+      expect(done).toHaveAttribute('aria-valuemax', '4');
+      expect(screen.getByText('1 / 4')).toBeInTheDocument();
+      const time = await screen.findByRole('progressbar', { name: 'Sprint time elapsed' });
+      expect(time).toHaveAttribute('aria-valuenow', '3');
+      expect(time).toHaveAttribute('aria-valuemax', '14');
+      expect(screen.getByText('3 / 14 days')).toBeInTheDocument();
+      expect(screen.getByText('Ship mobile board polish')).toBeInTheDocument();
+    });
+
+    it('leaves out the done bar until the project counts are available', async () => {
+      mockApi(scrumMocks(problem(500, 'internal_error')));
+      renderApp('/o/acme/p/WEB/board');
+      expect(
+        await screen.findByRole('progressbar', { name: 'Sprint time elapsed' }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('progressbar', { name: 'Sprint issues done' })).toBeNull();
+    });
+  });
+
+  it('keeps the drag handle and the move menu reachable by name on every card', async () => {
+    mockApi({
+      'GET /auth/session': () => json(SESSION),
+      'GET /orgs/acme/projects/WEB': () => json(PROJECT),
+      'GET /orgs/acme/projects/WEB/board': () => json(board()),
+    });
+    renderApp('/o/acme/p/WEB/board');
+    await screen.findByRole('heading', { name: 'WEB board' });
+    for (const key of ['WEB-1', 'WEB-2', 'WEB-3']) {
+      expect(screen.getByRole('button', { name: `More actions for ${key}` })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: new RegExp(`^Drag ${key}:`) })).toBeInTheDocument();
+    }
+  });
+
   it('rolls the board back and shows an error when the server rejects the move', async () => {
     mockApi({
       'GET /auth/session': () => json(SESSION),

@@ -9,7 +9,7 @@ import {
 import { cn } from '../../lib/cn';
 
 const control =
-  'w-full rounded-md border border-line-strong bg-surface px-3 text-sm text-fg placeholder:text-fg-subtle hover:border-fg-subtle disabled:opacity-60 aria-[invalid=true]:border-danger';
+  'w-full rounded-md border border-control bg-surface px-3 text-sm text-fg placeholder:text-fg-subtle hover:border-fg-subtle disabled:opacity-60 aria-[invalid=true]:border-danger';
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className, ...props }, ref) {

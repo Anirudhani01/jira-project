@@ -10,6 +10,9 @@ import { Dialog, DialogContent, DialogTrigger } from '../../components/ui/Overla
 import { mutationErrorMessage } from '../../lib/ux/permissionDenied';
 import type { Board, Sprint } from '../../lib/api/types';
 import { useBacklog, useCompleteSprint } from '../backlog/api';
+import { useProjects } from '../projects/api';
+
+import { donePercent, sprintTimeProgress } from './sprintProgress';
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -113,6 +116,47 @@ function CompleteSprintDialog({
   );
 }
 
+function SprintBar({
+  label,
+  value,
+  max,
+  percent,
+  text,
+  tone,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  percent: number;
+  text: string;
+  tone: 'muted' | 'accent';
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="mb-1.5 flex justify-between gap-2 text-xs text-[var(--board-muted)]">
+        <span>{label}</span>
+        <span className="tabular-nums">{text}</span>
+      </div>
+      <div
+        role="progressbar"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={max}
+        aria-valuenow={value}
+        className="h-1.5 rounded-full bg-surface-2"
+      >
+        <div
+          className={cn(
+            'h-1.5 rounded-full',
+            tone === 'accent' ? 'bg-[var(--board-accent)]' : 'bg-fg-subtle',
+          )}
+          style={{ width: `${String(percent)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function BoardSprintHeader({
   board,
   org,
@@ -126,6 +170,7 @@ export function BoardSprintHeader({
 }) {
   const boardChrome = useBoardShell();
   const backlog = useBacklog(org, projectKey, board.board_type === 'scrum');
+  const projects = useProjects(org);
   const sprintRef = board.sprint;
   if (board.board_type !== 'scrum' || !sprintRef) return null;
 
@@ -133,13 +178,17 @@ export function BoardSprintHeader({
   const futures =
     backlog.data?.sprints.map((s) => s.sprint).filter((s) => s.state === 'future') ?? [];
   const left = daysLeft(detail?.end_at);
+  const time = sprintTimeProgress(detail?.start_at, detail?.end_at);
+  // Issue totals of the active sprint come with the project list (exact, board limits aside).
+  const counts = projects.data?.find((p) => p.key.toLowerCase() === projectKey.toLowerCase());
+  const issuesDone = counts ? donePercent(counts.done_count, counts.issue_count) : null;
 
   return (
     <div
       className={cn(
         'flex flex-wrap items-start justify-between gap-4 rounded-lg border border-line bg-surface px-4 py-3',
         boardChrome &&
-          'board-sprint-card border-[var(--board-border)] bg-[var(--board-surface)] px-5 py-4',
+          'board-sprint-card gap-x-8 gap-y-4 border-[var(--board-border)] bg-[var(--board-surface)] px-5 py-4',
       )}
     >
       <div className="min-w-0 space-y-2">
@@ -204,6 +253,30 @@ export function BoardSprintHeader({
           </p>
         ) : null}
       </div>
+      {boardChrome && (time || (counts && issuesDone !== null)) ? (
+        <div className="grid min-w-[16rem] flex-1 basis-80 grid-cols-2 gap-x-5 gap-y-3">
+          {time ? (
+            <SprintBar
+              label="Sprint time elapsed"
+              value={time.elapsedDays}
+              max={time.totalDays}
+              percent={time.percent}
+              text={`${String(time.elapsedDays)} / ${String(time.totalDays)} days`}
+              tone="muted"
+            />
+          ) : null}
+          {counts && issuesDone !== null ? (
+            <SprintBar
+              label="Sprint issues done"
+              value={counts.done_count}
+              max={counts.issue_count}
+              percent={issuesDone}
+              text={`${String(counts.done_count)} / ${String(counts.issue_count)}`}
+              tone="accent"
+            />
+          ) : null}
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <Button
           asChild

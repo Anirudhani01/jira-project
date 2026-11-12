@@ -6,6 +6,7 @@ which additionally hides issues of projects the caller cannot view.
 
 import re
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, cast
@@ -237,6 +238,67 @@ async def list_board_views(
             .limit(limit)
         )
     )
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectProgress:
+    """Issue totals for one project card (see ``project_progress`` for the scope)."""
+
+    issue_count: int
+    done_count: int
+    active_sprint: str | None
+
+
+async def project_progress(
+    session: AsyncSession, projects: Sequence[tuple[uuid.UUID, str]]
+) -> dict[uuid.UUID, ProjectProgress]:
+    """Issue and done counts per project, in one grouped query (``projects`` = id, board type).
+
+    Scope: every non-deleted issue of a kanban project; for a scrum project only the issues
+    of its active sprint (none when no sprint is active), the same set its board shows.
+    Unlike the board this does not hide issues finished long ago.
+    """
+    context = require_org_context(session)
+    if not projects:
+        return {}
+    ids = [project_id for project_id, _ in projects]
+    scrum_ids = [project_id for project_id, board_type in projects if board_type == "scrum"]
+    kanban_ids = [project_id for project_id, board_type in projects if board_type != "scrum"]
+    active = {
+        row.project_id: row.name
+        for row in await session.execute(
+            select(Sprint.project_id, Sprint.name).where(
+                Sprint.org_id == context.org_id,
+                Sprint.project_id.in_(scrum_ids),
+                Sprint.state == "active",
+            )
+        )
+    }
+    rows = await session.execute(
+        select(
+            Issue.project_id,
+            func.count(Issue.id),
+            func.count(Issue.id).filter(WorkflowStatus.category == "done"),
+        )
+        .join(WorkflowStatus, WorkflowStatus.id == Issue.status_id)
+        .outerjoin(Sprint, Sprint.id == Issue.sprint_id)
+        .where(
+            Issue.org_id == context.org_id,
+            Issue.project_id.in_(ids),
+            Issue.deleted_at.is_(None),
+            or_(Issue.project_id.in_(kanban_ids), Sprint.state == "active"),
+        )
+        .group_by(Issue.project_id)
+    )
+    counts = {project_id: (total, done) for project_id, total, done in rows}
+    return {
+        project_id: ProjectProgress(
+            issue_count=counts.get(project_id, (0, 0))[0],
+            done_count=counts.get(project_id, (0, 0))[1],
+            active_sprint=active.get(project_id),
+        )
+        for project_id in ids
+    }
 
 
 async def list_backlog_views(

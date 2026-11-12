@@ -24,6 +24,7 @@ from app.modules.boards import repository as boards_repo
 from app.modules.boards.column_mapping import validate_column_mapping
 from app.modules.boards.schemas import ColumnInput
 from app.modules.identity.deps import IdentityServices
+from app.modules.issues import repository as issues_repo
 from app.modules.orgs import repository as orgs
 from app.modules.projects import repository, workflow_edit
 from app.modules.projects.models import Project
@@ -141,11 +142,15 @@ async def rename_project_key(
 
 async def list_projects(
     services: IdentityServices, access: OrgAccess, *, archived: bool
-) -> list[tuple[Project, str | None]]:
+) -> list[tuple[Project, str | None, issues_repo.ProjectProgress]]:
     async with org_transaction(services, access, Permission.ORG_VIEW) as (session, current):
-        return await repository.list_projects(
+        rows = await repository.list_projects(
             session, archived=archived, all_projects=current.role in ("owner", "admin")
         )
+        progress = await issues_repo.project_progress(
+            session, [(project.id, project.board_type) for project, _ in rows]
+        )
+        return [(project, role, progress[project.id]) for project, role in rows]
 
 
 async def get_project(

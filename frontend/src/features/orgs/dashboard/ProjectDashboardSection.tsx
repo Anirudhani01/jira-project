@@ -8,7 +8,6 @@ import { suggestProjectQuery } from '../../../lib/ux/searchSuggest';
 import { ErrorState, ProjectGridSkeleton } from '../../../components/ui/States';
 import { apiFetch } from '../../../lib/api/client';
 import type { Project } from '../../../lib/api/types';
-import { cn } from '../../../lib/cn';
 import { projectKey, useProjects } from '../../projects/api';
 
 import {
@@ -21,6 +20,7 @@ import {
 } from './projectDashboardFilters';
 import { useProjectCardStats } from './hooks/useProjectCardStats';
 import { CreateProjectDashboardCard, ProjectDashboardCard } from './ProjectDashboardCard';
+import { ProjectDashboardTable } from './ProjectDashboardTable';
 import { ProjectDashboardToolbar } from './ProjectDashboardToolbar';
 
 const projectPath = (org: string, key: string) =>
@@ -70,7 +70,11 @@ export function ProjectDashboardSection({ org, canCreate }: { org: string; canCr
   const allItems = projects.data ?? [];
   const filtered = applyProjectDashboardFilters(allItems, filters);
   const descriptionKeys = useMemo(() => filtered.map((p) => p.key), [filtered]);
-  const descriptions = useProjectDescriptions(org, projects.isSuccess ? descriptionKeys : []);
+  // Descriptions only appear on the grid cards, so the table skips those requests.
+  const descriptions = useProjectDescriptions(
+    org,
+    projects.isSuccess && filters.view === 'grid' ? descriptionKeys : [],
+  );
   const cardStats = useProjectCardStats(org, descriptionKeys, projects.isSuccess);
 
   if (projects.isPending) return <ProjectGridSkeleton />;
@@ -132,14 +136,12 @@ export function ProjectDashboardSection({ org, canCreate }: { org: string; canCr
           title="No matching projects"
           description="Try adjusting your search or filters."
         />
-      ) : (
-        <div
-          className={cn(
-            filters.view === 'grid'
-              ? 'grid gap-4 sm:grid-cols-2 xl:grid-cols-3'
-              : 'flex flex-col gap-3',
-          )}
-        >
+      ) : empty ? (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <CreateProjectDashboardCard org={org} />
+        </div>
+      ) : filters.view === 'grid' ? (
+        <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((project) => {
             const stats = cardStats.data?.get(project.key);
             return (
@@ -150,12 +152,17 @@ export function ProjectDashboardSection({ org, canCreate }: { org: string; canCr
                 description={descriptions.get(project.key) ?? null}
                 {...(stats ? { stats } : {})}
                 statsPending={cardStats.isPending || cardStats.isFetching}
-                view={filters.view}
               />
             );
           })}
-          {showCreate ? <CreateProjectDashboardCard org={org} /> : null}
         </div>
+      ) : (
+        <ProjectDashboardTable
+          org={org}
+          projects={filtered}
+          stats={cardStats.data}
+          statsPending={cardStats.isPending || cardStats.isFetching}
+        />
       )}
     </section>
   );

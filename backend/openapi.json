@@ -2270,11 +2270,74 @@
         "title": "PriorityResponse",
         "type": "object"
       },
+      "ProjectListItem": {
+        "description": "A project in the list, with the issue totals its dashboard card shows.\n\n``issue_count`` counts non-deleted issues: all of a kanban project's, or only those of the\nactive sprint for a scrum project (0 while no sprint is active). ``done_count`` is how many\nof them are in a ``done`` status category. ``active_sprint`` is the active sprint's name.",
+        "properties": {
+          "active_sprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Sprint"
+          },
+          "archived": {
+            "title": "Archived",
+            "type": "boolean"
+          },
+          "board_type": {
+            "title": "Board Type",
+            "type": "string"
+          },
+          "done_count": {
+            "title": "Done Count",
+            "type": "integer"
+          },
+          "issue_count": {
+            "title": "Issue Count",
+            "type": "integer"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "my_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "My Role"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "board_type",
+          "archived",
+          "my_role",
+          "issue_count",
+          "done_count",
+          "active_sprint"
+        ],
+        "title": "ProjectListItem",
+        "type": "object"
+      },
       "ProjectListResponse": {
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/ProjectSummary"
+              "$ref": "#/components/schemas/ProjectListItem"
             },
             "title": "Items",
             "type": "array"

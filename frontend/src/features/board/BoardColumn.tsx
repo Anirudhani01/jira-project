@@ -1,5 +1,5 @@
 import { useDroppable } from '@dnd-kit/core';
-import { CheckCircle2, FileText, MoreHorizontal, Plus } from 'lucide-react';
+import { MoreHorizontal, Plus } from 'lucide-react';
 
 import { useBoardShell } from '../../app/shell/useBoardShell';
 import { Count } from '../../components/ui/Badge';
@@ -90,24 +90,13 @@ function BoardColumnEmpty({
     );
   }
 
-  if (boardChrome && trulyEmpty && visualKind === 'in_review') {
+  if (boardChrome && trulyEmpty && (visualKind === 'in_review' || visualKind === 'done')) {
     return (
-      <li className="board-column-empty pointer-events-none flex flex-1 flex-col items-center justify-center gap-2 px-4 py-10 text-center">
-        <FileText className="size-8 text-[var(--board-muted)] opacity-60" aria-hidden="true" />
-        <p className="text-sm font-medium text-[var(--board-text)]">No issues in review</p>
-        <p className="board-empty-hint max-w-[12rem] text-xs">
-          Drag and drop issues here or create a new issue.
+      <li className="board-column-empty pointer-events-none flex flex-col items-center justify-center gap-1 rounded-[10px] border-[1.5px] border-dashed border-fg-subtle px-4 py-8 text-center">
+        <p className="text-sm font-medium text-[var(--board-text)]">
+          {visualKind === 'in_review' ? 'No issues in review' : 'No completed issues'}
         </p>
-      </li>
-    );
-  }
-
-  if (boardChrome && trulyEmpty && visualKind === 'done') {
-    return (
-      <li className="board-column-empty pointer-events-none flex flex-1 flex-col items-center justify-center gap-2 px-4 py-10 text-center">
-        <CheckCircle2 className="size-8 text-[var(--board-muted)] opacity-60" aria-hidden="true" />
-        <p className="text-sm font-medium text-[var(--board-text)]">No completed issues</p>
-        <p className="board-empty-hint max-w-[12rem] text-xs">
+        <p className="board-empty-hint max-w-[14rem] text-[13px]">
           Drag and drop issues here or create a new issue.
         </p>
       </li>
@@ -168,26 +157,73 @@ export function BoardColumnView({
   const trulyEmpty = sourceColumn.count === 0;
   const hiddenByFilters = filtersActive && filteredCount === 0 && sourceColumn.count > 0;
 
+  const list = (
+    <ul
+      className={cn(
+        'board-column-list flex min-h-[12rem] flex-1 flex-col gap-2 overflow-y-auto p-2',
+        boardChrome && 'gap-2.5 p-2.5',
+      )}
+    >
+      {column.issues.length === 0 ? (
+        <BoardColumnEmpty
+          boardChrome={boardChrome}
+          visualKind={visualKind}
+          hiddenByFilters={hiddenByFilters}
+          trulyEmpty={trulyEmpty}
+          queryActive={queryActive}
+          nonQueryFiltersActive={nonQueryFiltersActive}
+          {...(onClearFilters ? { onClearFilters } : {})}
+          {...(onClearSearch ? { onClearSearch } : {})}
+        />
+      ) : (
+        column.issues.map((card: Issue) => <IssueCard key={card.key} card={card} {...cardProps} />)
+      )}
+    </ul>
+  );
+
+  const footer = canCreate ? (
+    <footer
+      className={cn(
+        'border-t border-line p-2',
+        boardChrome && 'board-column-footer border-t-0 px-2.5 pb-2.5 pt-0',
+      )}
+    >
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className={cn(
+          'w-full justify-center text-fg-muted',
+          boardChrome &&
+            'board-create-issue justify-start rounded-lg font-normal text-fg-muted hover:bg-[var(--board-bg)] hover:text-[var(--board-text)]',
+        )}
+        onClick={onCreate}
+      >
+        <Plus className="size-4" aria-hidden="true" />
+        {boardChrome ? 'Create issue' : 'Create'}
+      </Button>
+    </footer>
+  ) : null;
+
   return (
     <section
       ref={setNodeRef}
       data-board-column
       aria-labelledby={`col-${column.id}`}
       className={cn(
-        'flex shrink-0 flex-col rounded-lg border border-line bg-surface-2/80',
+        'flex shrink-0 flex-col',
         boardChrome
-          ? 'board-column min-h-[28rem] min-w-0 flex-1 border-[var(--board-border)] bg-[var(--board-col-bg)]'
-          : 'w-[17.5rem]',
+          ? 'board-column min-h-[28rem] min-w-0 flex-1 gap-2.5'
+          : 'w-[17.5rem] rounded-lg border border-line bg-surface-2/80',
         dimmed && 'opacity-40',
-        isOver &&
-          !dimmed &&
-          (boardChrome ? 'ring-2 ring-[var(--board-accent)]/35' : 'ring-2 ring-accent/40'),
+        isOver && !dimmed && !boardChrome && 'ring-2 ring-accent/40',
       )}
     >
       <header
         className={cn(
-          'space-y-2 border-b border-line px-3 py-3',
-          boardChrome && 'board-column-header border-[var(--board-border)] px-3 py-3',
+          'space-y-2 px-3 py-3',
+          !boardChrome && 'border-b border-line',
+          boardChrome && 'board-column-header px-1 py-0',
         )}
       >
         <div className="flex items-center justify-between gap-2">
@@ -212,7 +248,7 @@ export function BoardColumnView({
                 <IconButton
                   label={`Add issue to ${column.name}`}
                   size="sm"
-                  className="board-col-action text-[var(--board-accent)]"
+                  className="board-col-action text-[var(--board-muted)]"
                   onClick={onCreate}
                 >
                   <Plus className="size-4" aria-hidden="true" />
@@ -260,52 +296,22 @@ export function BoardColumnView({
           />
         ) : null}
       </header>
-      <ul
-        className={cn(
-          'board-column-list flex min-h-[12rem] flex-1 flex-col gap-2 overflow-y-auto p-2',
-          boardChrome && 'gap-3 p-3',
-        )}
-      >
-        {column.issues.length === 0 ? (
-          <BoardColumnEmpty
-            boardChrome={boardChrome}
-            visualKind={visualKind}
-            hiddenByFilters={hiddenByFilters}
-            trulyEmpty={trulyEmpty}
-            queryActive={queryActive}
-            nonQueryFiltersActive={nonQueryFiltersActive}
-            {...(onClearFilters ? { onClearFilters } : {})}
-            {...(onClearSearch ? { onClearSearch } : {})}
-          />
-        ) : (
-          column.issues.map((card: Issue) => (
-            <IssueCard key={card.key} card={card} {...cardProps} />
-          ))
-        )}
-      </ul>
-      {canCreate ? (
-        <footer
+      {boardChrome ? (
+        <div
           className={cn(
-            'border-t border-line p-2',
-            boardChrome && 'board-column-footer border-[var(--board-border)] p-3',
+            'board-column-well flex flex-1 flex-col rounded-xl bg-[var(--board-col-bg)]',
+            isOver && !dimmed && 'ring-2 ring-[var(--board-accent)]/35',
           )}
         >
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={cn(
-              'w-full justify-center text-fg-muted',
-              boardChrome &&
-                'board-create-issue rounded-lg font-medium text-[var(--board-accent)] hover:bg-[var(--board-accent-soft)]',
-            )}
-            onClick={onCreate}
-          >
-            <Plus className="size-4" aria-hidden="true" />
-            {boardChrome ? 'Create issue' : 'Create'}
-          </Button>
-        </footer>
-      ) : null}
+          {list}
+          {footer}
+        </div>
+      ) : (
+        <>
+          {list}
+          {footer}
+        </>
+      )}
     </section>
   );
 }

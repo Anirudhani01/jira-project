@@ -65,15 +65,26 @@ export function OrgGetStartedSection({
   canCreateProject,
   canInviteMembers,
   firstProjectKey,
+  projectCount,
+  memberCount,
 }: {
   orgSlug: string;
   canCreateProject: boolean;
   canInviteMembers: boolean;
   firstProjectKey: string | null;
+  /** Active project count once loaded; `null` while loading, on error or offline. */
+  projectCount: number | null;
+  /** Member count once loaded; `null` while loading, on error or offline. */
+  memberCount: number | null;
 }) {
   const trackHref = firstProjectKey
     ? `/o/${orgSlug}/p/${firstProjectKey}/issues`
     : `/o/${orgSlug}/projects/new`;
+
+  // Hide only on confirmed data, so a loading, failed or offline state never flashes then vanishes.
+  const hasProject = projectCount !== null && projectCount > 0;
+  const hasTeam = memberCount !== null && memberCount > 1;
+  if (hasProject && hasTeam) return null;
 
   return (
     <section aria-labelledby="get-started-title" className="space-y-3">
@@ -82,22 +93,26 @@ export function OrgGetStartedSection({
       </h2>
       <Card className="org-dash-card overflow-hidden">
         <ul className="divide-y divide-[var(--org-dash-border)]">
-          <Step
-            icon={FolderKanban}
-            title="Create a project"
-            description="Start by creating a project for your team"
-            to={`/o/${orgSlug}/projects/new`}
-            disabled={!canCreateProject}
-            disabledReason="You do not have permission to create projects"
-          />
-          <Step
-            icon={UserPlus}
-            title="Invite your team"
-            description="Add team members and set up roles"
-            to={`/o/${orgSlug}/settings/members`}
-            disabled={!canInviteMembers}
-            disabledReason="You do not have permission to invite members"
-          />
+          {hasProject ? null : (
+            <Step
+              icon={FolderKanban}
+              title="Create a project"
+              description="Start by creating a project for your team"
+              to={`/o/${orgSlug}/projects/new`}
+              disabled={!canCreateProject}
+              disabledReason="You do not have permission to create projects"
+            />
+          )}
+          {hasTeam ? null : (
+            <Step
+              icon={UserPlus}
+              title="Invite your team"
+              description="Add team members and set up roles"
+              to={`/o/${orgSlug}/settings/members`}
+              disabled={!canInviteMembers}
+              disabledReason="You do not have permission to invite members"
+            />
+          )}
           <Step
             icon={ListTodo}
             title="Track work"
