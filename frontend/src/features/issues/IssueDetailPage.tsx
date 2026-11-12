@@ -51,6 +51,7 @@ import {
 } from './api';
 import {
   IssueListAssigneeMenu,
+  IssueListTesterMenu,
   IssueListPriorityMenu,
   IssueListReporterMenu,
   IssueListStatusMenu,
@@ -574,6 +575,14 @@ function IssueView({
             </SidebarField>
             <SidebarField label="Assignee">
               <IssueListAssigneeMenu
+                org={org}
+                issue={issue}
+                members={members.data ?? []}
+                canAssign={canAssign}
+              />
+            </SidebarField>
+            <SidebarField label="Tester">
+              <IssueListTesterMenu
                 org={org}
                 issue={issue}
                 members={members.data ?? []}

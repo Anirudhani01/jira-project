@@ -602,6 +602,7 @@ async def test_composite_foreign_keys_reject_cross_tenant_and_cross_workflow_ref
         ("status_id", sibling_status.id),  # same tenant, another project's workflow
         ("reporter_id", other.user_id),
         ("assignee_id", other.user_id),
+        ("tester_id", other.user_id),
     ):
         with pytest.raises(DBAPIError, match="violates foreign key constraint"):
             await superuser_sql(

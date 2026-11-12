@@ -106,6 +106,7 @@ class Issue(Base):
         ),
         _member_fk("issues", "reporter_id"),
         _member_fk("issues", "assignee_id"),
+        _member_fk("issues", "tester_id"),
         UniqueConstraint("project_id", "seq"),
         UniqueConstraint("org_id", "id"),
         UniqueConstraint("org_id", "project_id", "id"),
@@ -128,6 +129,12 @@ class Issue(Base):
             "ix_issues_org_id_assignee_id",
             "org_id",
             "assignee_id",
+            postgresql_where=_NOT_DELETED,
+        ),
+        Index(
+            "ix_issues_org_id_tester_id",
+            "org_id",
+            "tester_id",
             postgresql_where=_NOT_DELETED,
         ),
         Index("ix_issues_parent_id", "parent_id"),
@@ -155,6 +162,7 @@ class Issue(Base):
     priority_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     parent_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     assignee_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    tester_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     reporter_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     sprint_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     summary: Mapped[str] = mapped_column(String(255))

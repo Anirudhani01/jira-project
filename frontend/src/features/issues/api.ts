@@ -27,6 +27,7 @@ export interface IssueFilters {
   type?: string;
   priority?: string;
   assignee?: string;
+  tester?: string;
   label?: string;
   sprint?: string;
   q?: string;
@@ -99,6 +100,7 @@ export interface NewIssue {
   summary: string;
   description?: string;
   assignee_id?: string | null;
+  tester_id?: string | null;
   parent_id?: string | null;
   label_ids?: string[];
   story_points?: number | null;
@@ -128,6 +130,7 @@ export type IssueChanges = Partial<
     | 'type_id'
     | 'priority_id'
     | 'assignee_id'
+    | 'tester_id'
     | 'parent_id'
     | 'label_ids'
     | 'story_points'

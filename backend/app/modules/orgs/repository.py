@@ -634,7 +634,11 @@ def now() -> Any:
 async def remove_member_effects(session: AsyncSession, user_id: uuid.UUID) -> None:
     """Same-transaction effects of removing a member: their project memberships go (M5)
     and their live issues are unassigned, with a version bump and activity (M6)."""
-    from app.modules.issues.repository import add_activity, unassign_member  # noqa: PLC0415
+    from app.modules.issues.repository import (  # noqa: PLC0415
+        add_activity,
+        unassign_member,
+        untest_member,
+    )
     from app.modules.projects.repository import remove_user_from_all_projects  # noqa: PLC0415
 
     await remove_user_from_all_projects(session, user_id)
@@ -650,5 +654,19 @@ async def remove_member_effects(session: AsyncSession, user_id: uuid.UUID) -> No
                 "new_value": None,
             }
             for issue_id in unassigned
+        ],
+    )
+    untested = await untest_member(session, user_id)
+    await add_activity(
+        session,
+        [
+            {
+                "issue_id": issue_id,
+                "action": "updated",
+                "field": "tester",
+                "old_value": {"id": str(user_id)},
+                "new_value": None,
+            }
+            for issue_id in untested
         ],
     )

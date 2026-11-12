@@ -218,6 +218,10 @@ export function IssueListPage() {
             { value: 'me', label: 'Me' },
             { value: 'none', label: 'Unassigned' },
           ])}
+          {select('tester', 'Tester', [
+            { value: 'me', label: 'Me' },
+            { value: 'none', label: 'No tester' },
+          ])}
           {select(
             'label',
             'Label',

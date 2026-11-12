@@ -13,7 +13,7 @@ import { permissionDeniedInlineMessage } from '../../lib/ux/permissionDenied';
 import type { Comment, IssueActivity } from '../../lib/api/types';
 import { useLocation } from 'react-router';
 import { useIssueActivity } from './api';
-import { useWorkflow } from '../projects/api';
+import { useProjectMembers, useWorkflow } from '../projects/api';
 
 import { useComments, useCreateComment, useDeleteComment, useUpdateComment } from '../comments/api';
 import { mergeTimeline, type TimelineEntry } from '../comments/timeline';
@@ -21,6 +21,7 @@ import { mergeTimeline, type TimelineEntry } from '../comments/timeline';
 import {
   createdTypeOf,
   describeIssueActivity,
+  personChangeOf,
   sprintChangeOf,
   statusChangeOf,
   type StatusRef,
@@ -89,7 +90,53 @@ function SprintChange({ from, to }: { from: string | null; to: string | null }) 
   return <>removed from {from ? <SprintChip name={from} /> : null}</>;
 }
 
+/** Project members by user id, so person edits (which store only ids) can show names. */
+const PeopleContext = createContext<ReadonlyMap<string, string>>(new Map());
+
+function PersonName({ id }: { id: string }) {
+  const people = useContext(PeopleContext);
+  return <span className="font-medium text-fg">{people.get(id) ?? 'a former member'}</span>;
+}
+
+function PersonChange({
+  field,
+  fromId,
+  toId,
+}: {
+  field: string;
+  fromId: string | null;
+  toId: string | null;
+}) {
+  if (fromId && toId) {
+    return (
+      <>
+        changed {field} from <PersonName id={fromId} /> to <PersonName id={toId} />
+      </>
+    );
+  }
+  if (toId) {
+    return (
+      <>
+        set {field} to <PersonName id={toId} />
+      </>
+    );
+  }
+  return (
+    <>
+      cleared {field}
+      {fromId ? (
+        <>
+          {' '}
+          (was <PersonName id={fromId} />)
+        </>
+      ) : null}
+    </>
+  );
+}
+
 function ActivityDetail({ activity }: { activity: IssueActivity }) {
+  const person = personChangeOf(activity);
+  if (person) return <PersonChange {...person} />;
   const status = statusChangeOf(activity);
   if (status) return <StatusChange from={status.from} to={status.to} />;
   const sprint = sprintChangeOf(activity);
@@ -395,6 +442,13 @@ export function IssueActivitySection({
   // without it the chips fall back to name-based colours.
   const projectKey = issueKey.slice(0, Math.max(0, issueKey.lastIndexOf('-')));
   const workflow = useWorkflow(org, projectKey);
+  // Assignee, reporter and tester edits store only ids; the member list (already cached by the
+  // issue page) supplies the names.
+  const members = useProjectMembers(org, projectKey);
+  const people = useMemo(
+    () => new Map((members.data ?? []).map((member) => [member.user_id, member.display_name])),
+    [members.data],
+  );
   const statusCategories = useMemo(
     () => new Map((workflow.data?.statuses ?? []).map((status) => [status.id, status.category])),
     [workflow.data],
@@ -454,66 +508,68 @@ export function IssueActivitySection({
   const loading = activity.isPending || comments.isPending;
 
   return (
-    <StatusCategoryContext.Provider value={statusCategories}>
-      <section aria-labelledby="activity-title" className="space-y-4">
-        <h2 id="activity-title" className="text-base font-medium text-fg">
-          Activity
-        </h2>
-        {loading ? <LoadingState label="Loading activity" /> : null}
-        {activity.isError ? (
-          <ErrorState error={activity.error} onRetry={() => void activity.refetch()} />
-        ) : null}
-        {comments.isError ? (
-          <ErrorState error={comments.error} onRetry={() => void comments.refetch()} />
-        ) : null}
+    <PeopleContext.Provider value={people}>
+      <StatusCategoryContext.Provider value={statusCategories}>
+        <section aria-labelledby="activity-title" className="space-y-4">
+          <h2 id="activity-title" className="text-base font-medium text-fg">
+            Activity
+          </h2>
+          {loading ? <LoadingState label="Loading activity" /> : null}
+          {activity.isError ? (
+            <ErrorState error={activity.error} onRetry={() => void activity.refetch()} />
+          ) : null}
+          {comments.isError ? (
+            <ErrorState error={comments.error} onRetry={() => void comments.refetch()} />
+          ) : null}
 
-        <Tabs
-          value={tab}
-          onValueChange={(v) => {
-            setTab(v as typeof tab);
-          }}
-        >
-          <TabsList aria-label="Activity views">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="comments">Comments</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
-          </TabsList>
-          <TabsContent value="all" className="pt-4">
-            <TimelineList entries={timeline} {...commentRowProps} />
-            <LoadMoreRow activity={activity} comments={comments} tab="all" />
-            <CommentComposer
-              canComment={canComment}
-              draft={draft}
-              createError={create.error}
-              createPending={create.isPending}
-              onDraftChange={setDraft}
-              onSubmit={submit}
-            />
-          </TabsContent>
-          <TabsContent value="comments" className="pt-4">
-            <TimelineList
-              entries={timeline.filter((e) => e.kind === 'comment')}
-              {...commentRowProps}
-            />
-            <LoadMoreRow activity={activity} comments={comments} tab="comments" />
-            <CommentComposer
-              canComment={canComment}
-              draft={draft}
-              createError={create.error}
-              createPending={create.isPending}
-              onDraftChange={setDraft}
-              onSubmit={submit}
-            />
-          </TabsContent>
-          <TabsContent value="history" className="pt-4">
-            <TimelineList
-              entries={timeline.filter((e) => e.kind === 'activity')}
-              {...commentRowProps}
-            />
-            <LoadMoreRow activity={activity} comments={comments} tab="history" />
-          </TabsContent>
-        </Tabs>
-      </section>
-    </StatusCategoryContext.Provider>
+          <Tabs
+            value={tab}
+            onValueChange={(v) => {
+              setTab(v as typeof tab);
+            }}
+          >
+            <TabsList aria-label="Activity views">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="comments">Comments</TabsTrigger>
+              <TabsTrigger value="history">History</TabsTrigger>
+            </TabsList>
+            <TabsContent value="all" className="pt-4">
+              <TimelineList entries={timeline} {...commentRowProps} />
+              <LoadMoreRow activity={activity} comments={comments} tab="all" />
+              <CommentComposer
+                canComment={canComment}
+                draft={draft}
+                createError={create.error}
+                createPending={create.isPending}
+                onDraftChange={setDraft}
+                onSubmit={submit}
+              />
+            </TabsContent>
+            <TabsContent value="comments" className="pt-4">
+              <TimelineList
+                entries={timeline.filter((e) => e.kind === 'comment')}
+                {...commentRowProps}
+              />
+              <LoadMoreRow activity={activity} comments={comments} tab="comments" />
+              <CommentComposer
+                canComment={canComment}
+                draft={draft}
+                createError={create.error}
+                createPending={create.isPending}
+                onDraftChange={setDraft}
+                onSubmit={submit}
+              />
+            </TabsContent>
+            <TabsContent value="history" className="pt-4">
+              <TimelineList
+                entries={timeline.filter((e) => e.kind === 'activity')}
+                {...commentRowProps}
+              />
+              <LoadMoreRow activity={activity} comments={comments} tab="history" />
+            </TabsContent>
+          </Tabs>
+        </section>
+      </StatusCategoryContext.Provider>
+    </PeopleContext.Provider>
   );
 }

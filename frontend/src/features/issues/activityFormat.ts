@@ -32,6 +32,31 @@ export function statusChangeOf(
   return to ? { from: statusRef(activity.old_value), to } : null;
 }
 
+export type PersonField = 'assignee' | 'reporter' | 'tester';
+
+export interface PersonChange {
+  field: PersonField;
+  fromId: string | null;
+  toId: string | null;
+}
+
+function idOf(value: unknown): string | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const id = (value as { id?: unknown }).id;
+  return typeof id === 'string' && id.length > 0 ? id : null;
+}
+
+/** Who an assignee, reporter or tester edit moved from and to (ids only; the entry keeps no
+ * names). `null` for other entries or when neither id was kept. */
+export function personChangeOf(activity: IssueActivity): PersonChange | null {
+  if (activity.action !== 'updated') return null;
+  const field = activity.field;
+  if (field !== 'assignee' && field !== 'reporter' && field !== 'tester') return null;
+  const fromId = idOf(activity.old_value);
+  const toId = idOf(activity.new_value);
+  return fromId || toId ? { field, fromId, toId } : null;
+}
+
 /** Sprint names of a sprint-change entry; `null` when neither name was kept. */
 export function sprintChangeOf(
   activity: IssueActivity,

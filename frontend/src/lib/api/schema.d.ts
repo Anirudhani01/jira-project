@@ -1680,6 +1680,8 @@ export interface components {
             story_points?: number | null;
             /** Summary */
             summary: string;
+            /** Tester Id */
+            tester_id?: string | null;
             /**
              * Type Id
              * Format: uuid
@@ -1856,6 +1858,7 @@ export interface components {
             story_points: number | null;
             /** Summary */
             summary: string;
+            tester?: components["schemas"]["UserRef"] | null;
             type: components["schemas"]["TypeRef"];
             /**
              * Updated At
@@ -2616,6 +2619,8 @@ export interface components {
             story_points?: number | null;
             /** Summary */
             summary?: string | null;
+            /** Tester Id */
+            tester_id?: string | null;
             /** Type Id */
             type_id?: string | null;
         };
@@ -3698,6 +3703,7 @@ export interface operations {
                 type?: string | null;
                 priority?: string | null;
                 assignee?: string | null;
+                tester?: string | null;
                 label?: string | null;
                 sprint?: string | null;
                 updated_since?: string | null;

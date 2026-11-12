@@ -53,8 +53,12 @@ vi.mock('../backlog/planApi', () => ({
   useVersions: () => ({ data: [] }),
 }));
 
+const membersState = vi.hoisted(() => ({
+  items: [] as { user_id: string; display_name: string; email: string; role: string }[],
+}));
+
 vi.mock('../projects/api', () => ({
-  useProjectMembers: () => ({ data: [] }),
+  useProjectMembers: () => ({ data: membersState.items }),
 }));
 
 const policyState = vi.hoisted(
@@ -172,6 +176,28 @@ describe('CreateIssueDialog', () => {
       summary: 'Write tests',
     });
     searchState.hits = [];
+  });
+
+  it('sends the chosen tester as tester_id, next to the assignee', async () => {
+    createIssueState.mutate.mockClear();
+    membersState.items = [
+      { user_id: 'u-1', display_name: 'Ann Example', email: 'ann@example.com', role: 'admin' },
+      { user_id: 'u-2', display_name: 'Bea Example', email: 'bea@example.com', role: 'member' },
+    ];
+    mountDialog();
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('Summary'), 'Verify the fix');
+    await user.click(screen.getByRole('combobox', { name: /^Assignee/ }));
+    await user.click(await screen.findByRole('option', { name: /Ann Example/ }));
+    await user.click(screen.getByRole('combobox', { name: /^Tester/ }));
+    await user.click(await screen.findByRole('option', { name: /Bea Example/ }));
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => {
+      expect(createIssueState.mutate).toHaveBeenCalledTimes(1);
+    });
+    const [request] = createIssueState.mutate.mock.calls[0] as [{ body: Record<string, unknown> }];
+    expect(request.body).toMatchObject({ assignee_id: 'u-1', tester_id: 'u-2' });
+    membersState.items = [];
   });
 
   it('"Create another" keeps the dialog open, clears the text, keeps the type and uses a fresh key', async () => {

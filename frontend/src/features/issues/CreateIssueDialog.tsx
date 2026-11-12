@@ -82,6 +82,7 @@ export function CreateIssueDialog({
   const [typeId, setTypeId] = useState<string | null>(null);
   const [priorityId, setPriorityId] = useState<string | null>(null);
   const [assigneeId, setAssigneeId] = useState<string | null>(null);
+  const [testerId, setTesterId] = useState<string | null>(null);
   const [parent, setParent] = useState<IssueSearchHit | null>(null);
   const [parentQuery, setParentQuery] = useState('');
   const [labelIds, setLabelIds] = useState<string[]>([]);
@@ -193,6 +194,7 @@ export function CreateIssueDialog({
           summary,
           ...(description ? { description } : {}),
           ...(assigneeId ? { assignee_id: assigneeId } : {}),
+          ...(testerId ? { tester_id: testerId } : {}),
           ...(parent ? { parent_id: parent.id } : {}),
           ...(labelIds.length ? { label_ids: labelIds } : {}),
           ...(fixVersionId ? { fix_version_id: fixVersionId } : {}),
@@ -304,6 +306,21 @@ export function CreateIssueDialog({
               }))}
               value={assigneeId}
               onChange={setAssigneeId}
+              loading={members.isPending}
+            />
+            <Combobox
+              label="Tester"
+              clearLabel="No tester"
+              searchPlaceholder="Search people…"
+              emptyText="No matching people"
+              options={(members.data ?? []).map((m) => ({
+                value: m.user_id,
+                label: m.display_name,
+                description: m.email,
+                icon: <Avatar name={m.display_name} size="xs" />,
+              }))}
+              value={testerId}
+              onChange={setTesterId}
               loading={members.isPending}
             />
           </div>

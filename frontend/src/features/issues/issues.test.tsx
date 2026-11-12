@@ -147,6 +147,33 @@ describe('issue list', () => {
     ).toHaveLength(6);
   });
 
+  it('adds a Tester column (off by default) and a Tester filter to the issue list', async () => {
+    const calls = mockApi({
+      ...CONFIG,
+      'GET /orgs/acme/issues': () =>
+        json({
+          items: [{ ...ISSUE, tester: { id: 'u-2', display_name: 'Bea Example' } }],
+          next_cursor: null,
+        }),
+    });
+    renderApp('/o/acme/p/WEB/issues');
+    await screen.findByText('Login button misaligned');
+    const user = userEvent.setup();
+    expect(screen.queryByRole('columnheader', { name: 'Tester' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Choose visible columns' }));
+    await user.click(await screen.findByRole('menuitemcheckbox', { name: 'Tester' }));
+    await user.keyboard('{Escape}');
+    expect(await screen.findByRole('columnheader', { name: 'Tester' })).toBeInTheDocument();
+    expect(screen.getAllByText('Bea Example').length).toBeGreaterThan(0);
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Tester' }), 'me');
+    await waitFor(() => {
+      expect(
+        calls.some((c) => c.path === '/orgs/acme/issues' && c.search.includes('tester=me')),
+      ).toBe(true);
+    });
+  });
+
   it('sorts by key via the Issue header and updates the URL', async () => {
     const calls = mockApi({
       ...CONFIG,
@@ -337,6 +364,61 @@ describe('issue detail: M7 (transitions, assignee, labels)', () => {
     expect(
       await screen.findByRole('button', { name: /Assignee: Bea Example\. Choose assignee/i }),
     ).toBeInTheDocument();
+  });
+
+  it('sets and clears the tester from the issue page', async () => {
+    const calls = mockApi({
+      ...CONFIG,
+      'GET /orgs/acme/projects/WEB': () => json(ADMIN_PROJECT),
+      'GET /orgs/acme/projects/WEB/members': () => json({ items: [MEMBER] }),
+      'GET /orgs/acme/issues/WEB-1': () => json(ISSUE),
+      'GET /orgs/acme/issues/WEB-1/activity': () => json({ items: [], next_cursor: null }),
+      'GET /orgs/acme/issues/WEB-1/transitions': () => json({ items: [] }),
+      'GET /orgs/acme/issues/WEB-1/children': () => json({ items: [], done: 0, total: 0 }),
+      'PATCH /orgs/acme/issues/WEB-1': () =>
+        json({
+          ...ISSUE,
+          version: 4,
+          tester: { id: MEMBER.user_id, display_name: MEMBER.display_name },
+        }),
+    });
+    renderApp('/o/acme/issues/WEB-1');
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Tester: No tester\. Choose tester/i }),
+    );
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Bea Example/i }));
+    await waitFor(() => {
+      expect(calls.some((c) => c.method === 'PATCH')).toBe(true);
+    });
+    expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ tester_id: MEMBER.user_id });
+    const set = await screen.findByRole('button', {
+      name: /Tester: Bea Example\. Choose tester/i,
+    });
+
+    await userEvent.click(set);
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'No tester' }));
+    await waitFor(() => {
+      expect(calls.filter((c) => c.method === 'PATCH')).toHaveLength(2);
+    });
+    expect(calls.filter((c) => c.method === 'PATCH')[1]?.body).toEqual({ tester_id: null });
+  });
+
+  it('shows the tester read-only without the assign permission', async () => {
+    mockApi({
+      ...CONFIG,
+      'GET /orgs/acme/issues/WEB-1': () =>
+        json({
+          ...ISSUE,
+          tester: { id: 'u-2', display_name: 'Bea Example' },
+        }),
+      'GET /orgs/acme/issues/WEB-1/activity': () => json({ items: [], next_cursor: null }),
+      'GET /orgs/acme/issues/WEB-1/transitions': () => json({ items: [] }),
+      'GET /orgs/acme/issues/WEB-1/children': () => json({ items: [], done: 0, total: 0 }),
+    });
+    renderApp('/o/acme/issues/WEB-1');
+    const field = (await screen.findByText('Tester')).nextElementSibling;
+    expect(field).toHaveTextContent('Bea Example');
+    expect(screen.queryByRole('button', { name: /Tester:/i })).not.toBeInTheDocument();
   });
 
   it('replaces the full label set from the picker', async () => {

@@ -334,6 +334,56 @@ describe('activity timeline', () => {
     );
   });
 
+  it('shows who the assignee, reporter and tester moved from and to, by name', async () => {
+    const person = (id: string, display_name: string) => ({
+      user_id: id,
+      display_name,
+      email: `${id}@example.com`,
+      role: 'member',
+    });
+    mockApi({
+      ...CONFIG,
+      'GET /orgs/acme/projects/WEB/members': () =>
+        json({ items: [person('u-ann', 'Ann Example'), person('u-bea', 'Bea Example')] }),
+      'GET /orgs/acme/issues/WEB-1/activity': () =>
+        json({
+          items: [
+            {
+              ...activityEntry(1, '2026-10-28T00:30:00Z', { field: 'tester' }),
+              old_value: null,
+              new_value: { id: 'u-ann' },
+            },
+            {
+              ...activityEntry(2, '2026-10-28T01:30:00Z', { field: 'tester' }),
+              old_value: { id: 'u-ann' },
+              new_value: { id: 'u-bea' },
+            },
+            {
+              ...activityEntry(3, '2026-10-28T02:30:00Z', { field: 'assignee' }),
+              old_value: { id: 'u-bea' },
+              new_value: null,
+            },
+            {
+              ...activityEntry(4, '2026-10-28T03:30:00Z', { field: 'tester' }),
+              old_value: { id: 'u-gone' },
+              new_value: null,
+            },
+          ],
+          next_cursor: null,
+        }),
+      'GET /orgs/acme/issues/WEB-1/comments': () => json({ items: [], next_cursor: null }),
+    });
+    renderApp('/o/acme/issues/WEB-1');
+    const rows = await screen.findAllByRole('listitem');
+    expect(rows).toHaveLength(4);
+    await waitFor(() => {
+      expect(rows[0]).toHaveTextContent('set tester to Ann Example');
+    });
+    expect(rows[1]).toHaveTextContent('changed tester from Ann Example to Bea Example');
+    expect(rows[2]).toHaveTextContent('cleared assignee (was Bea Example)');
+    expect(rows[3]).toHaveTextContent('cleared tester (was a former member)');
+  });
+
   it('breaks an exact-timestamp tie by rendering the activity entry before the comment', async () => {
     const SAME = '2026-10-28T01:00:00Z';
     mockApi({
