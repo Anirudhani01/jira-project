@@ -5,6 +5,7 @@ export const ISSUE_LIST_FILTER_KEYS = [
   'type',
   'priority',
   'assignee',
+  'tester',
   'label',
   'sprint',
 ] as const;

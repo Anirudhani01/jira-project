@@ -37,6 +37,7 @@ class CreateIssueRequest(_Request):
     summary: Summary
     description: Description | None = None
     assignee_id: uuid.UUID | None = None
+    tester_id: uuid.UUID | None = None
     parent_id: uuid.UUID | None = None
     label_ids: list[uuid.UUID] | None = None
     story_points: StoryPoints | None = None
@@ -51,6 +52,7 @@ class UpdateIssueRequest(_Request):
     type_id: uuid.UUID | None = None
     priority_id: uuid.UUID | None = None
     assignee_id: uuid.UUID | None = None
+    tester_id: uuid.UUID | None = None
     reporter_id: uuid.UUID | None = None
     parent_id: uuid.UUID | None = None
     label_ids: list[uuid.UUID] | None = None
@@ -116,6 +118,8 @@ class IssueResponse(BaseModel):
     priority: PriorityRef
     reporter: UserRef
     assignee: UserRef | None
+    # Optional with a default so clients written before the field existed keep working.
+    tester: UserRef | None = None
     parent: IssueRefShort | None
     sprint: SprintRef | None
     fix_version: VersionRef | None

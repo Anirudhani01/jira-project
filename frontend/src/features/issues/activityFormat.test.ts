@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createdTypeOf,
   describeIssueActivity,
+  personChangeOf,
   sprintChangeOf,
   statusChangeOf,
 } from './activityFormat';
@@ -106,5 +107,24 @@ describe('describeIssueActivity', () => {
       'Task',
     );
     expect(createdTypeOf(entry('created', null, null, null))).toBeNull();
+  });
+
+  it('reads who a person field moved from and to', () => {
+    expect(personChangeOf(entry('updated', 'tester', { id: 'u1' }, { id: 'u2' }))).toEqual({
+      field: 'tester',
+      fromId: 'u1',
+      toId: 'u2',
+    });
+    expect(personChangeOf(entry('updated', 'assignee', null, { id: 'u2' }))).toEqual({
+      field: 'assignee',
+      fromId: null,
+      toId: 'u2',
+    });
+    expect(personChangeOf(entry('updated', 'reporter', { id: 'u1' }, { id: 'u2' }))).toMatchObject({
+      field: 'reporter',
+    });
+    expect(personChangeOf(entry('updated', 'tester', null, null))).toBeNull();
+    expect(personChangeOf(entry('updated', 'summary', { id: 'u1' }, { id: 'u2' }))).toBeNull();
+    expect(personChangeOf(entry('created', null, null, null))).toBeNull();
   });
 });

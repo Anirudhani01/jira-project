@@ -84,25 +84,42 @@ export function IssueListStatusMenu({
   );
 }
 
-export function IssueListAssigneeMenu({
+interface PersonMenuText {
+  /** Shown when nobody is set, and as the "clear" menu item. */
+  none: string;
+  /** Header of the open menu. */
+  heading: string;
+  /** Field name in the trigger's accessible label, e.g. "Assignee". */
+  field: string;
+}
+
+/** Dropdown for an optional person on an issue (assignee, tester): pick a project member or
+ * clear it. */
+function OptionalPersonMenu({
   org,
   issue,
   members,
-  canAssign,
+  canEdit,
+  column,
+  person,
+  text,
 }: {
   org: string;
   issue: Issue;
   members: ProjectMember[];
-  canAssign: boolean;
+  canEdit: boolean;
+  column: 'assignee_id' | 'tester_id';
+  person: Issue['assignee'] | undefined;
+  text: PersonMenuText;
 }) {
   const update = useUpdateIssue(org, issue.key);
-  const label = issue.assignee?.display_name ?? 'Unassigned';
+  const label = person?.display_name ?? text.none;
 
-  if (!canAssign) {
-    return issue.assignee ? (
-      <MemberReadOnly name={issue.assignee.display_name} />
+  if (!canEdit) {
+    return person ? (
+      <MemberReadOnly name={person.display_name} />
     ) : (
-      <span className="text-sm text-fg-subtle">Unassigned</span>
+      <span className="text-sm text-fg-subtle">{text.none}</span>
     );
   }
 
@@ -111,32 +128,32 @@ export function IssueListAssigneeMenu({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label={`Assignee: ${label}. Choose assignee`}
+          aria-label={`${text.field}: ${label}. Choose ${text.field.toLowerCase()}`}
           className={memberTriggerClass}
         >
-          {issue.assignee ? <Avatar name={issue.assignee.display_name} size="xs" /> : null}
+          {person ? <Avatar name={person.display_name} size="xs" /> : null}
           <span className="truncate text-fg-muted">{label}</span>
           <ChevronDown className="size-3.5 shrink-0 text-fg-muted" aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="max-h-64 overflow-y-auto">
-        <DropdownMenuLabel>Assign to</DropdownMenuLabel>
+        <DropdownMenuLabel>{text.heading}</DropdownMenuLabel>
         <DropdownMenuItem
           disabled={update.isPending}
           onSelect={() => {
-            update.mutate({ changes: { assignee_id: null }, version: issue.version });
+            update.mutate({ changes: { [column]: null }, version: issue.version });
           }}
         >
-          Unassigned
+          {text.none}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {members.map((member) => (
           <DropdownMenuItem
             key={member.user_id}
-            disabled={update.isPending || issue.assignee?.id === member.user_id}
+            disabled={update.isPending || person?.id === member.user_id}
             onSelect={() => {
               update.mutate({
-                changes: { assignee_id: member.user_id },
+                changes: { [column]: member.user_id },
                 version: issue.version,
               });
             }}
@@ -149,6 +166,55 @@ export function IssueListAssigneeMenu({
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+export function IssueListAssigneeMenu({
+  org,
+  issue,
+  members,
+  canAssign,
+}: {
+  org: string;
+  issue: Issue;
+  members: ProjectMember[];
+  canAssign: boolean;
+}) {
+  return (
+    <OptionalPersonMenu
+      org={org}
+      issue={issue}
+      members={members}
+      canEdit={canAssign}
+      column="assignee_id"
+      person={issue.assignee}
+      text={{ none: 'Unassigned', heading: 'Assign to', field: 'Assignee' }}
+    />
+  );
+}
+
+/** Who tests the issue: any project member, same permission as assigning. */
+export function IssueListTesterMenu({
+  org,
+  issue,
+  members,
+  canAssign,
+}: {
+  org: string;
+  issue: Issue;
+  members: ProjectMember[];
+  canAssign: boolean;
+}) {
+  return (
+    <OptionalPersonMenu
+      org={org}
+      issue={issue}
+      members={members}
+      canEdit={canAssign}
+      column="tester_id"
+      person={issue.tester}
+      text={{ none: 'No tester', heading: 'Set tester', field: 'Tester' }}
+    />
   );
 }
 

@@ -237,6 +237,7 @@ async def create_issue(
     summary: str,
     label_ids: list[uuid.UUID] | None = None,
     assignee_id: uuid.UUID | None = None,
+    tester_id: uuid.UUID | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "type_id": str(type_id),
@@ -247,6 +248,8 @@ async def create_issue(
         payload["label_ids"] = [str(i) for i in label_ids]
     if assignee_id:
         payload["assignee_id"] = str(assignee_id)
+    if tester_id:
+        payload["tester_id"] = str(tester_id)
     response = await http.post(
         f"/api/v1/orgs/{DEMO_ORG_SLUG}/projects/{project}/issues",
         json=payload,
@@ -377,6 +380,9 @@ async def seed_kanban_issues(
     print(f"  {KANBAN_KEY}: created {len(created)} issues")
 
 
+TESTED_SUMMARIES = {"Biometric login on iOS", "Crash on rotate in board view"}
+
+
 async def seed_scrum_issues(
     http: httpx.AsyncClient,
     user_id: uuid.UUID,
@@ -405,6 +411,8 @@ async def seed_scrum_issues(
             summary=summary,
             label_ids=labels,
             assignee_id=user_id,
+            # A couple of issues are waiting on testing, so the Tester field shows up in the demo.
+            tester_id=user_id if summary in TESTED_SUMMARIES else None,
         )
     print(f"  {SCRUM_KEY}: created {len(items)} issues (4 → sprint, 2 stay in backlog)")
 

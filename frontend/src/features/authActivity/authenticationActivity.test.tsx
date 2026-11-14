@@ -136,7 +136,7 @@ describe('authentication activity', () => {
     expect(await screen.findByText(/No activity matches the selected filters/)).toBeInTheDocument();
   });
 
-  it('supports cursor pagination and resets when filters change', async () => {
+  it('pages with Previous and Next, shows the range, and starts over when size or filters change', async () => {
     const page2 = {
       ...ACTIVITY_ITEM,
       id: 43,
@@ -157,26 +157,81 @@ describe('authentication activity', () => {
         return json({ items: [ACTIVITY_ITEM], next_cursor: 'c1' });
       },
     });
+    const requests = () =>
+      calls
+        .filter((c) => c.path.includes('/authentication-activity'))
+        .map((c) => new URLSearchParams(c.search.replace(/^\?/, '')));
     renderApp('/o/acme/admin/security/activity');
     await screen.findByRole('cell', { name: 'Alex Admin' });
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Load more' }));
-    await waitFor(() => {
-      expect(
-        calls.filter((c) => c.path.includes('/authentication-activity')).length,
-      ).toBeGreaterThan(1);
-      expect(screen.getAllByText('Signed out').length).toBeGreaterThan(0);
-    });
+    const pagination = screen.getByRole('navigation', { name: 'Pagination' });
 
+    // Page 1: 25 rows per page by default, nothing before it.
+    expect(requests()[0]?.get('limit')).toBe('25');
+    expect(requests()[0]?.has('cursor')).toBe(false);
+    expect(within(pagination).getByText('Showing 1–1 · Page 1')).toBeInTheDocument();
+    expect(within(pagination).getByRole('button', { name: 'Previous' })).toBeDisabled();
+
+    // Next replaces the rows with page 2, which has nothing after it.
+    await user.click(within(pagination).getByRole('button', { name: 'Next' }));
+    expect(await screen.findByText('Showing 26–26 · Page 2')).toBeInTheDocument();
+    expect(screen.getAllByText('Signed out').length).toBeGreaterThan(0);
+    expect(within(screen.getByRole('table')).queryByText('Sign-in succeeded')).toBeNull();
+    expect(requests().at(-1)?.get('cursor')).toBe('c1');
+    expect(within(pagination).getByRole('button', { name: 'Next' })).toBeDisabled();
+
+    // Previous goes back to page 1 without asking for another cursor.
+    await user.click(within(pagination).getByRole('button', { name: 'Previous' }));
+    expect(await screen.findByText('Showing 1–1 · Page 1')).toBeInTheDocument();
+    expect(
+      await within(screen.getByRole('table')).findByText('Sign-in succeeded'),
+    ).toBeInTheDocument();
+
+    // A new page size starts again at page 1.
+    await user.click(within(pagination).getByRole('button', { name: 'Next' }));
+    await screen.findByText('Showing 26–26 · Page 2');
+    await user.selectOptions(within(pagination).getByLabelText('Rows per page'), '10');
+    expect(await screen.findByText('Showing 1–1 · Page 1')).toBeInTheDocument();
+    expect(requests().at(-1)?.get('limit')).toBe('10');
+    expect(requests().at(-1)?.has('cursor')).toBe(false);
+
+    // So does a new filter.
+    await user.click(within(pagination).getByRole('button', { name: 'Next' }));
+    await screen.findByText('Showing 11–11 · Page 2');
     await user.selectOptions(screen.getByLabelText('Event type'), 'auth.logout');
     await waitFor(() => {
-      const filtered = calls.filter(
-        (c) =>
-          c.path.includes('/authentication-activity') &&
-          c.search.includes('event_type=auth.logout'),
-      );
-      expect(filtered.at(-1)?.search.includes('cursor')).toBe(false);
+      const last = requests().at(-1);
+      expect(last?.get('event_type')).toBe('auth.logout');
+      expect(last?.has('cursor')).toBe(false);
     });
+    expect(await screen.findByText('Showing 1–1 · Page 1')).toBeInTheDocument();
+  });
+
+  it('filters by a quick date range from the picker and clears it again', async () => {
+    const calls = mockApi({
+      ...activityMocks(),
+      'GET /orgs/acme/authentication-activity': () =>
+        json({ items: [ACTIVITY_ITEM], next_cursor: null }),
+    });
+    const requests = () => calls.filter((c) => c.path.includes('/authentication-activity'));
+    const { router } = renderApp('/o/acme/admin/security/activity');
+    await screen.findByRole('cell', { name: 'Alex Admin' });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /^Date range/ }));
+    await user.click(await screen.findByRole('button', { name: 'Last 7 days' }));
+    await waitFor(() => {
+      expect(requests().at(-1)?.search).toMatch(/from=/);
+    });
+    expect(requests().at(-1)?.search).toMatch(/to=/);
+    const chips = screen.getByRole('list', { name: 'Active filters' });
+    expect(chips).toHaveTextContent('From:');
+    expect(chips).toHaveTextContent('To:');
+
+    await user.click(screen.getByRole('button', { name: 'Clear date range' }));
+    await waitFor(() => {
+      expect(router.state.location.search).not.toMatch(/from=|to=/);
+    });
+    expect(screen.queryByRole('list', { name: 'Active filters' })).not.toBeInTheDocument();
   });
 
   it('shows API errors with retry', async () => {

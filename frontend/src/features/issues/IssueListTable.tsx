@@ -19,6 +19,7 @@ import { type IssueListColumnVisibility } from './issueListColumns';
 import { IssueListRowActions } from './IssueListRowActions';
 import {
   IssueListAssigneeMenu,
+  IssueListTesterMenu,
   IssueListPriorityMenu,
   IssueListStatusMenu,
   IssueListTypeMenu,
@@ -95,6 +96,7 @@ export function IssueListTable({
     '10rem', // priority
     columns.status ? '10rem' : null,
     columns.assignee ? '11rem' : null,
+    columns.tester ? '11rem' : null,
     columns.labels ? '10rem' : null,
     columns.updated ? '7rem' : null,
     '3rem', // row actions
@@ -120,6 +122,7 @@ export function IssueListTable({
               </DataGridDividedHeadCell>
             ) : null}
             {columns.assignee ? <DataGridDividedHeadCell>Assignee</DataGridDividedHeadCell> : null}
+            {columns.tester ? <DataGridDividedHeadCell>Tester</DataGridDividedHeadCell> : null}
             {columns.labels ? <DataGridDividedHeadCell>Labels</DataGridDividedHeadCell> : null}
             {columns.updated ? <DataGridDividedHeadCell>Updated</DataGridDividedHeadCell> : null}
             <DataGridDividedHeadCell>
@@ -212,6 +215,11 @@ function IssueListTableRow({
       {columns.assignee ? (
         <DataGridDividedCell>
           <IssueListAssigneeMenu org={org} issue={issue} members={members} canAssign={canAssign} />
+        </DataGridDividedCell>
+      ) : null}
+      {columns.tester ? (
+        <DataGridDividedCell>
+          <IssueListTesterMenu org={org} issue={issue} members={members} canAssign={canAssign} />
         </DataGridDividedCell>
       ) : null}
       {columns.labels ? (

@@ -150,7 +150,7 @@ async def create_comment(
             project_id=project.id,
             issue_id=issue.id,
             kind="issue_commented",
-            candidates=[issue.reporter_id, issue.assignee_id],
+            candidates=[issue.reporter_id, issue.assignee_id, issue.tester_id],
             payload={"summary": issue.summary, "comment_id": str(comment_id)},
         )
         response = await _comment_response(session, comment_id)

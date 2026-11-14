@@ -1121,6 +1121,18 @@
             "title": "Summary",
             "type": "string"
           },
+          "tester_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tester Id"
+          },
           "type_id": {
             "format": "uuid",
             "title": "Type Id",
@@ -1627,6 +1639,16 @@
           "summary": {
             "title": "Summary",
             "type": "string"
+          },
+          "tester": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "type": {
             "$ref": "#/components/schemas/TypeRef"
@@ -3647,6 +3669,18 @@
               }
             ],
             "title": "Summary"
+          },
+          "tester_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tester Id"
           },
           "type_id": {
             "anyOf": [
@@ -5775,6 +5809,23 @@
                 }
               ],
               "title": "Assignee"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tester",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tester"
             }
           },
           {

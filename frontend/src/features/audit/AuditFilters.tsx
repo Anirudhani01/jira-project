@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { SetURLSearchParams } from 'react-router';
 
 import { Badge } from '../../components/ui/Badge';
+import { DateRangePicker } from '../../components/ui/DateRangePicker';
 import { Input } from '../../components/ui/Input';
 import { cn } from '../../lib/cn';
 import type { Member } from '../../lib/api/types';
@@ -13,7 +14,7 @@ import {
   formatFilterChipValue,
   type ParsedAuditSearch,
 } from './auditSearchParams';
-import { datetimeLocalToIso, isoToDatetimeLocalValue } from './auditDateParams';
+import { applyDateRangeParams } from './auditDateParams';
 import { formatActorFilterLabel } from './auditActorLabel';
 
 const selectClass =
@@ -111,36 +112,22 @@ export function AuditFilters({
             <span className="text-xs text-danger">Invalid actor filter; not applied.</span>
           ) : null}
         </label>
-        <label className="flex min-w-0 flex-col gap-1">
-          From
-          <Input
-            type="datetime-local"
-            value={isoToDatetimeLocalValue(searchParams.get('from'))}
-            onChange={(e) => {
-              const iso = datetimeLocalToIso(e.target.value);
-              setFilterParam(setSearch, 'from', iso ?? '');
+        <div className="flex min-w-0 flex-col gap-1">
+          <DateRangePicker
+            label="Date range"
+            from={searchParams.get('from')}
+            to={searchParams.get('to')}
+            onChange={(range) => {
+              setSearch((prev) => applyDateRangeParams(prev, range), { replace: true });
             }}
-            className={inputClass}
           />
           {parsed.invalid.from ? (
-            <span className="text-xs text-danger">Invalid date; not applied.</span>
+            <span className="text-xs text-danger">From: Invalid date; not applied.</span>
           ) : null}
-        </label>
-        <label className="flex min-w-0 flex-col gap-1">
-          To
-          <Input
-            type="datetime-local"
-            value={isoToDatetimeLocalValue(searchParams.get('to'))}
-            onChange={(e) => {
-              const iso = datetimeLocalToIso(e.target.value);
-              setFilterParam(setSearch, 'to', iso ?? '');
-            }}
-            className={inputClass}
-          />
           {parsed.invalid.to ? (
-            <span className="text-xs text-danger">Invalid date; not applied.</span>
+            <span className="text-xs text-danger">To: Invalid date; not applied.</span>
           ) : null}
-        </label>
+        </div>
       </div>
       {chips.length > 0 ? (
         <ul className="flex flex-wrap gap-2" aria-label="Active filters">

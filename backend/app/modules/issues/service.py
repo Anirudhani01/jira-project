@@ -133,6 +133,7 @@ def _response(
         ),
         reporter=_reporter(users, issue.reporter_id),
         assignee=_user(users, issue.assignee_id),
+        tester=_user(users, issue.tester_id),
         parent=parent_ref,
         sprint=SprintRef(id=issue.sprint_id, name=row.sprint_name, state=row.sprint_state)
         if issue.sprint_id is not None and row.sprint_name is not None
@@ -154,9 +155,11 @@ def _response(
 
 
 async def issue_responses(session: AsyncSession, rows: list[Any]) -> list[IssueResponse]:
-    ids = {r.Issue.reporter_id for r in rows} | {
-        r.Issue.assignee_id for r in rows if r.Issue.assignee_id
-    }
+    ids = (
+        {r.Issue.reporter_id for r in rows}
+        | {r.Issue.assignee_id for r in rows if r.Issue.assignee_id}
+        | {r.Issue.tester_id for r in rows if r.Issue.tester_id}
+    )
     users = await visible_users(session, sorted(ids))
     labels_by_issue = await repository.list_issue_labels_bulk(session, [r.Issue.id for r in rows])
     parent_ids = sorted({r.Issue.parent_id for r in rows if r.Issue.parent_id})
@@ -241,10 +244,17 @@ async def _validate_hierarchy(
 
 
 async def _validate_assignee(
-    session: AsyncSession, project: Project, assignee_id: uuid.UUID
+    session: AsyncSession,
+    project: Project,
+    assignee_id: uuid.UUID,
+    *,
+    field: str = "assignee_id",
+    code: str = "invalid_assignee",
+    role_name: str = "assignee",
 ) -> None:
     """The assignee must be an active org owner/admin (implicit project admin, §1.1) or
-    hold the project's admin/member role (plan R3.3 row 14)."""
+    hold the project's admin/member role (plan R3.3 row 14). The tester follows the same rule
+    (``field``/``code``/``role_name`` only change the error it reports)."""
     membership = await orgs.get_member(session, assignee_id)
     if (
         membership is not None
@@ -259,9 +269,62 @@ async def _validate_assignee(
     role = await projects.get_project_member(session, project.id, assignee_id)
     if role in ("admin", "member"):
         return
-    raise invalid_field(
-        "assignee_id", "invalid_assignee", "The assignee must be an active project member."
+    raise invalid_field(field, code, f"The {role_name} must be an active project member.")
+
+
+async def _validate_tester(session: AsyncSession, project: Project, tester_id: uuid.UUID) -> None:
+    await _validate_assignee(
+        session,
+        project,
+        tester_id,
+        field="tester_id",
+        code="invalid_tester",
+        role_name="tester",
     )
+
+
+async def _validate_new_people(
+    session: AsyncSession, project: Project, permissions: Any, body: CreateIssueRequest
+) -> None:
+    """Assigning someone (assignee or tester) at creation needs the assign permission."""
+    for person, validate in (
+        (body.assignee_id, _validate_assignee),
+        (body.tester_id, _validate_tester),
+    ):
+        if person is None:
+            continue
+        if Permission.ISSUE_ASSIGN not in permissions:
+            raise forbidden()
+        await validate(session, project, person)
+
+
+async def _person_changes(
+    session: AsyncSession,
+    project: Project,
+    issue: Any,
+    body: UpdateIssueRequest,
+    *,
+    fields: Any,
+    permissions: Any,
+) -> list[Any]:
+    """Assignee and tester edits: same permission, same member rule, same activity shape."""
+    changes: list[Any] = []
+    for column, label, validate in (
+        ("assignee_id", "assignee", _validate_assignee),
+        ("tester_id", "tester", _validate_tester),
+    ):
+        new_id = getattr(body, column)
+        old_id = getattr(issue, column)
+        if column not in fields or new_id == old_id:
+            continue
+        if Permission.ISSUE_ASSIGN not in permissions:
+            raise forbidden()
+        if new_id is not None:
+            await validate(session, project, new_id)
+        old_ref = {"id": str(old_id)} if old_id else None
+        new_ref = {"id": str(new_id)} if new_id else None
+        changes.append((column, new_id, label, old_ref, new_ref))
+    return changes
 
 
 async def _validate_labels(
@@ -352,10 +415,7 @@ async def create_issue(
             type_ref, kind = await _type_kind(session, body.type_id)
             await _priority_ref(session, body.priority_id)
             await _validate_hierarchy(session, project.id, kind, body.parent_id)
-            if body.assignee_id is not None:
-                if Permission.ISSUE_ASSIGN not in current.permissions:
-                    raise forbidden()
-                await _validate_assignee(session, project, body.assignee_id)
+            await _validate_new_people(session, project, current.permissions, body)
             if body.fix_version_id is not None:
                 await _validate_fix_version(session, project, body.fix_version_id)
             if body.label_ids:
@@ -379,6 +439,7 @@ async def create_issue(
                     description=body.description,
                     parent_id=body.parent_id,
                     assignee_id=body.assignee_id,
+                    tester_id=body.tester_id,
                     story_points=body.story_points,
                     fix_version_id=body.fix_version_id,
                 ),
@@ -440,6 +501,7 @@ class ListQuery:
     project_key: str | None
     filters: IssueFilter
     assignee: str | None
+    tester: str | None
     sort: str
     cursor: str | None
     limit: int
@@ -461,6 +523,17 @@ async def list_issues(
             except ValueError as error:
                 raise invalid_field(
                     "assignee", "invalid_assignee", "Use me, none or a user id."
+                ) from error
+        if query.tester == "me":
+            filters = replace(filters, tester=current.user_id)
+        elif query.tester == "none":
+            filters = replace(filters, no_tester=True)
+        elif query.tester is not None:
+            try:
+                filters = replace(filters, tester=uuid.UUID(query.tester))
+            except ValueError as error:
+                raise invalid_field(
+                    "tester", "invalid_tester", "Use me, none or a user id."
                 ) from error
         if query.project_key is not None:
             project = await projects.find_project(session, query.project_key)
@@ -642,14 +715,9 @@ async def _changes(
                 "name": old_priority.name if old_priority else None,
             }
             changes.append(("priority_id", body.priority_id, "priority", old, new_priority))
-    if "assignee_id" in fields and body.assignee_id != issue.assignee_id:
-        if Permission.ISSUE_ASSIGN not in permissions:
-            raise forbidden()
-        if body.assignee_id is not None:
-            await _validate_assignee(session, project, body.assignee_id)
-        old_assignee = {"id": str(issue.assignee_id)} if issue.assignee_id else None
-        new_assignee = {"id": str(body.assignee_id)} if body.assignee_id else None
-        changes.append(("assignee_id", body.assignee_id, "assignee", old_assignee, new_assignee))
+    changes += await _person_changes(
+        session, project, issue, body, fields=fields, permissions=permissions
+    )
     changes += await _estimate_and_release_changes(session, project, issue, body, fields)
     changes += await _reporter_change(session, project, issue, body, fields)
     return changes
@@ -868,7 +936,7 @@ async def _notify_status_change(
         project_id=project.id,
         issue_id=issue.id,
         kind="issue_status_changed",
-        candidates=[issue.reporter_id, issue.assignee_id],
+        candidates=[issue.reporter_id, issue.assignee_id, issue.tester_id],
         payload={"summary": issue.summary, "from": old_name, "to": new_name},
     )
 

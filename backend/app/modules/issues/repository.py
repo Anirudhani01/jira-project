@@ -132,6 +132,7 @@ class NewIssue:
     description: str | None
     parent_id: uuid.UUID | None = None
     assignee_id: uuid.UUID | None = None
+    tester_id: uuid.UUID | None = None
     story_points: int | None = None
     fix_version_id: uuid.UUID | None = None
 
@@ -153,6 +154,7 @@ async def insert_issue(session: AsyncSession, new: NewIssue) -> None:
             description=new.description,
             parent_id=new.parent_id,
             assignee_id=new.assignee_id,
+            tester_id=new.tester_id,
             story_points=new.story_points,
             fix_version_id=new.fix_version_id,
             rank=initial_rank(new.seq),
@@ -452,6 +454,23 @@ async def unassign_member(session: AsyncSession, user_id: uuid.UUID) -> list[uui
     return list(rows.scalars())
 
 
+async def untest_member(session: AsyncSession, user_id: uuid.UUID) -> list[uuid.UUID]:
+    """Org-member removal effect, like ``unassign_member`` but for the tester: clear every live
+    issue's tester that is this member, bumping versions."""
+    context = require_org_context(session)
+    rows = await session.execute(
+        update(Issue)
+        .where(
+            Issue.org_id == context.org_id,
+            Issue.tester_id == user_id,
+            Issue.deleted_at.is_(None),
+        )
+        .values(tester_id=None, version=Issue.version + 1, updated_at=func.now())
+        .returning(Issue.id)
+    )
+    return list(rows.scalars())
+
+
 async def find_candidate_parent(
     session: AsyncSession, project_id: uuid.UUID, parent_id: uuid.UUID
 ) -> tuple[Issue, str] | None:
@@ -672,6 +691,8 @@ class IssueFilter:
     priority_id: uuid.UUID | None = None
     assignee: uuid.UUID | None = None
     unassigned: bool = False
+    tester: uuid.UUID | None = None
+    no_tester: bool = False
     label_id: uuid.UUID | None = None
     sprint_id: uuid.UUID | None = None
     backlog_only: bool = False
@@ -738,6 +759,17 @@ def _search_condition(query: str) -> ColumnElement[bool]:
     )
 
 
+def _person_condition(
+    column: Any, person: uuid.UUID | None, none: bool
+) -> ColumnElement[bool] | None:
+    """``none`` = nobody is set; otherwise the column equals ``person`` (``None`` = no filter)."""
+    if none:
+        return cast(ColumnElement[bool], column.is_(None))
+    if person is not None:
+        return cast(ColumnElement[bool], column == person)
+    return None
+
+
 def _filter_conditions(filters: IssueFilter) -> list[ColumnElement[bool]]:
     conditions: list[ColumnElement[bool]] = []
     if filters.project_id is not None:
@@ -750,10 +782,12 @@ def _filter_conditions(filters: IssueFilter) -> list[ColumnElement[bool]]:
         conditions.append(Issue.type_id == filters.type_id)
     if filters.priority_id is not None:
         conditions.append(Issue.priority_id == filters.priority_id)
-    if filters.unassigned:
-        conditions.append(Issue.assignee_id.is_(None))
-    elif filters.assignee is not None:
-        conditions.append(Issue.assignee_id == filters.assignee)
+    for person in (
+        _person_condition(Issue.assignee_id, filters.assignee, filters.unassigned),
+        _person_condition(Issue.tester_id, filters.tester, filters.no_tester),
+    ):
+        if person is not None:
+            conditions.append(person)
     if filters.updated_since is not None:
         conditions.append(Issue.updated_at >= filters.updated_since)
     if filters.q:
