@@ -14,13 +14,13 @@ Statuses come from the repository and from checks run on 2026-11-24 (test suites
 
 ## Summary
 
-**Release checklist (section 10): 20 of 36 done, 6 partial, 10 not done.**
+**Release checklist (section 10): 22 of 36 done, 4 partial, 10 not done.**
 
 | Checklist group | ✅ | 🟡 | ❌ |
 |---|---|---|---|
 | Product (8) | 6 | 2 | 0 |
 | Security (6) | 6 | 0 | 0 |
-| Quality (8) | 6 | 2 | 0 |
+| Quality (8) | 8 | 0 | 0 |
 | Deployment (7) | 1 | 0 | 6 |
 | Portfolio (7) | 1 | 2 | 4 |
 
@@ -49,7 +49,7 @@ Statuses come from the repository and from checks run on 2026-11-24 (test suites
 | 10 | View project-level progress | 🟡 | Org dashboard and project progress exist; no dedicated reports page (see 5.7) |
 | 11 | Manage settings by permission | ✅ | Org and project settings, roles, audit log |
 
-End-to-end journeys are written as 13 scenarios (`frontend/e2e/suites/mvp/scenarios.ts`, documented in `docs/ui-redesign/e2e-journeys.md`). The full-stack run was **not re-run** for this document; see Quality.
+End-to-end journeys are written as 13 scenarios (`frontend/e2e/suites/mvp/scenarios.ts`, documented in `docs/ui-redesign/e2e-journeys.md`). **All 13 passed on 2026-11-24** against the full local stack (API, outbox worker, Mailpit, UI); see Testing.
 
 ## 2. Functional requirements (section 5)
 
@@ -83,8 +83,8 @@ End-to-end journeys are written as 13 scenarios (`frontend/e2e/suites/mvp/scenar
 | CI on main | ✅ | Latest merge (#92) passed CI. The previous main run (#87, 2026-11-14) failed once; the dependency audit failure on #92 was fixed by bumping `opentelemetry-api` |
 | Organization and project isolation | ✅ | Named tests, e.g. `test_cross_tenant_slug_returns_not_found`, `test_every_tenant_table_has_forced_rls_and_org_scoped_fks`, `test_inserts_into_other_tenant_are_rejected`, `test_cross_tenant_project_settings_are_not_found` |
 | Mocked browser tests | ✅ | Run in CI (workflow A4b specs) |
-| Full-stack end-to-end journeys | 🟡 | Written and documented; not re-run for this document. The UX-states workflow runs only on pushes to main or on manual dispatch |
-| Session-expiry behaviour | 🟡 | Backend expiry tests exist; the browser behaviour is covered by the full-stack UX-states spec, which has not been re-run |
+| Full-stack end-to-end journeys | ✅ | 13 of 13 scenarios passed on 2026-11-24 (local stack). Four steps in scenarios 08 and 09 had gone stale after the UI refresh (a moved menu, a renamed button, a new confirmation dialog, a removed Search button) and were updated; the app itself behaved correctly. The full-stack suite is not part of the PR CI job; the UX-states workflow runs only on pushes to main or on manual dispatch |
+| Session-expiry behaviour | ✅ | Backend expiry tests, plus the UX-states spec: 11 of 11 passed on 2026-11-24, including one dialog for concurrent 401s, return to the original page after re-login, and keyboard access |
 
 ## 5. Deployment (section 8)
 
@@ -122,12 +122,12 @@ End-to-end journeys are written as 13 scenarios (`frontend/e2e/suites/mvp/scenar
 ### Quality
 - [x] Critical backend tests pass
 - [x] Critical frontend tests pass
-- [ ] Critical E2E journeys pass — 🟡 not re-run
+- [x] Critical E2E journeys pass (13 of 13, 2026-11-24)
 - [x] No blocking defects remain (none known)
 - [x] Error states are handled
 - [x] Empty states are handled
 - [x] Loading states are handled
-- [ ] Session-expiration behavior is tested — 🟡 see section 4
+- [x] Session-expiration behavior is tested
 
 ### Deployment
 - [ ] Frontend is deployed
@@ -163,7 +163,7 @@ Section 9 lists these as optional "if already implemented and stable": comments,
 ## 9. Next actions, in order
 
 1. **Decide how the deployed app handles signup**, then deploy. Options: (a) pay about $7/month for the email worker plus a free SMTP provider such as Brevo; (b) keep signup off and provide a seeded demo login (needs a safe way to seed the deployed database, which is not documented yet). Then run the Supabase and Render steps in `DEPLOYMENT.md` and verify with the checks listed there.
-2. **Run the full-stack E2E journeys** (`make e2e-journeys` against `make dev`) and record the result here; do the same on the deployed URL.
+2. ~~Run the full-stack E2E journeys~~ — done 2026-11-24 (13 of 13). Repeat the journeys against the deployed URL once it exists.
 3. **Responsive and visual QA pass** (planned): all pages, light/paper/dark, phone/tablet/desktop, plus the Assignee-button fix. Keep a curated set of screenshots as evidence.
 4. **Portfolio assets**: README (product description, screenshots, demo link), architecture diagram, project and resume descriptions.
 5. **Close the 🟡 items**: confirm which admin pages are placeholders; decide whether a small status-distribution view is needed for "basic reporting"; record a k6 baseline result.
