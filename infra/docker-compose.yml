@@ -12,7 +12,7 @@ x-dev-email: &dev-email
 
 services:
   postgres:
-    image: postgres:17.6-alpine
+    image: postgres:17.11-alpine
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       APP_DB_NAMES: ${APP_DB_NAMES:-jira,jira_test}
@@ -32,7 +32,7 @@ services:
       retries: 30
 
   redis:
-    image: redis:7.4.5-alpine
+    image: redis:7.4.12-alpine
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     ports:
       - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
@@ -45,7 +45,7 @@ services:
   # Free, local SMTP sink for development and tests (M2). Captures every message; nothing
   # leaves the machine. Web UI and API on http://localhost:8025. Never used in production.
   mailpit:
-    image: axllent/mailpit:v1.27.11
+    image: axllent/mailpit:v1.34.0
     environment:
       MP_DISABLE_VERSION_CHECK: "true"
       MP_MAX_MESSAGES: "5000"
