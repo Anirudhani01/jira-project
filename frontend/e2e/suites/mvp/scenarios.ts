@@ -285,11 +285,13 @@ export const mvpScenarios: MvpScenario[] = [
       await page.getByRole('button', { name: 'Create sprint' }).click();
       await expect(page.getByRole('heading', { name: /Sprint Alpha/ })).toBeVisible();
       const issueKey = `${key}-1`;
-      await page.getByLabel(`Move ${issueKey} to`).selectOption({ label: 'Sprint Alpha' });
+      // The row's actions menu ("Move <key> to") replaced the old native select.
+      await page.getByRole('button', { name: `More actions for ${issueKey}` }).click();
+      await page.getByRole('menuitem', { name: 'Sprint Alpha' }).click();
       await page.getByRole('button', { name: 'Start sprint' }).click();
       await page.locator('input[type="datetime-local"]').nth(0).fill(localDateTimeInput(-1));
       await page.locator('input[type="datetime-local"]').nth(1).fill(localDateTimeInput(48));
-      await page.getByRole('button', { name: 'Start', exact: true }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Start sprint' }).click();
       await expect(
         page.getByRole('region', { name: 'Sprint Alpha' }).getByText('Active'),
       ).toBeVisible();
@@ -297,6 +299,9 @@ export const mvpScenarios: MvpScenario[] = [
       await expect(issueLink(page, issueKey)).toBeVisible();
       await page.goto(`/o/${slug}/p/${key}/backlog`);
       await page.getByRole('button', { name: 'Complete sprint' }).click();
+      // Completing asks where open issues go; confirm with the default (back to the backlog).
+      await page.getByRole('dialog').getByRole('button', { name: 'Complete sprint' }).click();
+      await expect(page.getByRole('dialog')).toBeHidden();
       await expect(page.getByRole('heading', { name: 'Backlog', exact: true })).toBeVisible();
       await expectNoSeriousViolations(page);
     },
@@ -331,11 +336,9 @@ export const mvpScenarios: MvpScenario[] = [
         await ownerPage.goto(`/o/${owner.slug}/p/${owner.key}/issues`);
         await createIssueOnList(ownerPage, 'Notification target', 'Find me with search');
         await ownerPage.goto(`/o/${owner.slug}/p/${owner.key}/issues`);
+        // The search box has no submit button; Enter submits the form.
         await ownerPage.getByRole('searchbox', { name: 'Search issues' }).fill('notification');
-        await ownerPage
-          .locator('#main')
-          .getByRole('button', { name: 'Search', exact: true })
-          .click();
+        await ownerPage.getByRole('searchbox', { name: 'Search issues' }).press('Enter');
         await expect(issueLink(ownerPage, `${owner.key}-1`)).toBeVisible();
         const issueKey = `${owner.key}-1`;
         await assignIssueViaApi(ownerPage, owner.slug, issueKey, assigneeId);
