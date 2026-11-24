@@ -73,6 +73,8 @@ ALLOWED_TABLES = frozenset(
         # project key rename + issue relocation (old keys keep resolving)
         "project_key_aliases",
         "issue_key_aliases",
+        # saved issue-list filters (private per user and project)
+        "saved_filters",
     }
 )
 
