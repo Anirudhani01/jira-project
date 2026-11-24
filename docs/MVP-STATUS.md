@@ -14,7 +14,7 @@ Statuses come from the repository and from checks run on 2026-11-24 (test suites
 
 ## Summary
 
-**Release checklist (section 10): 22 of 36 done, 4 partial, 10 not done.**
+**Release checklist (section 10): 26 of 36 done, 3 partial, 7 not done.**
 
 | Checklist group | ✅ | 🟡 | ❌ |
 |---|---|---|---|
@@ -22,7 +22,7 @@ Statuses come from the repository and from checks run on 2026-11-24 (test suites
 | Security (6) | 6 | 0 | 0 |
 | Quality (8) | 8 | 0 | 0 |
 | Deployment (7) | 1 | 0 | 6 |
-| Portfolio (7) | 1 | 2 | 4 |
+| Portfolio (7) | 5 | 1 | 1 |
 
 **The product is feature-complete for the MVP. The gaps are in getting it in front of people**: the hosted deployment is stopped and on the backlog (section 10), signup is disabled in the planned free-tier deployment, and the portfolio assets (screenshots in the README, architecture diagram, demo URL, descriptions) are missing.
 
@@ -141,13 +141,13 @@ End-to-end journeys are written as 13 scenarios (`frontend/e2e/suites/mvp/scenar
 - [ ] Demo workflow is verified on the deployed environment
 
 ### Portfolio
-- [ ] README is complete — 🟡 setup-focused; no product description, screenshots or demo link
-- [ ] Architecture diagram is available — ❌ an architecture plan and ADRs exist, no diagram found
-- [ ] Screenshots are available — 🟡 images exist under `docs/`, not shown in the README
+- [ ] README is complete — 🟡 product description, screenshots, architecture and quality are in; the demo link waits on the hosted deployment (backlog B1)
+- [x] Architecture diagram is available (Mermaid diagram in the README, linked to the ADRs)
+- [x] Screenshots are available (in the README and `docs/ui-redesign/evidence/2026-11-24-responsive-qa/`)
 - [ ] Demo URL is available
 - [x] GitHub repository is organized (docs, ADRs, CI, PR workflow)
-- [ ] Project description is ready
-- [ ] Resume description is ready
+- [x] Project description is ready (`docs/PORTFOLIO.md`)
+- [x] Resume description is ready (`docs/PORTFOLIO.md`)
 
 ## 7. Known issues
 
@@ -165,7 +165,7 @@ Section 9 lists these as optional "if already implemented and stable": comments,
 1. ~~Deployment~~ **moved to the backlog on 2026-11-25** (section 10, item B1). Repeat the E2E journeys against the deployed URL when it exists.
 2. ~~Run the full-stack E2E journeys~~ — done 2026-11-24 (13 of 13). Repeat the journeys against the deployed URL once it exists.
 3. ~~Responsive and visual QA pass~~ — done 2026-11-24 (243 combinations clean; 30 curated screenshots in `docs/ui-redesign/evidence/2026-11-24-responsive-qa/`).
-4. **Portfolio assets**: README (product description, screenshots, demo link), architecture diagram, project and resume descriptions.
+4. ~~Portfolio assets~~ — done 2026-11-25 (README, architecture diagram, screenshots, `docs/PORTFOLIO.md`). Only the demo link remains, and it waits on the deployment (backlog B1).
 5. **Close the 🟡 items**: confirm which admin pages are placeholders; decide whether a small status-distribution view is needed for "basic reporting"; record a k6 baseline result.
 6. **Refresh `docs/FEATURES.md`** (test counts, known-failure note).
 
