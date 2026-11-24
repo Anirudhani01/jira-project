@@ -14,11 +14,11 @@ Statuses come from the repository and from checks run on 2026-11-24 (test suites
 
 ## Summary
 
-**Release checklist (section 10): 26 of 36 done, 3 partial, 7 not done.**
+**Release checklist (section 10): 28 of 36 done, 1 partial, 7 not done.**
 
 | Checklist group | ✅ | 🟡 | ❌ |
 |---|---|---|---|
-| Product (8) | 6 | 2 | 0 |
+| Product (8) | 8 | 0 | 0 |
 | Security (6) | 6 | 0 | 0 |
 | Quality (8) | 8 | 0 | 0 |
 | Deployment (7) | 1 | 0 | 6 |
@@ -46,7 +46,7 @@ Statuses come from the repository and from checks run on 2026-11-24 (test suites
 | 7 | Assign work and update details | ✅ | Assignee, reporter, Tester, priority, story points |
 | 8 | Manage work on a board | ✅ | Kanban and Scrum boards with drag and drop, backlog, sprints |
 | 9 | Update statuses, track progress | ✅ | Transitions, activity history, notifications |
-| 10 | View project-level progress | 🟡 | Org dashboard and project progress exist; no dedicated reports page (see 5.7) |
+| 10 | View project-level progress | ✅ | Org dashboard, board sprint header and the project Summary page |
 | 11 | Manage settings by permission | ✅ | Org and project settings, roles, audit log |
 
 End-to-end journeys are written as 13 scenarios (`frontend/e2e/suites/mvp/scenarios.ts`, documented in `docs/ui-redesign/e2e-journeys.md`). **All 13 passed on 2026-11-24** against the full local stack (API, outbox worker, Mailpit, UI); see Testing.
@@ -61,8 +61,8 @@ End-to-end journeys are written as 13 scenarios (`frontend/e2e/suites/mvp/scenar
 | 5.4 Issues | ✅ | Full create/edit/assign, filters, sort, search, bulk actions, **saved filters** (new), optimistic locking, unique keys per project |
 | 5.5 Agile boards | ✅ | Kanban and Scrum, persisted status moves, quick filters |
 | 5.6 Workflow management | ✅ | Data-driven statuses and transitions; invalid transitions rejected; editor limited to authorized users |
-| 5.7 Dashboard & reporting | 🟡 | Org dashboard and project progress with real done counts. No status-distribution or report page; sidebar shows "Reports — Soon" |
-| 5.8 Settings & administration | 🟡 | Admin console is broad (general, catalogs, members, invitations, audit, authentication activity, workflows). `docs/FEATURES.md` notes some pages (Email Delivery, Notifications) may still be placeholders; **not verified** |
+| 5.7 Dashboard & reporting | ✅ | Org dashboard and project progress with real done counts, plus a per-project **Summary** page (2026-11-25): headline numbers, the split across the workflow, and issue types and priorities, each number linking to the filtered issue list. Evidence: `docs/ui-redesign/evidence/2026-11-25-project-summary/` |
+| 5.8 Settings & administration | ✅ | Admin console covers general, catalogs, members, invitations, audit, authentication activity and workflows. Checked 2026-11-25: no admin page is a placeholder (the unused `AdminPlaceholderPage` component is not rendered anywhere); Email delivery and Notifications are deliberate read-only pages explaining what the platform handles |
 
 ## 3. Non-functional requirements (section 6)
 
@@ -110,8 +110,8 @@ End-to-end journeys are written as 13 scenarios (`frontend/e2e/suites/mvp/scenar
 - [x] Issue management is functional
 - [x] Board functionality is functional
 - [x] Workflow management is functional
-- [ ] Basic reporting is functional — 🟡 dashboard and progress yes, no reports page
-- [ ] Settings and administration are functional — 🟡 some admin pages unverified
+- [x] Basic reporting is functional (project Summary page, 2026-11-25)
+- [x] Settings and administration are functional
 
 ### Security
 - [x] Authentication works
@@ -166,7 +166,7 @@ Section 9 lists these as optional "if already implemented and stable": comments,
 2. ~~Run the full-stack E2E journeys~~ — done 2026-11-24 (13 of 13). Repeat the journeys against the deployed URL once it exists.
 3. ~~Responsive and visual QA pass~~ — done 2026-11-24 (243 combinations clean; 30 curated screenshots in `docs/ui-redesign/evidence/2026-11-24-responsive-qa/`).
 4. ~~Portfolio assets~~ — done 2026-11-25 (README, architecture diagram, screenshots, `docs/PORTFOLIO.md`). Only the demo link remains, and it waits on the deployment (backlog B1).
-5. **Close the 🟡 items**: confirm which admin pages are placeholders; decide whether a small status-distribution view is needed for "basic reporting"; record a k6 baseline result.
+5. ~~Close the 🟡 items~~ — admin pages confirmed (no placeholders) and basic reporting built (project Summary page, 2026-11-25). Still open: record a k6 baseline result.
 6. **Refresh `docs/FEATURES.md`** (test counts, known-failure note).
 
 ## 10. Backlog
@@ -196,3 +196,7 @@ Work that is agreed but not scheduled. Nothing here blocks day-to-day developmen
 **Risks and notes:** a public demo login can be changed by anyone (hence the reset command and a README note); the hosted database is several migrations behind; the free Render backend sleeps when idle (first request is slow); local `.env` still points at an old hosted Neon database from the Antideploy attempt, so do not run `make` targets that use `DATABASE_URL` without overriding it.
 
 **Estimate:** about half a day of work once the facts in step 1 are known, plus the owner's dashboard actions.
+
+### B2 — Reporting follow-ups (not started)
+
+Natural next steps after the project Summary page, none needed for the MVP definition: per-assignee workload, trends over time (burndown, throughput; the sidebar "Reports - Soon" entry is for these), due-date and aging views, a per-status filter on the issue list (so status rows on the Summary could link too), and sharing or exporting the page.

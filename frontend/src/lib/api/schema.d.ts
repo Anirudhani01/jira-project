@@ -1079,6 +1079,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Summary
+         * @description Issue counts by status, type and priority for the project Summary page.
+         */
+        get: operations["get_summary_api_v1_orgs__org_slug__projects__project_key__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orgs/{org_slug}/projects/{project_key}/unarchive": {
         parameters: {
             query?: never;
@@ -2153,6 +2173,20 @@ export interface components {
             /** Email */
             email: string;
         };
+        /** PriorityCountResponse */
+        PriorityCountResponse: {
+            /** Active */
+            active: boolean;
+            /** Count */
+            count: number;
+            /** Name */
+            name: string;
+            /**
+             * Priority Id
+             * Format: uuid
+             */
+            priority_id: string;
+        };
         /** PriorityListResponse */
         PriorityListResponse: {
             /** Items */
@@ -2185,6 +2219,27 @@ export interface components {
             name: string;
             /** Sort Order */
             sort_order: number;
+        };
+        /**
+         * ProjectIssueSummaryResponse
+         * @description Issue counts for the project Summary page.
+         *
+         *     Counts every non-deleted issue of the project, backlog and past sprints included.
+         *     ``total`` is the sum of ``by_status``. ``by_status`` lists every status of the workflow in
+         *     workflow order (zero counts included); ``by_type`` and ``by_priority`` follow the catalog
+         *     order and include an inactive entry only while issues still use it.
+         */
+        ProjectIssueSummaryResponse: {
+            /** By Priority */
+            by_priority: components["schemas"]["PriorityCountResponse"][];
+            /** By Status */
+            by_status: components["schemas"]["StatusCountResponse"][];
+            /** By Type */
+            by_type: components["schemas"]["TypeCountResponse"][];
+            /** Total */
+            total: number;
+            /** Unassigned */
+            unassigned: number;
         };
         /**
          * ProjectListItem
@@ -2542,6 +2597,23 @@ export interface components {
              */
             start_at: string;
         };
+        /** StatusCountResponse */
+        StatusCountResponse: {
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "todo" | "in_progress" | "done";
+            /** Count */
+            count: number;
+            /** Name */
+            name: string;
+            /**
+             * Status Id
+             * Format: uuid
+             */
+            status_id: string;
+        };
         /** StatusInput */
         StatusInput: {
             /**
@@ -2668,6 +2740,22 @@ export interface components {
              * Format: uuid
              */
             to_status_id: string;
+        };
+        /** TypeCountResponse */
+        TypeCountResponse: {
+            /** Active */
+            active: boolean;
+            /** Count */
+            count: number;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /**
+             * Type Id
+             * Format: uuid
+             */
+            type_id: string;
         };
         /** TypeRef */
         TypeRef: {
@@ -5449,6 +5537,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SprintResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_summary_api_v1_orgs__org_slug__projects__project_key__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectIssueSummaryResponse"];
                 };
             };
             /** @description Validation Error */

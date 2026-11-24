@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../lib/api/client';
 import type {
   Project,
+  ProjectIssueSummary,
   ProjectMember,
   ProjectSettings,
   ProjectListItem,
@@ -36,6 +37,18 @@ export function useProject(org: string, key: string) {
   return useQuery({
     queryKey: projectKey(org, key),
     queryFn: () => apiFetch<Project>(projectPath(org, key)),
+  });
+}
+
+/** Issue counts for the project Summary page. The key sits under the issues prefix
+ * (`issuesKey(org)` in features/issues/api.ts), so creating, editing or deleting an issue
+ * invalidates it; a board drag does not, so it is also refetched every time the page opens. */
+export function useProjectSummary(org: string, key: string) {
+  return useQuery({
+    queryKey: ['org', org.toLowerCase(), 'issues', 'summary', key.toUpperCase()] as const,
+    enabled: org.length > 0 && key.length > 0,
+    staleTime: 0,
+    queryFn: () => apiFetch<ProjectIssueSummary>(`${projectPath(org, key)}/summary`),
   });
 }
 

@@ -40,6 +40,7 @@ export type IssueActivityList = Schemas['ActivityListResponse'];
 export type IssueType = Schemas['IssueTypeResponse'];
 export type Priority = Schemas['PriorityResponse'];
 export type Label = Schemas['LabelResponse'];
+export type ProjectIssueSummary = Schemas['ProjectIssueSummaryResponse'];
 export type SavedFilter = Schemas['SavedFilterResponse'];
 export type LabelList = Schemas['LabelListResponse'];
 export type Transition = Schemas['TransitionRef'];

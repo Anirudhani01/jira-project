@@ -164,3 +164,41 @@ class AddProjectMemberRequest(_Request):
 
 class UpdateProjectMemberRequest(_Request):
     role: ProjectRole
+
+
+class StatusCountResponse(BaseModel):
+    status_id: uuid.UUID
+    name: str
+    category: StatusCategory
+    count: int
+
+
+class TypeCountResponse(BaseModel):
+    type_id: uuid.UUID
+    name: str
+    kind: str
+    active: bool
+    count: int
+
+
+class PriorityCountResponse(BaseModel):
+    priority_id: uuid.UUID
+    name: str
+    active: bool
+    count: int
+
+
+class ProjectIssueSummaryResponse(BaseModel):
+    """Issue counts for the project Summary page.
+
+    Counts every non-deleted issue of the project, backlog and past sprints included.
+    ``total`` is the sum of ``by_status``. ``by_status`` lists every status of the workflow in
+    workflow order (zero counts included); ``by_type`` and ``by_priority`` follow the catalog
+    order and include an inactive entry only while issues still use it.
+    """
+
+    total: int
+    unassigned: int
+    by_status: list[StatusCountResponse]
+    by_type: list[TypeCountResponse]
+    by_priority: list[PriorityCountResponse]

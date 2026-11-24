@@ -544,3 +544,14 @@ async def change_member(
             target_id=str(user_id),
             metadata=metadata,
         )
+
+
+async def issue_summary(
+    services: IdentityServices, access: ProjectAccess
+) -> issues_repo.ProjectSummaryCounts:
+    async with project_transaction(services, access, Permission.PROJECT_VIEW) as (
+        session,
+        project,
+        _,
+    ):
+        return await issues_repo.project_summary(session, project.id, project.workflow_id)
