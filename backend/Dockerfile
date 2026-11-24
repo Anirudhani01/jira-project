@@ -1,5 +1,5 @@
 # Backend image: API (default command) and migrations (`alembic upgrade head`).
-# Local compose / Render backend only. Antideploy uses the repository-root Dockerfile.
+# Used by the local compose stack and by the Render backend service.
 
 FROM python:3.13-slim AS builder
 ENV UV_COMPILE_BYTECODE=1 \
