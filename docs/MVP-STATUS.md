@@ -24,12 +24,12 @@ Statuses come from the repository and from checks run on 2026-11-24 (test suites
 | Deployment (7) | 1 | 0 | 6 |
 | Portfolio (7) | 1 | 2 | 4 |
 
-**The product is feature-complete for the MVP. The gaps are in getting it in front of people**: nothing is deployed, signup is disabled in the planned free-tier deployment, and the portfolio assets (screenshots in the README, architecture diagram, demo URL, descriptions) are missing.
+**The product is feature-complete for the MVP. The gaps are in getting it in front of people**: the hosted deployment is stopped and on the backlog (section 10), signup is disabled in the planned free-tier deployment, and the portfolio assets (screenshots in the README, architecture diagram, demo URL, descriptions) are missing.
 
 ### Blockers to calling it MVP-ready
-1. **No deployment.** `render.yaml` and `DEPLOYMENT.md` are prepared, but `DEPLOYMENT.md` states nothing has been executed, and the repo contains no live URL.
+1. **No running deployment.** A Render deployment existed and was stopped by the owner on 2026-11-25; the Antideploy attempt never worked and was removed. Bringing Render back is on the backlog (section 10).
 2. **Signup would be disabled when deployed.** The free-tier config ships with `SIGNUP_ENABLED=false` because the email worker needs a paid plan or another host. Without email, nobody can register.
-3. **Demo workflow not verified on a deployed environment** (follows from 1).
+3. **Demo workflow not verified on a deployed environment** (follows from 1; part of the same backlog item).
 
 ---
 
@@ -88,16 +88,18 @@ End-to-end journeys are written as 13 scenarios (`frontend/e2e/suites/mvp/scenar
 
 ## 5. Deployment (section 8)
 
+> Correction (2026-11-25): the 2026-11-24 version of this document said nothing had ever been deployed. That was wrong: a Render deployment existed and has since been stopped by the owner. The statuses below describe the current state: nothing is running.
+
 | Item | Status | Evidence |
 |---|---|---|
-| Frontend deployed | ❌ | Prepared in `render.yaml`; no deployed URL found |
-| Backend deployed | ❌ | Same |
-| Database connected | ❌ | Supabase steps documented, "nothing has been executed" |
-| Migrations applied (deployed DB) | ❌ | Documented procedure only |
+| Frontend deployed | ❌ | Was on Render; stopped by the owner on 2026-11-25. Backlog B1 |
+| Backend deployed | ❌ | Same (Render service stopped) |
+| Database connected | ❌ | Supabase (direct connection); its state is unconfirmed, and free projects pause when idle. Backlog B1 |
+| Migrations applied (deployed DB) | ❌ | The hosted database is behind: head is now `0027`. Must be migrated before restart. Backlog B1 |
 | Deployment documented | ✅ | `DEPLOYMENT.md` (architecture, roles, env vars, rollback, verification steps) |
 | Health checks | ✅ | `/healthz` and `/readyz` exist and are used by `render.yaml` |
 | Logging / error visibility | 🟡 | Structured logging and runbooks exist; no deployed log destination |
-| Email / signup in deployed env | ❌ | Worker not deployed; signup disabled in the free-tier config |
+| Email / signup in deployed env | ❌ | Worker not deployed; signup disabled in the free-tier config. Decision: seeded demo login, signup off (Backlog B1) |
 
 ## 6. Release checklist (section 10)
 
@@ -160,9 +162,37 @@ Section 9 lists these as optional "if already implemented and stable": comments,
 
 ## 9. Next actions, in order
 
-1. **Decide how the deployed app handles signup**, then deploy. Options: (a) pay about $7/month for the email worker plus a free SMTP provider such as Brevo; (b) keep signup off and provide a seeded demo login (needs a safe way to seed the deployed database, which is not documented yet). Then run the Supabase and Render steps in `DEPLOYMENT.md` and verify with the checks listed there.
+1. ~~Deployment~~ **moved to the backlog on 2026-11-25** (section 10, item B1). Repeat the E2E journeys against the deployed URL when it exists.
 2. ~~Run the full-stack E2E journeys~~ — done 2026-11-24 (13 of 13). Repeat the journeys against the deployed URL once it exists.
 3. ~~Responsive and visual QA pass~~ — done 2026-11-24 (243 combinations clean; 30 curated screenshots in `docs/ui-redesign/evidence/2026-11-24-responsive-qa/`).
 4. **Portfolio assets**: README (product description, screenshots, demo link), architecture diagram, project and resume descriptions.
 5. **Close the 🟡 items**: confirm which admin pages are placeholders; decide whether a small status-distribution view is needed for "basic reporting"; record a k6 baseline result.
 6. **Refresh `docs/FEATURES.md`** (test counts, known-failure note).
+
+## 10. Backlog
+
+Work that is agreed but not scheduled. Nothing here blocks day-to-day development.
+
+### B1 — Bring the Render deployment back (on hold, since 2026-11-25)
+
+**Why it is on hold:** the owner stopped the Render service and chose to defer hosting. The product is feature-complete and tested locally; this item only affects *showing* it.
+
+**What it closes:** the 6 unfinished Deployment checklist items (frontend, backend, database, migrations, accessible product, demo workflow on a deployed environment) and the portfolio "demo URL" item.
+
+**Decisions already made**
+- Access: **seeded demo login, signup off** (free). Public signup (paid Render worker, about $7/month, plus a free SMTP provider) stays a later option.
+- Database: **Supabase**, **direct** connection (`db.<ref>.supabase.co`, port 5432), not the pooler (the app sets per-connection session settings).
+- Antideploy is abandoned; its removal is PR #102.
+
+**Plan, in order**
+1. Confirm the facts (owner): Render backend and frontend service URLs, Supabase project still active (free projects pause when idle), Redis provider and URL, whether login worked before the stop.
+2. Fix `render.yaml`: the frontend rewrite points at `https://jira-project.onrender.com`, which does not match the blueprint service name `jira-backend`; make them agree.
+3. Migrate the hosted database once to head `0027` (`alembic upgrade head` with the `app_owner` URL; never downgrade; `pg_dump` first if it holds data).
+4. Resume the services; verify `/healthz`, `/readyz` (database and Redis ok), SPA loads, cookie flags (`Secure; HttpOnly; SameSite=Lax`, `__Host-`), security headers.
+5. Seed the demo: a small ops script creates the demo user directly (Argon2 hash through the app's hasher, no email), then loads the sample data over the hosted API; add a documented reset command.
+6. Verify on the live URL: `E2E_BASE_URL=<live> make e2e-visual-qa` plus a manual core-journey pass (the 13 journeys need signup and Mailpit, so they stay local).
+7. Docs and portfolio: rewrite `DEPLOYMENT.md` to what was actually done, add the demo URL to the README, update this document.
+
+**Risks and notes:** a public demo login can be changed by anyone (hence the reset command and a README note); the hosted database is several migrations behind; the free Render backend sleeps when idle (first request is slow); local `.env` still points at an old hosted Neon database from the Antideploy attempt, so do not run `make` targets that use `DATABASE_URL` without overriding it.
+
+**Estimate:** about half a day of work once the facts in step 1 are known, plus the owner's dashboard actions.
