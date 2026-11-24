@@ -5,7 +5,9 @@ import { defineConfig, devices } from '@playwright/test';
  * unrelated app on :5173 from another worktree or `make dev`.
  *
  * - Default: Playwright starts this worktree's Vite on PLAYWRIGHT_MOCK_PORT (5193).
- * - Full stack (`make dev` + journeys): set E2E_BASE_URL=http://127.0.0.1:5173 explicitly.
+ * - Full stack (`make dev` + journeys): set E2E_BASE_URL to the same address as APP_BASE_URL
+ *   (http://localhost:5173 with the default env files). The API rejects writes from any other
+ *   origin, so 127.0.0.1 and localhost are not interchangeable. `make e2e-ux-states` sets it.
  */
 const PLAYWRIGHT_MOCK_PORT = process.env.PLAYWRIGHT_MOCK_PORT ?? '5193';
 const mockBaseURL = `http://127.0.0.1:${PLAYWRIGHT_MOCK_PORT}`;
