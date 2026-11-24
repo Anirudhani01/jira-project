@@ -19,6 +19,7 @@ import { CreateIssueDialog } from './CreateIssueDialog';
 import { IssueListColumnPicker } from './IssueListColumnPicker';
 import { useIssueListColumns } from './issueListColumns';
 import {
+  applySavedParams,
   clearIssueListFiltersPreservingQuery,
   clearIssueListQuery,
   ISSUE_LIST_FILTER_KEYS,
@@ -29,6 +30,7 @@ import {
 } from './issueListSearchParams';
 import { DEFAULT_ISSUE_LIST_SORT, type IssueListSort } from './issueListSort';
 import { IssueListTable } from './IssueListTable';
+import { SavedFiltersMenu } from './SavedFiltersMenu';
 
 const FILTERS = [...ISSUE_LIST_FILTER_KEYS, ISSUE_LIST_QUERY_KEY] as const;
 
@@ -162,10 +164,10 @@ export function IssueListPage() {
       />
 
       <div className="space-y-3">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <form
             role="search"
-            className="min-w-0 flex-1"
+            className="min-w-[12rem] flex-1"
             onSubmit={(event) => {
               event.preventDefault();
               const value = new FormData(event.currentTarget).get('q');
@@ -189,6 +191,14 @@ export function IssueListPage() {
               />
             </div>
           </form>
+          <SavedFiltersMenu
+            org={org}
+            project={key}
+            search={search}
+            onApply={(params) => {
+              setSearch(applySavedParams(search, params));
+            }}
+          />
           {items.length > 0 ? (
             <IssueListColumnPicker
               visible={columns}

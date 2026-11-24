@@ -1007,6 +1007,42 @@ export interface paths {
         patch: operations["update_member_api_v1_orgs__org_slug__projects__project_key__members__user_id__patch"];
         trace?: never;
     };
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/saved-filters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Saved Filters */
+        get: operations["list_saved_filters_api_v1_orgs__org_slug__projects__project_key__saved_filters_get"];
+        put?: never;
+        /** Create Saved Filter */
+        post: operations["create_saved_filter_api_v1_orgs__org_slug__projects__project_key__saved_filters_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/saved-filters/{filter_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Saved Filter */
+        delete: operations["delete_saved_filter_api_v1_orgs__org_slug__projects__project_key__saved_filters__filter_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Saved Filter */
+        patch: operations["update_saved_filter_api_v1_orgs__org_slug__projects__project_key__saved_filters__filter_id__patch"];
+        trace?: never;
+    };
     "/api/v1/orgs/{org_slug}/projects/{project_key}/settings": {
         parameters: {
             query?: never;
@@ -1734,6 +1770,12 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** CreateSavedFilterRequest */
+        CreateSavedFilterRequest: {
+            /** Name */
+            name: string;
+            params: components["schemas"]["FilterParams"];
+        };
         /** CreateSprintRequest */
         CreateSprintRequest: {
             /** Goal */
@@ -1773,6 +1815,30 @@ export interface components {
             summary: string;
             /** Total */
             total: number;
+        };
+        /**
+         * FilterParams
+         * @description The URL parameters of the issue list; an unset key means "no filter".
+         */
+        FilterParams: {
+            /** Assignee */
+            assignee?: string | null;
+            /** Label */
+            label?: string | null;
+            /** Priority */
+            priority?: string | null;
+            /** Q */
+            q?: string | null;
+            /** Sort */
+            sort?: string | null;
+            /** Sprint */
+            sprint?: string | null;
+            /** Status Category */
+            status_category?: string | null;
+            /** Tester */
+            tester?: string | null;
+            /** Type */
+            type?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -2315,6 +2381,35 @@ export interface components {
             /** Transitions */
             transitions: components["schemas"]["TransitionInput"][];
         };
+        /** SavedFilterListResponse */
+        SavedFilterListResponse: {
+            /** Items */
+            items?: components["schemas"]["SavedFilterResponse"][];
+        };
+        /** SavedFilterResponse */
+        SavedFilterResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Params */
+            params: {
+                [key: string]: string;
+            };
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** SessionInfo */
         SessionInfo: {
             /**
@@ -2693,6 +2788,12 @@ export interface components {
             story_points_enabled_override?: boolean | null;
             /** Story Points Max Override */
             story_points_max_override?: number | null;
+        };
+        /** UpdateSavedFilterRequest */
+        UpdateSavedFilterRequest: {
+            /** Name */
+            name?: string | null;
+            params?: components["schemas"]["FilterParams"] | null;
         };
         /** UpdateSprintRequest */
         UpdateSprintRequest: {
@@ -5077,6 +5178,142 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_saved_filters_api_v1_orgs__org_slug__projects__project_key__saved_filters_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedFilterListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_saved_filter_api_v1_orgs__org_slug__projects__project_key__saved_filters_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSavedFilterRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedFilterResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_saved_filter_api_v1_orgs__org_slug__projects__project_key__saved_filters__filter_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                filter_id: string;
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_saved_filter_api_v1_orgs__org_slug__projects__project_key__saved_filters__filter_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                filter_id: string;
+                project_key: string;
+                org_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSavedFilterRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedFilterResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

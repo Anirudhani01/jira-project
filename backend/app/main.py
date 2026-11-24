@@ -33,6 +33,7 @@ from app.modules.issues.router import router as issues_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.orgs.router import router as orgs_router
 from app.modules.projects.router import router as projects_router
+from app.modules.saved_filters.router import router as saved_filters_router
 from app.modules.sprints.router import router as sprints_router
 from app.modules.versions.router import router as versions_router
 
@@ -118,6 +119,7 @@ def create_app(
     app.include_router(sprints_router)
     app.include_router(versions_router)
     app.include_router(notifications_router)
+    app.include_router(saved_filters_router)
     app.include_router(comments_router)
 
     # add_middleware wraps: the last added is outermost.

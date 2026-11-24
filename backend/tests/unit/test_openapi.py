@@ -101,6 +101,8 @@ M11_PATHS = {
 EPICS_VERSIONS_PATHS = {
     "/api/v1/orgs/{org_slug}/issues/bulk",
     "/api/v1/orgs/{org_slug}/projects/{project_key}/epics",
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/saved-filters",
+    "/api/v1/orgs/{org_slug}/projects/{project_key}/saved-filters/{filter_id}",
     "/api/v1/orgs/{org_slug}/projects/{project_key}/versions",
     "/api/v1/orgs/{org_slug}/projects/{project_key}/versions/order",
     "/api/v1/orgs/{org_slug}/versions/{version_id}",

@@ -50,3 +50,43 @@ export function clearIssueListQuery(search: URLSearchParams): URLSearchParams {
   next.delete(ISSUE_LIST_QUERY_KEY);
   return next;
 }
+
+/** The URL parameters a saved filter stores: every filter, the search text and the sort. */
+export const SAVED_FILTER_KEYS = [
+  ...ISSUE_LIST_FILTER_KEYS,
+  ISSUE_LIST_QUERY_KEY,
+  SORT_PARAM,
+] as const;
+
+/** The saved-filter parameters of the current URL; the default sort is not stored. */
+export function filtersToParams(search: URLSearchParams): Record<string, string> {
+  const params: Record<string, string> = {};
+  for (const name of SAVED_FILTER_KEYS) {
+    const value = search.get(name)?.trim();
+    if (!value || (name === SORT_PARAM && value === DEFAULT_ISSUE_LIST_SORT)) continue;
+    params[name] = value;
+  }
+  return params;
+}
+
+/** Replaces the filters, search text and sort with a saved set; unrelated params stay. */
+export function applySavedParams(
+  search: URLSearchParams,
+  params: Record<string, string>,
+): URLSearchParams {
+  const next = new URLSearchParams(search);
+  for (const name of SAVED_FILTER_KEYS) next.delete(name);
+  for (const name of SAVED_FILTER_KEYS) {
+    const value = params[name];
+    if (value) next.set(name, value);
+  }
+  return next;
+}
+
+/** True when the URL shows exactly this saved set (the default sort counts as no sort). */
+export function savedParamsMatch(search: URLSearchParams, params: Record<string, string>): boolean {
+  const current = filtersToParams(search);
+  const saved = Object.fromEntries(Object.entries(params).filter(([, value]) => value));
+  const names = new Set([...Object.keys(current), ...Object.keys(saved)]);
+  return [...names].every((name) => current[name] === saved[name]);
+}
