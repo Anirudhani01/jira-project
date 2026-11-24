@@ -22,6 +22,7 @@ jobs:
       docker: ${{ steps.filter.outputs.docker }}
       code: ${{ steps.filter.outputs.code }}
       documentation: ${{ steps.filter.outputs.documentation }}
+      scope: ${{ steps.scope.outputs.scope }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -59,6 +60,23 @@ jobs:
               - '.nvmrc'
               - '.editorconfig'
               - 'render.yaml'
+
+      # `frontend` only when a PR changes nothing but frontend/ (and documentation); the
+      # backend tests cannot be affected, so `make ci-frontend` replaces `make ci`.
+      # Everything else, and every non-PR run (main, manual), keeps the full `make ci`.
+      - name: Classify CI scope
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          scope=full
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            scope=$(git diff --name-only "$BASE_SHA" HEAD | python3 .github/scripts/classify_pr_paths.py --scope)
+          fi
+          echo "CI scope: $scope"
+          echo "scope=$scope" >> "$GITHUB_OUTPUT"
 
   docs-only:
     name: Docs only (secrets scan)
@@ -121,11 +139,12 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - name: make ci
+      - name: make ci (make ci-frontend for frontend-only PRs)
         env:
+          CI_TARGET: ${{ needs.changes.outputs.scope == 'frontend' && 'ci-frontend' || 'ci' }}
           SKIP_MIGRATE_ROUNDTRIP: ${{ (github.ref == 'refs/heads/main' || needs.changes.outputs.migrations == 'true') && '0' || '1' }}
           CI_GITLEAKS_FULL_HISTORY: ${{ github.event_name == 'pull_request' && '0' || '1' }}
-        run: make ci
+        run: make "$CI_TARGET"
 
       - name: Set up Docker Buildx
         if: github.ref == 'refs/heads/main' || needs.changes.outputs.docker == 'true'

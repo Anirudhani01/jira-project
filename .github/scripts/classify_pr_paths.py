@@ -84,10 +84,35 @@ def classify_pr_changes(paths: list[str]) -> str:
     return "docs_only" if saw_doc else "full_ci_fail_safe"
 
 
+def classify_ci_scope(paths: list[str]) -> str:
+    """Return 'frontend' or 'full' for the full-CI job.
+
+    'frontend' only when at least one changed path is under ``frontend/`` and every other
+    changed path is documentation: nothing the backend tests exercise can have changed.
+    Anything else (backend, infra, Makefile, workflows, lockfiles, unknown or no paths)
+    keeps the full ``make ci``. Fail-safe: when in doubt, run everything.
+    """
+    normalized = [_norm(p) for p in paths if _norm(p)]
+    if not normalized:
+        return "full"
+    saw_frontend = False
+    for p in normalized:
+        if p.startswith("frontend/"):
+            saw_frontend = True
+        elif not is_documentation_path(p):
+            return "full"
+    return "frontend" if saw_frontend else "full"
+
+
 def main() -> None:
     import sys
     import unittest
     from pathlib import Path
+
+    if "--scope" in sys.argv[1:]:
+        # Changed paths on stdin, one per line (git diff --name-only); prints the CI scope.
+        print(classify_ci_scope(sys.stdin.read().splitlines()))
+        return
 
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     suite = unittest.defaultTestLoader.loadTestsFromName("test_classify_pr_paths")

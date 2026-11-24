@@ -234,12 +234,15 @@ ci-secrets-scan: ## Full history on main; worktree-only on PRs (CI_GITLEAKS_FULL
 	fi
 
 # ------------------------------------------------------------------------------- CI
-.PHONY: test-ci-path-classify ci ci-docs
+.PHONY: test-ci-path-classify ci ci-frontend ci-docs
 test-ci-path-classify: ## Unit tests for PR path classification (.github/scripts)
 	python3 .github/scripts/classify_pr_paths.py
 
 ci: install infra-up lint typecheck test-parallel ci-migrate-roundtrip openapi-check build audit ci-secrets-scan ## Everything CI runs
 	@echo "make ci: all checks passed"
+
+ci-frontend: install frontend-lint frontend-typecheck frontend-test openapi-check build frontend-audit ci-secrets-scan ## Frontend-only PRs: no backend tests, Postgres/Redis or migration round-trip
+	@echo "make ci-frontend: all checks passed"
 
 ci-docs: ## Docs-only PRs: gitleaks (respects CI_GITLEAKS_FULL_HISTORY); no app tests or Docker
 	$(MAKE) ci-secrets-scan
