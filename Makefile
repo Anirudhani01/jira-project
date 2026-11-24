@@ -130,8 +130,16 @@ backend-test-parallel:
 backend-test-unit:
 	$(UV) run pytest tests/unit
 
+# SHARD=<i>/<n> runs one balanced slice of the integration test files (CI runs n in parallel jobs;
+# see .github/scripts/shard_tests.py). Without SHARD it runs them all.
 backend-test-integration:
-	$(UV) run env REQUIRE_INTEGRATION=1 pytest tests/integration
+	@if [ -n "$(SHARD)" ]; then \
+	  files="$$(python3 $(CURDIR)/.github/scripts/shard_tests.py $(SHARD))"; \
+	  echo "Integration test shard $(SHARD): $$files"; \
+	  $(UV) run env REQUIRE_INTEGRATION=1 pytest $$files; \
+	else \
+	  $(UV) run env REQUIRE_INTEGRATION=1 pytest tests/integration; \
+	fi
 
 frontend-test: node-version-check
 	$(PNPM) test
@@ -227,6 +235,7 @@ ci-migrate-roundtrip: ## migrate-roundtrip unless SKIP_MIGRATE_ROUNDTRIP=1 (PR p
 	@if [ "$(SKIP_MIGRATE_ROUNDTRIP)" = "1" ]; then \
 	  echo "Skipping migrate-roundtrip (SKIP_MIGRATE_ROUNDTRIP=1)"; \
 	else \
+	  $(MAKE) infra-up; \
 	  $(MAKE) migrate-roundtrip; \
 	fi
 
@@ -238,15 +247,29 @@ ci-secrets-scan: ## Full history on main; worktree-only on PRs (CI_GITLEAKS_FULL
 	fi
 
 # ------------------------------------------------------------------------------- CI
-.PHONY: test-ci-path-classify ci ci-frontend ci-docs
+.PHONY: test-ci-path-classify test-ci-scripts ci ci-backend ci-backend-integration ci-frontend ci-contract ci-docs
 test-ci-path-classify: ## Unit tests for PR path classification (.github/scripts)
 	python3 .github/scripts/classify_pr_paths.py
+
+test-ci-scripts: ## Tests for all CI helper scripts (path scope, test sharding, PR gate)
+	python3 -m unittest discover -s .github/scripts -p 'test_*.py' -v
 
 ci: install infra-up lint typecheck test-parallel ci-migrate-roundtrip openapi-check build audit ci-secrets-scan ## Everything CI runs
 	@echo "make ci: all checks passed"
 
-ci-frontend: install frontend-lint frontend-typecheck frontend-test openapi-check build frontend-audit ci-secrets-scan ## Frontend-only PRs: no backend tests, Postgres/Redis or migration round-trip
+# The full gate is split into parallel CI jobs; each runs one of these targets. `make ci` runs
+# everything in one go for local use.
+ci-backend: backend-install backend-lint backend-typecheck backend-test-unit ci-migrate-roundtrip backend-audit ## CI backend job: lint, types, unit tests, migration round-trip, audit (integration tests run in shards)
+	@echo "make ci-backend: all checks passed"
+
+ci-backend-integration: backend-install infra-up backend-test-integration ## CI integration shard job (SHARD=<i>/<n>)
+	@echo "make ci-backend-integration: tests passed"
+
+ci-frontend: frontend-install frontend-lint frontend-typecheck frontend-test build frontend-audit ## CI frontend job: needs no Python, database or Docker
 	@echo "make ci-frontend: all checks passed"
+
+ci-contract: install openapi-check ## CI API contract job: openapi.json and generated TypeScript types match the backend
+	@echo "make ci-contract: all checks passed"
 
 ci-docs: ## Docs-only PRs: gitleaks (respects CI_GITLEAKS_FULL_HISTORY); no app tests or Docker
 	$(MAKE) ci-secrets-scan

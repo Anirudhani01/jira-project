@@ -10,19 +10,38 @@ User-facing changes should follow the [Global UX State System](../ux/global-ux-s
 
 Locally, **`make ci`** always runs the full gate (including migration round-trip and full gitleaks history).
 
-CI runs **`make ci`** with optional scoping via environment variables, then **`make images`** when Docker-related paths change or on `main`.
-
 | Variable | CI typical value | Effect |
 |----------|------------------|--------|
 | `SKIP_MIGRATE_ROUNDTRIP=1` | PRs without `backend/migrations/**` changes | Skips Alembic up/down/up on the test DB |
 | `CI_GITLEAKS_FULL_HISTORY=0` | Pull requests | `secrets-scan-worktree` only (no full git history scan) |
 | `CI_GITLEAKS_FULL_HISTORY=1` | `main`, `workflow_dispatch` | Full `secrets-scan` (git + working tree) |
 
-Simulate a scoped PR locally:
+Simulate a scoped PR locally (everything in one go, as before):
 
 ```bash
 SKIP_MIGRATE_ROUNDTRIP=1 CI_GITLEAKS_FULL_HISTORY=0 make ci
 ```
+
+`SKIP_MIGRATE_ROUNDTRIP` applies to the **Backend** job and `CI_GITLEAKS_FULL_HISTORY` to the **Secrets scan** job.
+
+## CI jobs
+
+CI does not run `make ci` as one job. The same checks run as **parallel jobs**, each calling a make target, so a pull request finishes in about as long as the slowest job (the backend integration tests, split in three):
+
+| Job | Make target | What it checks |
+|-----|-------------|----------------|
+| **Backend** | `make ci-backend` | ruff, mypy, backend unit tests, migration round-trip, backend dependency audit |
+| **Backend integration (shard 1/3, 2/3, 3/3)** | `make ci-backend-integration SHARD=i/3` | the integration tests (PostgreSQL, Redis, Mailpit), one balanced third each, in three parallel jobs with their own containers |
+| **Frontend** | `make ci-frontend` | lint and format, typecheck, unit tests, production build, frontend dependency audit (no Python, database or Docker) |
+| **API contract** | `make ci-contract` | `backend/openapi.json` and the generated TypeScript types match the backend (no database) |
+| **Secrets scan** | `make ci-secrets-scan` | gitleaks |
+| **Container images** | `make images` | image build, only on `main` or when Dockerfiles / `infra/docker-compose.yml` change |
+| **Playwright workflow A4b (mocked)** | `make e2e-workflow-a4b` | mocked browser tests |
+| **CI** | — | the single required check; see below |
+
+The shards are planned by [`.github/scripts/shard_tests.py`](../.github/scripts/shard_tests.py): test files are packed, heaviest first, into the lightest shard using per-file timings in `.github/scripts/shard_weights.json` (a new file without a timing gets the average). To rebalance after the suite changes, re-time the integration tests (`pytest tests/integration --durations=0`) and update the weights file; the script's tests fail if a weight names a file that no longer exists.
+
+Run one shard locally: `make backend-test-integration SHARD=2/3`.
 
 ## Documentation-only pull requests
 
@@ -64,55 +83,62 @@ There is **no** markdown linter in this repository; none was added for docs-only
 
 The **`code`** filter includes (non-exhaustive): `backend/**`, `frontend/**`, `infra/**`, `Makefile`, `.github/**`, lockfiles, `.nvmrc`, `.editorconfig`, `render.yaml`, `.env.example`, `.gitleaks.toml`, `.gitignore`.
 
-Any match forces the full **`make ci`** job on pull requests.
+Any match runs the code jobs above on pull requests (all of them, or only one side; see the next section).
 
-## Frontend-only pull requests
+## Frontend-only and backend-only pull requests
 
-A pull request is **frontend-only** when every changed file is under `frontend/` or is documentation (the allowlist above), and at least one file is under `frontend/`. The backend tests, database rules and migrations cannot be affected, so the full-CI job runs **`make ci-frontend`** instead of **`make ci`**:
+The scope is computed in the **Detect changed paths** job by `python3 .github/scripts/classify_pr_paths.py --scope` (changed paths on stdin) and logged as `CI scope: frontend|backend|full`:
 
-| Runs | Skipped |
-|------|---------|
-| dependency install, frontend lint and format, frontend typecheck, frontend tests, OpenAPI drift check (needs no database), production build, frontend dependency audit, gitleaks | backend lint, typecheck and tests, Postgres/Redis/Mailpit, backend dependency audit, migration round-trip |
+| Scope | When | Jobs that run | Skipped |
+|-------|------|---------------|---------|
+| `frontend` | every changed file is under `frontend/` or is documentation, and at least one is under `frontend/` | Frontend, API contract, Secrets scan, mocked Playwright (+ Images when Dockerfiles change) | Backend, Backend integration |
+| `backend` | every changed file is under `backend/` or is documentation, and at least one is under `backend/` | Backend, Backend integration, API contract, Secrets scan, mocked Playwright (+ Images) | Frontend |
+| `full` | anything else: both sides, `infra/`, `Makefile`, `.github/`, `.env.example`, `.gitleaks.toml`, `.nvmrc`, `render.yaml`, any unknown path, every push to `main`, every manual run | all jobs | — |
 
-Everything else keeps the full **`make ci`**: any change under `backend/`, `infra/`, `Makefile`, `.github/`, `.env.example`, `.gitleaks.toml`, `.nvmrc`, `render.yaml`, any unknown path, and every push to `main` and manual run. The classification is deliberately fail-safe: when in doubt, everything runs.
-
-The scope is computed in the **Detect changed paths** job by `python3 .github/scripts/classify_pr_paths.py --scope` (changed paths on stdin) and logged as `CI scope: frontend|full`. Its rules are covered by `make test-ci-path-classify`. The mocked Playwright job and the required **`CI`** check are unchanged.
+The API contract job always runs, so a backend change that alters `openapi.json` is still checked against the generated frontend types. The classification is deliberately fail-safe: when in doubt, everything runs.
 
 Simulate locally:
 
 ```bash
 git diff --name-only origin/main...HEAD | python3 .github/scripts/classify_pr_paths.py --scope
-make ci-frontend
+make ci-frontend      # or: make ci-backend, make ci-contract
 ```
 
 ## Pull request required check
 
-Job **`CI`** (`ci-required`) always runs on pull requests and passes if either **`make ci`** or **Docs only (secrets scan)** succeeded. Use **`CI`** as the branch protection required check (not the skipped **`make ci`** job alone).
+Job **`CI`** (`ci-required`) always runs on pull requests. It reads the results of every other job (`.github/scripts/ci_gate.py`) and passes when:
 
-## Path filter tests
+- no job failed or was cancelled, and
+- either the **Docs only (secrets scan)** job succeeded (a documentation-only PR; the code jobs are skipped), or every code job succeeded, where a job may be *skipped* only if the scope excludes it (Backend and Backend integration for `frontend`; Frontend for `backend`) or, for Container images, when it was not needed.
 
-Logic mirrored in [`.github/scripts/classify_pr_paths.py`](../.github/scripts/classify_pr_paths.py):
+Use **`CI`** as the branch protection required check: it does not depend on which jobs were skipped, and the individual job names can change without touching branch protection.
+
+## CI script tests
+
+The helper scripts in [`.github/scripts/`](../.github/scripts/) have their own tests: path classification (`classify_pr_paths.py`), test sharding (`shard_tests.py`, including a check that every integration test file lands in exactly one shard) and the gate (`ci_gate.py`):
 
 ```bash
-make test-ci-path-classify
+make test-ci-scripts          # all of them
+make test-ci-path-classify    # path classification only
 ```
 
-The PR **`CI`** job runs this test before reporting success.
+The PR **`CI`** job runs them before reporting success.
 
-## Other PR scoping (full CI job)
+## Other PR scoping
 
-- **`make images`**: runs on `main` or when Dockerfiles / `infra/docker-compose.yml` change.  
-- **Migration round-trip**: runs on `main` or when `backend/migrations/**` changes.
+- **Container images**: run on `main` or when Dockerfiles / `infra/docker-compose.yml` change.  
+- **Migration round-trip** (in the Backend job): runs on `main` or when `backend/migrations/**` changes.
 
-## Test parallelism (full CI)
+## Test parallelism
 
-| Target | What runs |
-|--------|-----------|
+| Where | What runs in parallel |
+|-------|-----------------------|
+| CI | the jobs in the table above; the integration tests are additionally split across three jobs |
 | `make test` | `backend-test` ∥ `frontend-test` (two processes) |
-| `make test-parallel` | `backend-test-unit` ∥ `backend-test-integration` ∥ `frontend-test` (three processes; **`make ci` uses this**) |
+| `make test-parallel` | `backend-test-unit` ∥ `backend-test-integration` ∥ `frontend-test` (three processes; **`make ci` uses this** locally) |
 
 ## Performance (free tier)
 
-Inside the full CI job, `make ci` runs **`test-parallel`** and parallel install/lint/typecheck/audit where the Makefile allows. Dependency caches: **pnpm** (Node setup) and **uv** (`enable-cache` on `setup-uv`). Image builds use BuildKit when the images step runs.
+Before the split, one job ran everything in about 7 minutes, of which the backend integration tests were about 5m50s. They now run as three parallel shards; the other jobs finish well inside that. Each job repeats checkout and tool setup, kept short by the dependency caches: **pnpm** (Node setup) and **uv** (`enable-cache` on `setup-uv`). Image builds use BuildKit when the images job runs.
 
 Feature branches should use **pull requests**; **`push` triggers CI only on `main`** to avoid duplicate runs.

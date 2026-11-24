@@ -85,23 +85,33 @@ def classify_pr_changes(paths: list[str]) -> str:
 
 
 def classify_ci_scope(paths: list[str]) -> str:
-    """Return 'frontend' or 'full' for the full-CI job.
+    """Return 'frontend', 'backend' or 'full' for the code CI jobs.
 
-    'frontend' only when at least one changed path is under ``frontend/`` and every other
-    changed path is documentation: nothing the backend tests exercise can have changed.
-    Anything else (backend, infra, Makefile, workflows, lockfiles, unknown or no paths)
-    keeps the full ``make ci``. Fail-safe: when in doubt, run everything.
+    'frontend': at least one changed path is under ``frontend/`` and every other changed
+    path is documentation, so the backend jobs are skipped.
+    'backend': the same for ``backend/``, so the frontend job is skipped (the API contract
+    job always runs, so a changed ``backend/openapi.json`` is still checked against the
+    generated frontend types).
+    Anything else (both sides, infra, Makefile, workflows, unknown or no paths) is 'full'.
+    Fail-safe: when in doubt, run everything.
     """
     normalized = [_norm(p) for p in paths if _norm(p)]
     if not normalized:
         return "full"
     saw_frontend = False
+    saw_backend = False
     for p in normalized:
         if p.startswith("frontend/"):
             saw_frontend = True
+        elif p.startswith("backend/"):
+            saw_backend = True
         elif not is_documentation_path(p):
             return "full"
-    return "frontend" if saw_frontend else "full"
+    if saw_frontend and not saw_backend:
+        return "frontend"
+    if saw_backend and not saw_frontend:
+        return "backend"
+    return "full"
 
 
 def main() -> None:

@@ -13,6 +13,16 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# The code checks run as parallel jobs (see docs/ci.md):
+#   backend              lint, types, unit tests, migration round-trip, dependency audit
+#   backend-integration  integration tests, split into 3 shards that run in parallel
+#   frontend             lint, types, unit tests, build, dependency audit
+#   contract             openapi.json and generated TypeScript types match the backend
+#   secrets              gitleaks
+#   images               container image build (main, or when Dockerfiles change)
+# `make ci` runs all of this in one go locally. The "CI" job at the end is the single
+# required check: it decides from the results of all the others.
+
 jobs:
   changes:
     name: Detect changed paths
@@ -61,9 +71,9 @@ jobs:
               - '.editorconfig'
               - 'render.yaml'
 
-      # `frontend` only when a PR changes nothing but frontend/ (and documentation); the
-      # backend tests cannot be affected, so `make ci-frontend` replaces `make ci`.
-      # Everything else, and every non-PR run (main, manual), keeps the full `make ci`.
+      # `frontend` or `backend` when a PR changes only that side (plus documentation): the
+      # other side's job is skipped. Everything else, and every non-PR run (main, manual),
+      # is `full`. See .github/scripts/classify_pr_paths.py.
       - name: Classify CI scope
         id: scope
         env:
@@ -99,8 +109,129 @@ jobs:
           CI_GITLEAKS_FULL_HISTORY: "0"
         run: make ci-docs
 
-  ci:
-    name: make ci
+  backend:
+    name: Backend (lint, types, unit, migrations, audit)
+    needs: changes
+    if: |
+      needs.changes.outputs.scope != 'frontend' && (
+        github.event_name == 'workflow_dispatch' ||
+        github.ref == 'refs/heads/main' ||
+        (github.event_name == 'pull_request' && needs.changes.outputs.code == 'true') ||
+        (github.event_name == 'pull_request' && needs.changes.outputs.documentation != 'true')
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: backend/.python-version
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.32"
+          enable-cache: true
+
+      - name: make ci-backend
+        env:
+          SKIP_MIGRATE_ROUNDTRIP: ${{ (github.ref == 'refs/heads/main' || needs.changes.outputs.migrations == 'true') && '0' || '1' }}
+        run: make ci-backend
+
+      - name: Stop services
+        if: always()
+        run: make down
+
+  backend-integration:
+    # Three parallel jobs, each with its own Postgres/Redis/Mailpit containers. The test files
+    # are split by .github/scripts/shard_tests.py. The shard count appears three times below
+    # (matrix, job name, SHARD): change them together.
+    name: Backend integration (shard ${{ matrix.shard }}/3)
+    needs: changes
+    if: |
+      needs.changes.outputs.scope != 'frontend' && (
+        github.event_name == 'workflow_dispatch' ||
+        github.ref == 'refs/heads/main' ||
+        (github.event_name == 'pull_request' && needs.changes.outputs.code == 'true') ||
+        (github.event_name == 'pull_request' && needs.changes.outputs.documentation != 'true')
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: backend/.python-version
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.32"
+          enable-cache: true
+
+      - name: make ci-backend-integration (shard ${{ matrix.shard }}/3)
+        env:
+          SHARD: ${{ matrix.shard }}/3
+        run: make ci-backend-integration SHARD="$SHARD"
+
+      - name: Stop services
+        if: always()
+        run: make down
+
+  frontend:
+    name: Frontend (lint, types, unit, build, audit)
+    needs: changes
+    if: |
+      needs.changes.outputs.scope != 'backend' && (
+        github.event_name == 'workflow_dispatch' ||
+        github.ref == 'refs/heads/main' ||
+        (github.event_name == 'pull_request' && needs.changes.outputs.code == 'true') ||
+        (github.event_name == 'pull_request' && needs.changes.outputs.documentation != 'true')
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up pnpm (version from frontend/package.json packageManager)
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: make ci-frontend
+        run: make ci-frontend
+
+  contract:
+    # openapi.json and the generated TypeScript types must match the backend. Needs both
+    # toolchains but no database, and runs for every code change (either side can break it).
+    name: API contract (OpenAPI drift)
     needs: changes
     if: |
       github.event_name == 'workflow_dispatch' ||
@@ -108,12 +239,12 @@ jobs:
       (github.event_name == 'pull_request' && needs.changes.outputs.code == 'true') ||
       (github.event_name == 'pull_request' && needs.changes.outputs.documentation != 'true')
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: ${{ github.event_name == 'pull_request' && 1 || 0 }}
+          fetch-depth: 1
           persist-credentials: false
 
       - name: Set up Python
@@ -139,27 +270,58 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - name: make ci (make ci-frontend for frontend-only PRs)
+      - name: make ci-contract
+        run: make ci-contract
+
+  secrets:
+    name: Secrets scan (gitleaks)
+    needs: changes
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main' ||
+      (github.event_name == 'pull_request' && needs.changes.outputs.code == 'true') ||
+      (github.event_name == 'pull_request' && needs.changes.outputs.documentation != 'true')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && 1 || 0 }}
+          persist-credentials: false
+
+      - name: make ci-secrets-scan
         env:
-          CI_TARGET: ${{ needs.changes.outputs.scope == 'frontend' && 'ci-frontend' || 'ci' }}
-          SKIP_MIGRATE_ROUNDTRIP: ${{ (github.ref == 'refs/heads/main' || needs.changes.outputs.migrations == 'true') && '0' || '1' }}
           CI_GITLEAKS_FULL_HISTORY: ${{ github.event_name == 'pull_request' && '0' || '1' }}
-        run: make "$CI_TARGET"
+        run: make ci-secrets-scan
+
+  images:
+    name: Container images
+    needs: changes
+    if: |
+      (github.ref == 'refs/heads/main' || needs.changes.outputs.docker == 'true') && (
+        github.event_name == 'workflow_dispatch' ||
+        github.ref == 'refs/heads/main' ||
+        (github.event_name == 'pull_request' && needs.changes.outputs.code == 'true') ||
+        (github.event_name == 'pull_request' && needs.changes.outputs.documentation != 'true')
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
 
       - name: Set up Docker Buildx
-        if: github.ref == 'refs/heads/main' || needs.changes.outputs.docker == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build container images (local only, not pushed)
-        if: github.ref == 'refs/heads/main' || needs.changes.outputs.docker == 'true'
         env:
           DOCKER_BUILDKIT: 1
           COMPOSE_DOCKER_CLI_BUILD: 1
         run: make images
-
-      - name: Stop services
-        if: always()
-        run: make down
 
   e2e-workflow-a4b:
     name: Playwright workflow A4b (mocked)
@@ -214,38 +376,31 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
-  # Single PR conclusion job so branch protection can require "CI" without treating
-  # skipped full-ci as a pending check when the docs-only path ran instead.
+  # Single PR conclusion job so branch protection can require "CI" without having to know
+  # which jobs were skipped (docs-only path, or a frontend-only / backend-only change).
   ci-required:
     name: CI
-    needs: [changes, docs-only, ci, e2e-workflow-a4b]
+    needs:
+      - changes
+      - docs-only
+      - backend
+      - backend-integration
+      - frontend
+      - contract
+      - secrets
+      - images
+      - e2e-workflow-a4b
     if: always() && !cancelled() && github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
-      - name: Path classification self-test
-        run: python3 .github/scripts/classify_pr_paths.py
+      - name: CI helper script self-tests (path scope, test sharding, gate)
+        run: make test-ci-scripts
 
-      - name: Require full CI or docs-only success
+      - name: Require the code jobs or the docs-only job to succeed
         env:
-          CI_RESULT: ${{ needs.ci.result }}
-          DOCS_RESULT: ${{ needs.docs-only.result }}
-          E2E_WORKFLOW_RESULT: ${{ needs.e2e-workflow-a4b.result }}
-        run: |
-          set -euo pipefail
-          if [ "$CI_RESULT" = "success" ]; then
-            if [ "$E2E_WORKFLOW_RESULT" != "success" ]; then
-              echo "make ci passed but workflow A4b E2E did not (result=$E2E_WORKFLOW_RESULT)." >&2
-              exit 1
-            fi
-            echo "Full CI and workflow A4b E2E passed."
-            exit 0
-          fi
-          if [ "$DOCS_RESULT" = "success" ]; then
-            echo "Documentation-only CI passed."
-            exit 0
-          fi
-          echo "CI did not pass (make ci=$CI_RESULT, docs-only=$DOCS_RESULT, e2e-workflow-a4b=$E2E_WORKFLOW_RESULT)." >&2
-          exit 1
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          SCOPE: ${{ needs.changes.outputs.scope }}
+        run: python3 .github/scripts/ci_gate.py

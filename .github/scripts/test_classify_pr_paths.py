@@ -96,17 +96,26 @@ class ClassifyCiScopeTests(unittest.TestCase):
             "frontend",
         )
 
-    def test_backend_change_is_full(self) -> None:
-        self.assertEqual(classify_ci_scope(["backend/app/main.py"]), "full")
+    def test_backend_change_is_backend_scope(self) -> None:
+        self.assertEqual(classify_ci_scope(["backend/app/main.py"]), "backend")
+
+    def test_backend_migrations_lock_and_openapi_are_backend_scope(self) -> None:
+        self.assertEqual(
+            classify_ci_scope(
+                [
+                    "backend/migrations/versions/0028_x.py",
+                    "backend/uv.lock",
+                    "backend/openapi.json",
+                    "docs/ci.md",
+                ]
+            ),
+            "backend",
+        )
 
     def test_frontend_plus_backend_is_full(self) -> None:
         self.assertEqual(
             classify_ci_scope(["frontend/src/a.tsx", "backend/openapi.json"]), "full"
         )
-
-    def test_migrations_and_backend_lock_are_full(self) -> None:
-        self.assertEqual(classify_ci_scope(["backend/migrations/versions/0028_x.py"]), "full")
-        self.assertEqual(classify_ci_scope(["backend/uv.lock"]), "full")
 
     def test_shared_files_are_full(self) -> None:
         for path in (
@@ -120,6 +129,7 @@ class ClassifyCiScopeTests(unittest.TestCase):
         ):
             with self.subTest(path=path):
                 self.assertEqual(classify_ci_scope(["frontend/src/a.tsx", path]), "full")
+                self.assertEqual(classify_ci_scope(["backend/app/main.py", path]), "full")
 
     def test_docs_only_is_full_for_this_job(self) -> None:
         # Docs-only PRs are handled by their own job; this classifier never narrows them.
@@ -127,12 +137,14 @@ class ClassifyCiScopeTests(unittest.TestCase):
 
     def test_unknown_path_fails_safe_to_full(self) -> None:
         self.assertEqual(classify_ci_scope(["frontend/src/a.tsx", "notes.txt"]), "full")
+        self.assertEqual(classify_ci_scope(["backend/app/main.py", "notes.txt"]), "full")
 
     def test_empty_is_full(self) -> None:
         self.assertEqual(classify_ci_scope([]), "full")
 
-    def test_path_that_only_looks_like_frontend_is_full(self) -> None:
+    def test_path_that_only_looks_like_frontend_or_backend_is_full(self) -> None:
         self.assertEqual(classify_ci_scope(["frontend-old/a.ts"]), "full")
+        self.assertEqual(classify_ci_scope(["backend-tools/a.py"]), "full")
 
 
 if __name__ == "__main__":
