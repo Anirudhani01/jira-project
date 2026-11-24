@@ -33,3 +33,6 @@ frontend/coverage/
 # Playwright
 test-results/
 playwright-report/
+
+# Local design-tool output (not part of the product)
+docs/unslop/
