@@ -596,7 +596,7 @@ function AdminCatalogsContent() {
   const canManage = org.data?.permissions.includes('org.manage') ?? false;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-1">
+    <div className="grid grid-cols-1 gap-6">
       <IssueTypesSection query={issueTypes} org={slug} canManage={canManage} />
       <PrioritiesSection query={priorities} org={slug} canManage={canManage} />
     </div>

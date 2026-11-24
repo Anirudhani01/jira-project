@@ -33,7 +33,7 @@ export function DataGrid({ className, children, ...props }: HTMLAttributes<HTMLD
   return (
     <div
       className={cn(
-        'w-full overflow-x-auto rounded-lg border border-line bg-surface shadow-sm',
+        'relative w-full overflow-x-auto rounded-lg border border-line bg-surface shadow-sm',
         className,
       )}
       {...props}

@@ -38,16 +38,19 @@ export function Avatar({
   src,
   size = 'sm',
   className,
+  decorative = false,
 }: {
   name: string;
   src?: string | null;
   size?: keyof typeof SIZES;
   className?: string;
+  /** Inside a control that already names the person: adds no hidden text or tooltip of its own. */
+  decorative?: boolean;
 }) {
   const hue = HUES[hash(name) % HUES.length] ?? HUES[0];
   return (
     <AvatarPrimitive.Root
-      title={name}
+      {...(decorative ? {} : { title: name })}
       className={cn(
         'avatar inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full font-medium',
         SIZES[size],
@@ -56,8 +59,18 @@ export function Avatar({
       style={{ '--avatar-hue': hue } as CSSProperties}
     >
       {src ? <AvatarPrimitive.Image src={src} alt="" className="size-full object-cover" /> : null}
-      <AvatarPrimitive.Fallback aria-hidden="true">{initials(name)}</AvatarPrimitive.Fallback>
-      <span className="sr-only">{name}</span>
+      {decorative ? (
+        // Drawn by CSS (see `.avatar-initials` in index.css), so the initials are not text: inside a
+        // control that already names the person they must not count as part of its visible label.
+        <AvatarPrimitive.Fallback
+          aria-hidden="true"
+          data-initials={initials(name)}
+          className="avatar-initials"
+        />
+      ) : (
+        <AvatarPrimitive.Fallback aria-hidden="true">{initials(name)}</AvatarPrimitive.Fallback>
+      )}
+      {decorative ? null : <span className="sr-only">{name}</span>}
     </AvatarPrimitive.Root>
   );
 }

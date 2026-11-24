@@ -320,7 +320,7 @@ export function IssueListPage() {
 
       {items.length > 0 ? (
         <div className="space-y-4">
-          <div className="max-h-[min(70vh,48rem)] overflow-auto rounded-lg border border-line">
+          <div className="relative max-h-[min(70vh,48rem)] overflow-auto rounded-lg border border-line">
             <IssueListTable
               org={org}
               items={items}

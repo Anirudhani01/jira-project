@@ -131,7 +131,7 @@ function OptionalPersonMenu({
           aria-label={`${text.field}: ${label}. Choose ${text.field.toLowerCase()}`}
           className={memberTriggerClass}
         >
-          {person ? <Avatar name={person.display_name} size="xs" /> : null}
+          {person ? <Avatar name={person.display_name} size="xs" decorative /> : null}
           <span className="truncate text-fg-muted">{label}</span>
           <ChevronDown className="size-3.5 shrink-0 text-fg-muted" aria-hidden="true" />
         </button>
@@ -244,7 +244,7 @@ export function IssueListReporterMenu({
           aria-label={`Reporter: ${name}. Choose reporter`}
           className={memberTriggerClass}
         >
-          <Avatar name={name} size="xs" />
+          <Avatar name={name} size="xs" decorative />
           <span className="truncate text-fg">{name}</span>
           <ChevronDown className="size-3.5 shrink-0 text-fg-muted" aria-hidden="true" />
         </button>
