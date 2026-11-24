@@ -256,7 +256,29 @@ async def test_concurrent_demotion_of_two_owners_leaves_one(tenant: Tenant) -> N
             patch_member(tenant.http, tenant.slug, second_id, role="member"),
             patch_member(second, tenant.slug, tenant.user_id, role="member"),
         )
-    assert sorted(r.status_code for r in results) == [204, 409]
+    # Exactly one demotion succeeds. The other is rejected, and which rejection it gets depends
+    # on timing: 409 `last_owner` when both requests pass authorization together, or 403 when the
+    # winner's demotion commits before the loser's request is authorized (they are no longer an
+    # owner). Both leave exactly one owner, which is the guarantee under test.
+    statuses = sorted(r.status_code for r in results)
+    assert statuses[0] == 204, statuses
+    assert statuses[1] in (403, 409), statuses
+    [owners] = await superuser_sql(
+        "SELECT count(*) AS n FROM org_memberships WHERE org_id = :o AND role = 'owner' "
+        "AND removed_at IS NULL",
+        o=tenant.org_id,
+    )
+    assert owners.n == 1
+
+
+async def test_an_owner_demoted_a_moment_earlier_cannot_demote_back(tenant: Tenant) -> None:
+    """The 403 outcome of the race above, made deterministic: the demotion commits first."""
+    async with AsyncExitStack() as stack:
+        second, second_id = await member_client(stack, tenant, "owner")
+        first = await patch_member(tenant.http, tenant.slug, second_id, role="member")
+        late = await patch_member(second, tenant.slug, tenant.user_id, role="member")
+    assert first.status_code == 204
+    assert late.status_code == 403
     [owners] = await superuser_sql(
         "SELECT count(*) AS n FROM org_memberships WHERE org_id = :o AND role = 'owner' "
         "AND removed_at IS NULL",
