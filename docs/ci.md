@@ -137,6 +137,17 @@ The PR **`CI`** job runs them before reporting success.
 | `make test` | `backend-test` ∥ `frontend-test` (two processes) |
 | `make test-parallel` | `backend-test-unit` ∥ `backend-test-integration` ∥ `frontend-test` (three processes; **`make ci` uses this** locally) |
 
+## Dependency updates (Dependabot)
+
+[`.github/dependabot.yml`](../.github/dependabot.yml) keeps the pull requests Dependabot opens few and quiet, because every one of them runs the full CI:
+
+- **Grouped:** routine (minor and patch) updates arrive as one pull request per ecosystem (Python, npm, GitHub Actions, Docker, Docker Compose), not one per package.
+- **Limited:** at most 3 open pull requests per ecosystem.
+- **Staggered:** each ecosystem has its own weekday (Monday to Friday), so their CI runs do not all start together. The CI uses about ten parallel jobs per run, and the free plan runs about 20 jobs at once, so a burst of runs queues.
+- **Deliberate upgrades:** major versions of Node, Postgres and Redis, and major or minor versions of the Python image, are ignored. They are pinned by the project (`.nvmrc`, `backend/.python-version`, the database volume) and need a planned upgrade, not a bot PR.
+
+To upgrade one of those on purpose, change the pin and the image together in a normal pull request.
+
 ## Performance (free tier)
 
 Before the split, one job ran everything in about 7 minutes, of which the backend integration tests were about 5m50s. They now run as three parallel shards; the other jobs finish well inside that. Each job repeats checkout and tool setup, kept short by the dependency caches: **pnpm** (Node setup) and **uv** (`enable-cache` on `setup-uv`). Image builds use BuildKit when the images job runs.

@@ -1,24 +1,69 @@
+# Dependabot: one grouped pull request per ecosystem for routine (minor/patch) updates, a small
+# open-PR limit, and each ecosystem on its own weekday so their CI runs do not all start at once.
+# Runtime and infrastructure images are upgraded deliberately, not by bot: their major versions
+# (and the Python minor version) are pinned by the project (.nvmrc, backend/.python-version, the
+# Postgres data volume), so those bumps are ignored here. See docs/ci.md.
 version: 2
 updates:
   - package-ecosystem: uv
     directory: /backend
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      python-minor-patch:
+        update-types: [minor, patch]
+
   - package-ecosystem: npm
     directory: /frontend
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+      day: tuesday
+    open-pull-requests-limit: 3
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+      day: wednesday
+    open-pull-requests-limit: 3
+    groups:
+      github-actions:
+        patterns: ["*"]
+
   - package-ecosystem: docker
     directories: [/backend, /frontend]
     schedule:
       interval: weekly
+      day: thursday
+    open-pull-requests-limit: 3
+    groups:
+      docker-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Python is pinned to a minor version (backend/.python-version): upgrade it on purpose.
+      - dependency-name: python
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # Node is pinned to a major version (.nvmrc).
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
+
   - package-ecosystem: docker-compose
     directory: /infra
     schedule:
       interval: weekly
+      day: friday
+    open-pull-requests-limit: 3
+    groups:
+      docker-compose-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      # A new Postgres major needs a data migration; a new Redis major changes behaviour.
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
+      - dependency-name: redis
+        update-types: ["version-update:semver-major"]
