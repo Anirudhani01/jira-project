@@ -2,7 +2,7 @@
 .env
 .env.*
 !.env.example
-.antideploy-secrets.env
+*-secrets.env
 *.pem
 *.key
 

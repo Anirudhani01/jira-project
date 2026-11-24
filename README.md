@@ -46,7 +46,7 @@ docs (dev only): http://localhost:8000/api/docs.
 
 Without a `.env`, the Makefile falls back to `docs/local-dev.env` (placeholder values
 only; the backend refuses to start with placeholders in staging/prod). Root `.env.example`
-lists production variable names for hosted deploys (Antideploy reads it for analysis).
+lists production variable names for hosted deploys (see `DEPLOYMENT.md`).
 
 Full stack in containers (production-like images, nginx serving the SPA on :8080):
 

@@ -1,7 +1,0 @@
-{
-  "applicationId": "0eabedc8-1ab7-4a1c-a589-476e12583db0",
-  "name": "jira-project",
-  "url": "https://task-tracker.antideploy.app",
-  "rootDirectory": "",
-  "deployNotes": "Monolith: build directory must be repository root. Root ./Dockerfile builds frontend+backend; ignore buildpack warnings about choosing Node vs Python. Ignore APP_* / POSTGRES_* / TEST_* in Set them — those are local-only (docs/local.env.example). Production secrets are already set in the dashboard."
-}
