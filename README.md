@@ -1,19 +1,84 @@
-# jira-project
+# Jira Project
 
-Jira Project Management Platform
-An open-source project management platform inspired by Jira, designed to help teams organize projects, manage issues, collaborate effectively and track development progress.
+[![CI](https://github.com/Anirudhani01/jira-project/actions/workflows/ci.yml/badge.svg)](https://github.com/Anirudhani01/jira-project/actions/workflows/ci.yml)
 
-Built with a modern technology stack:
-Frontend: React, TypeScript and Vite
-Backend: Python, FastAPI
-Database: PostgreSQL
-Caching and background processing: Redis
-Architecture: Modular monolith
-Infrastructure: Docker and Docker Compose
-The platform focuses on structured project management, configurable workflows, organization-level access control, issue tracking and Scrum-based development.
+A multi-tenant, Jira-style work management app for small teams: organizations contain projects, projects contain issues, and issues move through configurable workflows on Kanban and Scrum boards. Built as a full-stack portfolio project with a focus on security, data isolation and quality: React + TypeScript on the front, a FastAPI modular monolith on the back, and PostgreSQL row-level security keeping every organization's data apart.
+
+<table>
+  <tr>
+    <td><img src="docs/ui-redesign/evidence/2026-11-24-responsive-qa/board-scrum-desktop-light.png" alt="Scrum board in the light theme"></td>
+    <td><img src="docs/ui-redesign/evidence/2026-11-24-responsive-qa/issues-desktop-dark.png" alt="Issue list in the dark theme"></td>
+  </tr>
+  <tr>
+    <td align="center">Scrum board (light)</td>
+    <td align="center">Issue list (dark)</td>
+  </tr>
+  <tr>
+    <td><img src="docs/ui-redesign/evidence/2026-11-24-responsive-qa/issue-detail-desktop-paper.png" alt="Issue detail in the paper theme"></td>
+    <td align="center"><img src="docs/ui-redesign/evidence/2026-11-24-responsive-qa/issues-phone-light.png" alt="Issue list on a phone" width="240"></td>
+  </tr>
+  <tr>
+    <td align="center">Issue detail (paper)</td>
+    <td align="center">Phone layout</td>
+  </tr>
+</table>
+
+Three themes (light, dark and an off-white "paper" theme) and layouts from phone to desktop. More screenshots, with results for every page, are in [`docs/ui-redesign/evidence/2026-11-24-responsive-qa/`](docs/ui-redesign/evidence/2026-11-24-responsive-qa/README.md).
+
+## Try it
+
+A hosted demo is **not running at the moment** (it is on the backlog: [`docs/MVP-STATUS.md`](docs/MVP-STATUS.md), item B1). It runs locally in a few minutes:
+
+```bash
+make install        # backend + frontend dependencies from lockfiles
+make dev            # PostgreSQL, Redis and Mailpit in Docker; migrations; API, worker and web
+make seed-demo      # in a second terminal: a demo organization with projects and issues
+```
+
+Open http://localhost:5173 and sign in with the demo account (credentials are in the header of [`backend/app/scripts/seed_demo.py`](backend/app/scripts/seed_demo.py)). Details are under [Quick start](#quick-start).
+
+## What it does
+
+- **Organizations and access control:** multiple organizations, roles (owner, admin, member), email invitations, per-project roles (admin, member, viewer), an audit log and an authentication-activity view.
+- **Projects and issues:** Epic, Story, Task, Bug and Sub-task types; priorities, labels, comments (Markdown, sanitized on the server), assignee, reporter and tester, story points, fix versions and releases, per-issue activity history, search, filters, saved filters, and bulk actions.
+- **Workflows and boards:** data-driven workflows with an editor (statuses and transitions per project), a Kanban board with drag and drop, and a Scrum backlog with sprints.
+- **Notifications and admin:** in-app notifications, email through an outbox worker, and an admin console for catalogs (issue types, priorities), members, invitations, audit logs and workflows.
+- **Everyday quality:** loading, empty, error, permission-denied and session-expiry states everywhere, an online/offline indicator, keyboard support and three accessible themes.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  Browser["React + TypeScript SPA<br/>(Vite, TanStack Query)"] -->|"/api, same origin"| API["FastAPI modular monolith<br/>(identity, orgs, projects, issues,<br/>boards, sprints, comments, ...)"]
+  API --> PG[("PostgreSQL<br/>row-level security per org")]
+  API --> Redis[("Redis<br/>rate limits, cache")]
+  API -. "outbox rows, same transaction" .-> PG
+  Worker["Outbox worker<br/>(email, retention, reconciliation)"] --> PG
+  Worker -->|SMTP| Mail["Mailpit (dev) or an SMTP provider"]
+```
+
+- **Modular monolith with a separate worker** ([ADR 0001](docs/adr/0001-modular-monolith.md)): one codebase, one database and ACID transactions across modules; each module has models, schemas, repository, service and router layers.
+- **Tenant isolation in the database** ([ADR 0003](docs/adr/0003-tenancy-shared-schema-rls.md)): a shared schema with forced row-level security, composite foreign keys that keep every row inside its organization, and least-privilege database roles that the API checks at startup.
+- **Revocable server-side sessions** ([ADR 0004](docs/adr/0004-identity-and-sessions.md)): Argon2id passwords, an opaque `__Host-` session cookie, CSRF tokens bound to the session and an `Origin` check on writes.
+- **Data-driven workflows** ([ADR 0005](docs/adr/0005-data-driven-workflows.md)), **transactional outbox for email** ([ADR 0009](docs/adr/0009-outbox-worker-email-tokens.md)) and an **OpenAPI contract** whose TypeScript types are generated and drift-checked in CI.
+- All decisions: [`docs/adr/`](docs/adr/README.md) and the [decision log](docs/decisions.md).
+
+## Quality
+
+| | |
+|---|---|
+| Backend tests | 696 integration tests (real PostgreSQL and Redis, including cross-tenant and row-level-security tests and a migration round trip) and 280 unit tests |
+| Frontend tests | 617 unit and component tests |
+| End-to-end | 13 user journeys (sign-up to sprint to audit) and 11 UX-state scenarios (offline, session expiry, permissions) in Playwright |
+| Responsive and visual QA | 27 pages x 3 themes x 3 screen widths (243 combinations): no horizontal overflow and no serious accessibility (axe) violations ([results](docs/ui-redesign/evidence/2026-11-24-responsive-qa/README.md)) |
+| CI | Parallel jobs (lint, types, unit, integration in 3 shards, frontend, OpenAPI drift, secrets scan, dependency audit): about 3 minutes |
+
+Project status against the MVP definition: [`docs/MVP-STATUS.md`](docs/MVP-STATUS.md). Everything the app can do: [`docs/FEATURES.md`](docs/FEATURES.md).
 
 **Cost policy:** zero paid software cost. No paid services, subscriptions, paid APIs or
 provisioned paid resources without explicit owner approval (decision D14).
+
+More documentation:
 
 - Architecture plan (with Revisions 1–3): [`docs/architecture/phase-1-plan.md`](docs/architecture/phase-1-plan.md)
 - Decision log: [`docs/decisions.md`](docs/decisions.md) · ADRs: [`docs/adr/`](docs/adr/README.md)
@@ -46,7 +111,7 @@ docs (dev only): http://localhost:8000/api/docs.
 
 Without a `.env`, the Makefile falls back to `docs/local-dev.env` (placeholder values
 only; the backend refuses to start with placeholders in staging/prod). Root `.env.example`
-lists production variable names for hosted deploys (Antideploy reads it for analysis).
+lists production variable names for hosted deploys (see `DEPLOYMENT.md`).
 
 Full stack in containers (production-like images, nginx serving the SPA on :8080):
 
@@ -61,6 +126,8 @@ make reset-db  # DESTRUCTIVE: also deletes the local database volume
 | Command | What it does |
 |---|---|
 | `make infra-up` | Start PostgreSQL, Redis and Mailpit and wait until healthy |
+| `make seed-demo` | Demo organization, projects and issues (needs `make dev` running) |
+| `make e2e-journeys` / `make e2e-visual-qa` | Playwright user journeys / responsive and visual QA sweep (need `make dev` and `make seed-demo`) |
 | `make worker-dev` | Run the outbox worker locally (part of `make dev`) |
 | `make migrate` | Apply migrations to the dev DB (as `app_owner`) |
 | `make test` | Backend unit + integration tests (needs `infra-up`) and frontend tests |
@@ -71,10 +138,12 @@ make reset-db  # DESTRUCTIVE: also deletes the local database volume
 | `make secrets-scan` | gitleaks over git history and the working tree (Docker) |
 | `make ci` | Install, infra, lint, typecheck, parallel tests, migration round trip, OpenAPI drift, build, audit, secret scan |
 | `make ci-docs` | Docs-only PRs: gitleaks only (no app tests or Docker) |
+| `make ci-backend` / `make ci-frontend` / `make ci-contract` | The pieces CI runs as separate parallel jobs |
+| `make test-ci-scripts` | Tests for the CI helper scripts (path scope, test sharding, PR gate) |
 | `make test-parallel` | Backend unit + integration + frontend tests in parallel |
 | `make images` | Build backend and frontend container images locally (never pushed) |
 
-CI (`.github/workflows/ci.yml`) runs `make ci` then `make images` when applicable. **`main`** always gets the full gate. **Docs-only** PRs (explicit allowlist in `docs/ci.md`) run **`make ci-docs`**; require the **`CI`** check on PRs. See [`docs/ci.md`](docs/ci.md).
+CI (`.github/workflows/ci.yml`) runs the checks as **parallel jobs**: backend, three backend integration shards, frontend, API contract (OpenAPI drift), secrets scan, container images (on `main` or when Dockerfiles change) and mocked Playwright; a single required **`CI`** check decides from all of them. Pull requests that change only the frontend or only the backend skip the other side's job, and **docs-only** PRs run just a secrets scan. **`main`** always gets the full gate, and `make ci` runs everything in one go locally. See [`docs/ci.md`](docs/ci.md).
 
 After merge to **`main`**, path-scoped pushes also run **E2E UX states** (`.github/workflows/e2e-ux.yml`): Playwright `e2e/ux-states.spec.ts` against a local dev stack (`make e2e-ux-states` with `make dev`). Not a PR-required check.
 
@@ -116,7 +185,7 @@ backend/    FastAPI app (app/), Alembic migrations (migrations/), tests (unit/, 
 frontend/   React + Vite SPA (src/), nginx config for the production image
 infra/      docker-compose.yml and PostgreSQL role provisioning
 docs/       architecture plan, ADRs, decision log, ui-redesign plans
-.github/    CI workflow (runs `make ci`) and Dependabot
+.github/    CI workflow (parallel jobs), CI helper scripts and Dependabot
 ```
 
 
