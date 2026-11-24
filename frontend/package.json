@@ -22,6 +22,7 @@
     "e2e": "playwright test",
     "e2e:workflow-a4b": "playwright test e2e/project-settings.spec.ts e2e/workflow-edit.spec.ts e2e/admin-workflow.spec.ts",
     "e2e:journeys": "playwright test --project=mvp-journeys",
+    "e2e:visual-qa": "playwright test e2e/visual-qa --project=chromium",
     "e2e:journeys:smoke": "playwright test --project=mvp-journeys --grep @mvp-smoke"
   },
   "dependencies": {

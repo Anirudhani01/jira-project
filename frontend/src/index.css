@@ -604,6 +604,11 @@ body:has(.board-shell) {
   box-shadow: var(--shadow-md);
 }
 
+/* Decorative avatars draw their initials here instead of as text (see Avatar `decorative`). */
+.avatar-initials::before {
+  content: attr(data-initials);
+}
+
 /* Initials tiles (Avatar). The hue is stable per name; fill, text and edge are mixed from the
    theme's own surface and text colours, so they read as part of every theme. Paper is
    monochrome on purpose. */

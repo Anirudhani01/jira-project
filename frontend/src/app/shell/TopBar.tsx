@@ -172,7 +172,7 @@ export function TopBar({
             <LayoutGrid className="size-4" aria-hidden="true" />
           </span>
           {boardShell || orgDashboardHome ? (
-            <span className="hidden sm:inline">Jira Project</span>
+            <span className="sr-only sm:not-sr-only">Jira Project</span>
           ) : (
             'Jira Project'
           )}

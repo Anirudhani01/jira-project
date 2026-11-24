@@ -175,6 +175,10 @@ e2e-workflow-a4b: node-version-check ## A4b workflow editor mocked E2E (Playwrig
 	$(PNPM) exec playwright test \
 		e2e/project-settings.spec.ts e2e/workflow-edit.spec.ts e2e/admin-workflow.spec.ts
 
+.PHONY: e2e-visual-qa
+e2e-visual-qa: node-version-check ## Responsive + visual QA: every page x light/paper/dark x phone/tablet/desktop (needs make dev + make seed-demo; screenshots in .tmp/visual-qa)
+	$(PNPM) e2e:visual-qa
+
 .PHONY: e2e-ux-states
 e2e-ux-states: node-version-check ## Global UX M6 suite only (requires API :8000, worker, Vite :5173)
 	$(PNPM) exec playwright test e2e/ux-states.spec.ts --project=chromium

@@ -17,7 +17,6 @@ export function ProjectTemplatePicker({ org }: { org: string }) {
             key={template.id}
             to={`/o/${org}/projects/new?board_type=${template.id}`}
             className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            aria-label={`View ${template.label}`}
           >
             <Card className="flex h-full gap-3 p-4 transition-colors hover:border-line-strong hover:bg-surface-hover">
               <Icon className="size-8 shrink-0 text-accent" aria-hidden="true" />

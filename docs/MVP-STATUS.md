@@ -70,7 +70,7 @@ End-to-end journeys are written as 13 scenarios (`frontend/e2e/suites/mvp/scenar
 |---|---|---|
 | 6.1 Security | ✅ | Backend permission checks; row-level security with forced RLS on tenant tables; cross-tenant tests; CSRF and cross-origin rejection; security headers (CSP, HSTS, X-Frame-Options, nosniff, Referrer-Policy); no CORS by design (same-origin proxy); secrets scanning (gitleaks) and dependency audit in CI |
 | 6.2 Reliability & data integrity | ✅ | Composite foreign keys, optimistic locking, idempotency keys, migrations with round-trip test, retention jobs and runbooks |
-| 6.3 Usability | 🟡 | Loading, empty, error, permission-denied and session-expiry states exist. **Responsive layouts have not had a full sweep** (planned QA pass; it already found one phone-width bug on the issue list) |
+| 6.3 Usability | ✅ | Loading, empty, error, permission-denied and session-expiry states exist. Responsive and visual QA done 2026-11-24: 27 pages × light/paper/dark × phone/tablet/desktop (243 combinations), 0 overflow and 0 serious accessibility violations after fixes; evidence in `docs/ui-redesign/evidence/2026-11-24-responsive-qa/` |
 | 6.4 Performance | 🟡 | A k6 baseline exists (`infra/k6/baseline.js`); no recorded results found. List pagination is cursor-based |
 | 6.5 Maintainability | ✅ | Modular monolith, ADRs, OpenAPI contract with generated types and a drift check, migrations, lint/type/test gates in CI |
 
@@ -151,8 +151,6 @@ End-to-end journeys are written as 13 scenarios (`frontend/e2e/suites/mvp/scenar
 
 | Issue | Impact |
 |---|---|
-| Issue-list row Assignee buttons raise an axe `label-content-name-mismatch` warning (5 on the demo project) | Accessibility, not blocking |
-| Responsive and visual QA across all pages and themes not yet done | Possible layout bugs at phone width |
 | `docs/FEATURES.md` is dated 2026-11-11 with stale test counts (649 / 510) and a "known failing test" that now passes | Documentation only |
 | "Reports — Soon" in the sidebar | Cosmetic; sprint reports are outside the MVP |
 
@@ -164,7 +162,7 @@ Section 9 lists these as optional "if already implemented and stable": comments,
 
 1. **Decide how the deployed app handles signup**, then deploy. Options: (a) pay about $7/month for the email worker plus a free SMTP provider such as Brevo; (b) keep signup off and provide a seeded demo login (needs a safe way to seed the deployed database, which is not documented yet). Then run the Supabase and Render steps in `DEPLOYMENT.md` and verify with the checks listed there.
 2. ~~Run the full-stack E2E journeys~~ — done 2026-11-24 (13 of 13). Repeat the journeys against the deployed URL once it exists.
-3. **Responsive and visual QA pass** (planned): all pages, light/paper/dark, phone/tablet/desktop, plus the Assignee-button fix. Keep a curated set of screenshots as evidence.
+3. ~~Responsive and visual QA pass~~ — done 2026-11-24 (243 combinations clean; 30 curated screenshots in `docs/ui-redesign/evidence/2026-11-24-responsive-qa/`).
 4. **Portfolio assets**: README (product description, screenshots, demo link), architecture diagram, project and resume descriptions.
 5. **Close the 🟡 items**: confirm which admin pages are placeholders; decide whether a small status-distribution view is needed for "basic reporting"; record a k6 baseline result.
 6. **Refresh `docs/FEATURES.md`** (test counts, known-failure note).

@@ -69,6 +69,15 @@ describe('Avatar', () => {
     render(<Avatar name="Ann Example" />);
     expect(screen.getByText('Ann Example')).toBeInTheDocument();
   });
+
+  it('adds no hidden name or tooltip when it sits inside a control that already names the person', () => {
+    const { container } = render(<Avatar name="Ann Example" decorative />);
+    expect(screen.queryByText('Ann Example')).not.toBeInTheDocument();
+    expect(container.querySelector('[title]')).toBeNull();
+    // The initials are drawn by CSS from a data attribute, not rendered as text.
+    expect(container.querySelector('[data-initials="AE"]')).not.toBeNull();
+    expect(container).toHaveTextContent('');
+  });
 });
 
 describe('issue markers', () => {
