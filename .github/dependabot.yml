@@ -24,6 +24,11 @@ updates:
     groups:
       npm-minor-patch:
         update-types: [minor, patch]
+    ignore:
+      # The Node.js major is pinned (.nvmrc); @types/node must follow it, because a newer
+      # major describes APIs the runtime does not have. Bump both together, on purpose.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /

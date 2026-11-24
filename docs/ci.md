@@ -144,7 +144,7 @@ The PR **`CI`** job runs them before reporting success.
 - **Grouped:** routine (minor and patch) updates arrive as one pull request per ecosystem (Python, npm, GitHub Actions, Docker, Docker Compose), not one per package.
 - **Limited:** at most 3 open pull requests per ecosystem.
 - **Staggered:** each ecosystem has its own weekday (Monday to Friday), so their CI runs do not all start together. The CI uses about ten parallel jobs per run, and the free plan runs about 20 jobs at once, so a burst of runs queues.
-- **Deliberate upgrades:** major versions of Node, Postgres and Redis, and major or minor versions of the Python image, are ignored. They are pinned by the project (`.nvmrc`, `backend/.python-version`, the database volume) and need a planned upgrade, not a bot PR.
+- **Deliberate upgrades:** major versions of Node, Postgres and Redis, major `@types/node` versions (they must match the pinned Node major), and major or minor versions of the Python image, are ignored. They are pinned by the project (`.nvmrc`, `backend/.python-version`, the database volume) and need a planned upgrade, not a bot PR.
 
 To upgrade one of those on purpose, change the pin and the image together in a normal pull request.
 
