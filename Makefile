@@ -188,7 +188,11 @@ e2e-visual-qa: node-version-check ## Responsive + visual QA: every page x light/
 	$(PNPM) e2e:visual-qa
 
 .PHONY: e2e-ux-states
-e2e-ux-states: node-version-check ## Global UX M6 suite only (requires API :8000, worker, Vite :5173)
+# Full-stack spec: the API accepts writes only from the APP_BASE_URL origin, so the browser must use exactly
+# that address. Without E2E_BASE_URL Playwright would start its mock server on 127.0.0.1:5193 instead and
+# every sign-up would be rejected (the cause of the red "E2E UX states" workflow since 2026-11-01).
+e2e-ux-states: node-version-check ## Global UX M6 suite only (requires API :8000, worker, Vite on APP_BASE_URL, default :5173)
+	export E2E_BASE_URL="$${E2E_BASE_URL:-$(APP_BASE_URL)}"; \
 	$(PNPM) exec playwright test e2e/ux-states.spec.ts --project=chromium
 
 .PHONY: openapi openapi-check
