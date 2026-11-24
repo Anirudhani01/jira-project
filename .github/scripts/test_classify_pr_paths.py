@@ -3,7 +3,7 @@
 
 import unittest
 
-from classify_pr_paths import classify_pr_changes
+from classify_pr_paths import classify_ci_scope, classify_pr_changes
 
 
 class ClassifyPrPathsTests(unittest.TestCase):
@@ -78,6 +78,61 @@ class ClassifyPrPathsTests(unittest.TestCase):
             classify_pr_changes(["docs/ui-redesign/after/design-light.png"]),
             "docs_only",
         )
+
+
+class ClassifyCiScopeTests(unittest.TestCase):
+    def test_frontend_source_is_frontend_scope(self) -> None:
+        self.assertEqual(classify_ci_scope(["frontend/src/main.tsx"]), "frontend")
+
+    def test_frontend_e2e_and_lockfile_are_frontend_scope(self) -> None:
+        self.assertEqual(
+            classify_ci_scope(["frontend/e2e/suites/mvp/scenarios.ts", "frontend/pnpm-lock.yaml"]),
+            "frontend",
+        )
+
+    def test_frontend_plus_docs_is_frontend_scope(self) -> None:
+        self.assertEqual(
+            classify_ci_scope(["frontend/src/a.tsx", "docs/ui-redesign/evidence/x.png", "README.md"]),
+            "frontend",
+        )
+
+    def test_backend_change_is_full(self) -> None:
+        self.assertEqual(classify_ci_scope(["backend/app/main.py"]), "full")
+
+    def test_frontend_plus_backend_is_full(self) -> None:
+        self.assertEqual(
+            classify_ci_scope(["frontend/src/a.tsx", "backend/openapi.json"]), "full"
+        )
+
+    def test_migrations_and_backend_lock_are_full(self) -> None:
+        self.assertEqual(classify_ci_scope(["backend/migrations/versions/0028_x.py"]), "full")
+        self.assertEqual(classify_ci_scope(["backend/uv.lock"]), "full")
+
+    def test_shared_files_are_full(self) -> None:
+        for path in (
+            "Makefile",
+            ".github/workflows/ci.yml",
+            "infra/docker-compose.yml",
+            ".env.example",
+            ".gitleaks.toml",
+            ".nvmrc",
+            "render.yaml",
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(classify_ci_scope(["frontend/src/a.tsx", path]), "full")
+
+    def test_docs_only_is_full_for_this_job(self) -> None:
+        # Docs-only PRs are handled by their own job; this classifier never narrows them.
+        self.assertEqual(classify_ci_scope(["docs/ci.md"]), "full")
+
+    def test_unknown_path_fails_safe_to_full(self) -> None:
+        self.assertEqual(classify_ci_scope(["frontend/src/a.tsx", "notes.txt"]), "full")
+
+    def test_empty_is_full(self) -> None:
+        self.assertEqual(classify_ci_scope([]), "full")
+
+    def test_path_that_only_looks_like_frontend_is_full(self) -> None:
+        self.assertEqual(classify_ci_scope(["frontend-old/a.ts"]), "full")
 
 
 if __name__ == "__main__":

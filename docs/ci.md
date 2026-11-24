@@ -66,6 +66,25 @@ The **`code`** filter includes (non-exhaustive): `backend/**`, `frontend/**`, `i
 
 Any match forces the full **`make ci`** job on pull requests.
 
+## Frontend-only pull requests
+
+A pull request is **frontend-only** when every changed file is under `frontend/` or is documentation (the allowlist above), and at least one file is under `frontend/`. The backend tests, database rules and migrations cannot be affected, so the full-CI job runs **`make ci-frontend`** instead of **`make ci`**:
+
+| Runs | Skipped |
+|------|---------|
+| dependency install, frontend lint and format, frontend typecheck, frontend tests, OpenAPI drift check (needs no database), production build, frontend dependency audit, gitleaks | backend lint, typecheck and tests, Postgres/Redis/Mailpit, backend dependency audit, migration round-trip |
+
+Everything else keeps the full **`make ci`**: any change under `backend/`, `infra/`, `Makefile`, `.github/`, `.env.example`, `.gitleaks.toml`, `.nvmrc`, `render.yaml`, any unknown path, and every push to `main` and manual run. The classification is deliberately fail-safe: when in doubt, everything runs.
+
+The scope is computed in the **Detect changed paths** job by `python3 .github/scripts/classify_pr_paths.py --scope` (changed paths on stdin) and logged as `CI scope: frontend|full`. Its rules are covered by `make test-ci-path-classify`. The mocked Playwright job and the required **`CI`** check are unchanged.
+
+Simulate locally:
+
+```bash
+git diff --name-only origin/main...HEAD | python3 .github/scripts/classify_pr_paths.py --scope
+make ci-frontend
+```
+
 ## Pull request required check
 
 Job **`CI`** (`ci-required`) always runs on pull requests and passes if either **`make ci`** or **Docs only (secrets scan)** succeeded. Use **`CI`** as the branch protection required check (not the skipped **`make ci`** job alone).
