@@ -1,6 +1,6 @@
 # Jira Project — Features, Capabilities and Functionality
 
-_As of 2026-11-11. Compiled from the API routes (`backend/openapi.json`), backend modules, the permission model, seed data and the frontend feature folders. Not every screen was exercised by hand; see [Notes](#notes)._
+_As of 2026-11-25. Compiled from the API routes (`backend/openapi.json`), backend modules, the permission model, seed data and the frontend feature folders. Not every screen was exercised by hand; see [Notes](#notes)._
 
 ## Overview
 
@@ -15,7 +15,7 @@ A multi-tenant, Jira-style work management app: organizations contain projects, 
 | Frontend | React + TypeScript, built with Vite |
 | API contract | OpenAPI spec; frontend types are generated from it |
 
-Backend modules: `identity`, `orgs`, `projects`, `issues`, `boards`, `sprints`, `versions`, `comments`, `notifications`, `outbox`, `audit`, `security_events`, `org_auth_activity`.
+Backend modules: `identity`, `orgs`, `projects`, `issues`, `boards`, `sprints`, `versions`, `comments`, `notifications`, `outbox`, `audit`, `security_events`, `org_auth_activity`, `saved_filters`.
 
 Frontend feature areas: `auth`, `account`, `orgs`, `admin`, `projects`, `issues`, `board`, `backlog`, `comments`, `notifications`, `audit`, `authActivity`, `storyPoints`.
 
@@ -26,8 +26,8 @@ Frontend feature areas: `auth`, `account`, `orgs`, `admin`, `projects`, `issues`
 - **Account settings:** edit your profile; change your password.
 - **Password protection:** breached-password screening; Argon2 password hashing.
 - **Abuse protection:** rate limiting on sensitive endpoints.
-- **Audit trail:** a per-org audit log (with filters) and separate security events.
-- **Authentication activity:** per-org view of sign-in activity.
+- **Audit trail:** a per-org audit log (with filters, including a date-range picker) and separate security events.
+- **Authentication activity:** per-org view of sign-in activity, paginated (10, 25 or 50 per page) with a date-range filter.
 - **Data retention and operations:** retention jobs, plus runbooks for backup / point-in-time recovery, break-glass access, and observability retention (`docs/runbooks/`).
 
 ## Organizations and access control
@@ -55,13 +55,13 @@ Frontend feature areas: `auth`, `account`, `orgs`, `admin`, `projects`, `issues`
 
 - **Issue types (default):** Epic, Story, Task, Bug, Sub-task (kinds: `epic`, `standard`, `subtask`).
 - **Priorities (default):** Highest, High, Medium, Low, Lowest, each with a color.
-- **Core fields:** summary, description, type, priority, assignee, reporter, labels, parent / epic, fix version.
+- **Core fields:** summary, description, type, priority, assignee, reporter, tester, labels, parent / epic, fix version.
 - **Operations:** create, view, edit, delete.
 - **Hierarchy:** epics with child issues; sub-tasks. Per-project epics list.
-- **Activity:** per-issue activity history.
+- **Activity:** per-issue activity history; status changes read "from → to" with the status colours, and sprint, assignee and tester changes are shown too, as is the type an issue was created as.
 - **Comments:** add, edit, delete. Markdown is rendered and sanitized server-side. Editing your own comments and deleting anyone's are separate permissions.
 - **Labels:** per-project create / list / delete.
-- **Issue list:** filtering, sorting, keyset pagination, inline editing of type and priority.
+- **Issue list:** filtering (status category, type, priority, assignee, tester, label, sprint), search, sorting, keyset pagination, inline editing of type, priority, assignee and tester, and **saved filters** (named filter, search and sort sets, private to each user and project; at most 50 per project).
 - **Bulk actions** (up to 100 issues): move to sprint, assign, set priority, set parent, set fix version, delete.
 - **Concurrency safety:** optimistic locking via `If-Match` versions (412 stale / 428 missing), idempotency keys on create.
 
@@ -96,12 +96,14 @@ Overview · General · Defaults & Catalogs · Members · Invitations · Audit Lo
 
 - **UX states:** consistent loading, empty, error, permission-denied and session-expiry handling; online / offline indicator.
 - **Navigation:** global sidebar, org menu, design reference page.
-- **Backend tests:** 649 integration tests (including RLS, cross-tenant and migration round-trip tests) plus unit tests.
-- **Frontend tests:** 510 unit / component tests and Playwright end-to-end specs.
-- **CI:** lint, typecheck, OpenAPI drift check, migration round-trip.
+- **Themes and layouts:** light, dark and an off-white "paper" theme; layouts from phone to desktop.
+- **Backend tests:** 704 integration tests (real PostgreSQL and Redis, including RLS, cross-tenant and migration round-trip tests) and 280 unit tests.
+- **Frontend tests:** 638 unit / component tests.
+- **End-to-end:** 13 Playwright user journeys (sign-up to sprint to audit), 11 UX-state scenarios, mocked workflow specs, and a responsive and accessibility sweep of 27 pages in 3 themes at 3 widths (see `docs/ui-redesign/evidence/2026-11-24-responsive-qa/`).
+- **CI:** parallel jobs: backend (lint, types, unit, migrations, audit), the integration tests in 3 shards, frontend (lint, types, unit, build, audit), an OpenAPI drift check, secret scanning (gitleaks), container images and mocked browser tests; a single required check decides from all of them (`docs/ci.md`).
 
 ## Notes
 
 - This list reflects what the code and API expose. Features described in `PLAN.md` but not implemented are not listed.
-- The repo contains an `AdminPlaceholderPage`, so some admin pages (for example Email Delivery or Notifications) may still be placeholders. This has not been verified.
-- Known pre-existing test failure on `main`: `test_env_example_enables_local_mailpit_delivery_for_dev_only` (points at the renamed `docs/local.env.example`).
+- No admin page is a placeholder (checked 2026-11-25): the `AdminPlaceholderPage` component exists but is not rendered anywhere. Email delivery and Notifications are deliberate read-only pages that explain what the platform handles.
+- There are no known failing tests: CI on `main` was green on 2026-11-25.
