@@ -40,6 +40,12 @@
   --status-in-review-soft: #efeaff;
   --status-done: #0d5c2e;
   --status-done-soft: #e3f5ea;
+  /* Chart colours for the project Summary bar. Same hues as the status tokens, re-stepped so the
+     neighbouring segments stay >= 15 delta-E apart in normal vision and >= 3:1 against the card
+     (checked with the dataviz validator; the status lozenges keep the tokens above). */
+  --chart-todo: #8a8f98;
+  --chart-in-progress: #0b6fa8;
+  --chart-done: #0d5c2e;
   --epic: #b4308a;
   --story: #17803d;
   --task: #2563eb;
@@ -80,6 +86,7 @@
   --logo-bg: #111111;
   --status-todo: #66645e;
   --status-todo-soft: #ecebe5;
+  --chart-todo: #908d86;
   --task: #111111;
   --p-low: #44433f;
   --shadow-sm: 0 1px 0 rgb(17 17 17 / 0.05);
@@ -122,6 +129,9 @@
   --status-in-review-soft: #2a2150;
   --status-done: #6dd49a;
   --status-done-soft: #14301f;
+  --chart-todo: #7c7c84;
+  --chart-in-progress: #5bb4ee;
+  --chart-done: #6dd49a;
   --epic: #f08ccb;
   --story: #6dd49a;
   --task: #7aa7ff;

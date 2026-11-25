@@ -16,6 +16,7 @@ import { BoardPage } from '../features/board/BoardPage';
 import { IssueListPage } from '../features/issues/IssueListPage';
 import { ProjectKeyRedirect } from '../features/projects/ProjectKeyRedirect';
 import { ProjectPage } from '../features/projects/ProjectPage';
+import { ProjectSummaryPage } from '../features/projects/ProjectSummaryPage';
 import { AcceptInvitationPage } from '../features/orgs/pages/AcceptInvitationPage';
 import { OrgHomePage } from '../features/orgs/pages/OrgHomePage';
 import { OrgDashboardLayout } from '../features/orgs/OrgDashboardLayout';
@@ -69,6 +70,7 @@ export const appShellChildRoutes: RouteObject[] = [
             element: <ProjectKeyRedirect />,
             children: [
               { index: true, element: <ProjectPage /> },
+              { path: 'summary', element: <ProjectSummaryPage /> },
               { path: 'issues', element: <IssueListPage /> },
               { path: 'board', element: <BoardPage /> },
               { path: 'backlog', element: <BacklogPage /> },

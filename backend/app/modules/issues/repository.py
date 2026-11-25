@@ -1100,3 +1100,118 @@ async def insert_issue_key_alias(
             org_id=context.org_id, project_key=project_key.upper(), seq=seq, issue_id=issue_id
         )
     )
+
+
+@dataclass(frozen=True, slots=True)
+class StatusCount:
+    status_id: uuid.UUID
+    name: str
+    category: str
+    count: int
+
+
+@dataclass(frozen=True, slots=True)
+class TypeCount:
+    type_id: uuid.UUID
+    name: str
+    kind: str
+    active: bool
+    count: int
+
+
+@dataclass(frozen=True, slots=True)
+class PriorityCount:
+    priority_id: uuid.UUID
+    name: str
+    active: bool
+    count: int
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectSummaryCounts:
+    """Issue counts for a project's Summary page (see ``project_summary`` for the scope)."""
+
+    total: int
+    unassigned: int
+    by_status: list[StatusCount]
+    by_type: list[TypeCount]
+    by_priority: list[PriorityCount]
+
+
+async def project_summary(
+    session: AsyncSession, project_id: uuid.UUID, workflow_id: uuid.UUID
+) -> ProjectSummaryCounts:
+    """Counts per workflow status, issue type and priority, and the unassigned count.
+
+    Scope: every non-deleted issue of the project, backlog and past sprints included (unlike
+    ``project_progress``, which counts only the active sprint of a scrum project). Every status
+    of the project's workflow is listed, in workflow order, even with no issues. Types and
+    priorities follow their catalog order; an inactive entry appears only while issues still
+    use it. ``total`` is the sum of the status counts, so the status figures always agree with
+    each other even if issues change between the queries.
+    """
+    context = require_org_context(session)
+    mine = and_(
+        Issue.project_id == project_id,
+        Issue.org_id == context.org_id,
+        Issue.deleted_at.is_(None),
+    )
+    count = func.count(Issue.id)
+    statuses = [
+        StatusCount(status_id=row[0], name=row[1], category=row[2], count=row[3])
+        for row in await session.execute(
+            select(WorkflowStatus.id, WorkflowStatus.name, WorkflowStatus.category, count)
+            .select_from(WorkflowStatus)
+            .outerjoin(Issue, and_(Issue.status_id == WorkflowStatus.id, mine))
+            .where(
+                WorkflowStatus.org_id == context.org_id, WorkflowStatus.workflow_id == workflow_id
+            )
+            .group_by(
+                WorkflowStatus.id,
+                WorkflowStatus.name,
+                WorkflowStatus.category,
+                WorkflowStatus.position,
+            )
+            .order_by(WorkflowStatus.position, WorkflowStatus.name)
+        )
+    ]
+    types = [
+        TypeCount(type_id=row[0], name=str(row[1]), kind=row[2], active=row[3], count=row[4])
+        for row in await session.execute(
+            select(IssueType.id, IssueType.name, IssueType.kind, IssueType.is_active, count)
+            .select_from(IssueType)
+            .outerjoin(Issue, and_(Issue.type_id == IssueType.id, mine))
+            .where(IssueType.org_id == context.org_id)
+            .group_by(
+                IssueType.id,
+                IssueType.name,
+                IssueType.kind,
+                IssueType.is_active,
+                IssueType.position,
+            )
+            .having(or_(IssueType.is_active.is_(True), count > 0))
+            .order_by(IssueType.position, IssueType.name)
+        )
+    ]
+    priorities = [
+        PriorityCount(priority_id=row[0], name=str(row[1]), active=row[2], count=row[3])
+        for row in await session.execute(
+            select(Priority.id, Priority.name, Priority.is_active, count)
+            .select_from(Priority)
+            .outerjoin(Issue, and_(Issue.priority_id == Priority.id, mine))
+            .where(Priority.org_id == context.org_id)
+            .group_by(Priority.id, Priority.name, Priority.is_active, Priority.sort_order)
+            .having(or_(Priority.is_active.is_(True), count > 0))
+            .order_by(Priority.sort_order, Priority.name)
+        )
+    ]
+    unassigned = (
+        await session.execute(select(count).where(mine, Issue.assignee_id.is_(None)))
+    ).scalar_one()
+    return ProjectSummaryCounts(
+        total=sum(status.count for status in statuses),
+        unassigned=unassigned,
+        by_status=statuses,
+        by_type=types,
+        by_priority=priorities,
+    )

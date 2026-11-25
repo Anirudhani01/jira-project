@@ -183,6 +183,17 @@ describe('numeric tab shortcuts', () => {
     });
   });
 
+  it('3 opens the Summary tab, which comes after the tabs the first numbers already open', async () => {
+    mount();
+    const { router } = renderApp('/o/acme/p/WEB/board');
+    const user = userEvent.setup();
+    await screen.findByRole('navigation', { name: 'Project' });
+    await user.keyboard('3');
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/o/acme/p/WEB/summary');
+    });
+  });
+
   it('does nothing for a number with no tab, and ignores digits typed in a field', async () => {
     mount();
     const { router } = renderApp('/o/acme/p/WEB/board');

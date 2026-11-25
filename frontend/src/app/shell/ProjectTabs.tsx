@@ -100,6 +100,10 @@ export function ProjectTabs() {
         <NavLink to={`${base}/issues`} className={tabClass}>
           List
         </NavLink>
+        {/* Last, so the numeric shortcuts (1 = first tab) keep their meaning. */}
+        <NavLink to={`${base}/summary`} className={tabClass}>
+          Summary
+        </NavLink>
       </nav>
     </div>
   );

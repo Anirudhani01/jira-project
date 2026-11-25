@@ -40,7 +40,7 @@ Open http://localhost:5173 and sign in with the demo account (credentials are in
 ## What it does
 
 - **Organizations and access control:** multiple organizations, roles (owner, admin, member), email invitations, per-project roles (admin, member, viewer), an audit log and an authentication-activity view.
-- **Projects and issues:** Epic, Story, Task, Bug and Sub-task types; priorities, labels, comments (Markdown, sanitized on the server), assignee, reporter and tester, story points, fix versions and releases, per-issue activity history, search, filters, saved filters, and bulk actions.
+- **Projects and issues:** Epic, Story, Task, Bug and Sub-task types; priorities, labels, comments (Markdown, sanitized on the server), assignee, reporter and tester, story points, fix versions and releases, per-issue activity history, search, filters, saved filters, bulk actions, and a project Summary page (status distribution, types, priorities).
 - **Workflows and boards:** data-driven workflows with an editor (statuses and transitions per project), a Kanban board with drag and drop, and a Scrum backlog with sprints.
 - **Notifications and admin:** in-app notifications, email through an outbox worker, and an admin console for catalogs (issue types, priorities), members, invitations, audit logs and workflows.
 - **Everyday quality:** loading, empty, error, permission-denied and session-expiry states everywhere, an online/offline indicator, keyboard support and three accessible themes.

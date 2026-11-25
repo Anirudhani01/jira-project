@@ -16,6 +16,8 @@ from app.modules.projects.schemas import (
     AddProjectMemberRequest,
     ColumnResponse,
     CreateProjectRequest,
+    PriorityCountResponse,
+    ProjectIssueSummaryResponse,
     ProjectListItem,
     ProjectListResponse,
     ProjectMemberListResponse,
@@ -23,8 +25,10 @@ from app.modules.projects.schemas import (
     ProjectResponse,
     ProjectSummary,
     ReplaceWorkflowRequest,
+    StatusCountResponse,
     StatusResponse,
     TransitionResponse,
+    TypeCountResponse,
     UpdateProjectMemberRequest,
     UpdateProjectRequest,
     WorkflowResponse,
@@ -116,6 +120,37 @@ async def create_project(
 async def get_project(access: ViewProject, services: Services) -> ProjectResponse:
     project, current = await service.get_project(services, access)
     return _project(project, current)
+
+
+@router.get("/{project_key}/summary", response_model=ProjectIssueSummaryResponse)
+async def get_summary(access: ViewProject, services: Services) -> ProjectIssueSummaryResponse:
+    """Issue counts by status, type and priority for the project Summary page."""
+    summary = await service.issue_summary(services, access)
+    return ProjectIssueSummaryResponse(
+        total=summary.total,
+        unassigned=summary.unassigned,
+        by_status=[
+            StatusCountResponse(
+                status_id=s.status_id,
+                name=s.name,
+                category=cast(Any, s.category),
+                count=s.count,
+            )
+            for s in summary.by_status
+        ],
+        by_type=[
+            TypeCountResponse(
+                type_id=t.type_id, name=t.name, kind=t.kind, active=t.active, count=t.count
+            )
+            for t in summary.by_type
+        ],
+        by_priority=[
+            PriorityCountResponse(
+                priority_id=p.priority_id, name=p.name, active=p.active, count=p.count
+            )
+            for p in summary.by_priority
+        ],
+    )
 
 
 @router.get("/{project_key}/settings", response_model=ProjectSettingsResponse)

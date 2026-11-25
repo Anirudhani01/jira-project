@@ -57,6 +57,8 @@ const APP_PAGES: QaPage[] = [
   { id: 'admin-notifications', path: `/o/${ORG}/admin/system/notifications` },
   { id: 'admin-email', path: `/o/${ORG}/admin/system/email` },
   { id: 'project-overview', path: `/o/${ORG}/p/MOBILE` },
+  { id: 'project-summary', path: `/o/${ORG}/p/MOBILE/summary` },
+  { id: 'project-summary-kanban', path: `/o/${ORG}/p/SHOP/summary` },
   { id: 'issues', path: `/o/${ORG}/p/MOBILE/issues` },
   { id: 'board-scrum', path: `/o/${ORG}/p/MOBILE/board` },
   { id: 'board-kanban', path: `/o/${ORG}/p/SHOP/board` },
@@ -66,6 +68,13 @@ const APP_PAGES: QaPage[] = [
   { id: 'create-org', path: '/orgs/new' },
   { id: 'account', path: '/account' },
 ];
+
+/** Optional filter: E2E_QA_PAGES=project-summary,issues runs only those pages. */
+const ONLY = process.env.E2E_QA_PAGES?.split(',')
+  .map((id) => id.trim())
+  .filter(Boolean);
+const selected = (pages: QaPage[]) =>
+  ONLY ? pages.filter((page) => ONLY.includes(page.id)) : pages;
 
 interface Cell {
   viewport: string;
@@ -172,13 +181,13 @@ for (const [viewportName, size] of Object.entries(VIEWPORTS)) {
 
       test('public pages', async ({ page }) => {
         test.setTimeout(5 * 60_000);
-        for (const qa of PUBLIC_PAGES) await check(page, viewportName, theme, qa);
+        for (const qa of selected(PUBLIC_PAGES)) await check(page, viewportName, theme, qa);
       });
 
       test('signed-in pages', async ({ page }) => {
         test.setTimeout(15 * 60_000);
         await signIn(page);
-        for (const qa of APP_PAGES) await check(page, viewportName, theme, qa);
+        for (const qa of selected(APP_PAGES)) await check(page, viewportName, theme, qa);
       });
     });
   }

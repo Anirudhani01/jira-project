@@ -71,6 +71,7 @@ Frontend feature areas: `auth`, `account`, `orgs`, `admin`, `projects`, `issues`
 - **Transitions:** list the available transitions for an issue and apply one.
 - **Kanban board:** columns map to workflow statuses; move issues between columns; quick filters; board-columns editor.
 - **Scrum:** backlog view, sprints (create, edit, start, complete, delete), inline "Create issue" directly into a sprint.
+- **Project summary:** a per-project Summary page with total, done and unassigned counts, the split across the workflow (a segmented bar plus a table of every status) and ranked issue types and priorities; every number links to the issue list with the same filter.
 - **Versions / releases:** create, rename, reorder, release / unrelease, archive / unarchive, delete.
 
 ## Organization catalogs
