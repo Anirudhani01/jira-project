@@ -7,3 +7,4 @@ followed in order under pressure; check the "Before you start" box first.
 - [Break-glass database access](break-glass-access.md)
 - [Data retention and purge](retention.md)
 - [Log and trace retention](observability-retention.md)
+- [Performance baseline (k6)](performance-baseline.md): results, cause and how to re-run

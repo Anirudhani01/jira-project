@@ -71,7 +71,7 @@ End-to-end journeys are written as 13 scenarios (`frontend/e2e/suites/mvp/scenar
 | 6.1 Security | ✅ | Backend permission checks; row-level security with forced RLS on tenant tables; cross-tenant tests; CSRF and cross-origin rejection; security headers (CSP, HSTS, X-Frame-Options, nosniff, Referrer-Policy); no CORS by design (same-origin proxy); secrets scanning (gitleaks) and dependency audit in CI |
 | 6.2 Reliability & data integrity | ✅ | Composite foreign keys, optimistic locking, idempotency keys, migrations with round-trip test, retention jobs and runbooks |
 | 6.3 Usability | ✅ | Loading, empty, error, permission-denied and session-expiry states exist. Responsive and visual QA done 2026-11-24: 27 pages × light/paper/dark × phone/tablet/desktop (243 combinations), 0 overflow and 0 serious accessibility violations after fixes; evidence in `docs/ui-redesign/evidence/2026-11-24-responsive-qa/` |
-| 6.4 Performance | 🟡 | A k6 baseline exists (`infra/k6/baseline.js`); no recorded results found. List pagination is cursor-based |
+| 6.4 Performance | 🟡 | **Measured 2026-11-25** (local, one project with 10,117 issues, 10 readers + 2 writers): writes p95 **97 ms** (target 500 ms, pass); reads p95 **2.31 s** (target 300 ms, **miss**). Cause: the row-level-security function runs once per issue row (about 30 µs). Small and medium projects answer in 10 to 20 ms. Details, evidence and options: `docs/runbooks/performance-baseline.md`; backlog B3 |
 | 6.5 Maintainability | ✅ | Modular monolith, ADRs, OpenAPI contract with generated types and a drift check, migrations, lint/type/test gates in CI |
 
 ## 4. Testing (section 7)
@@ -155,6 +155,7 @@ End-to-end journeys are written as 13 scenarios (`frontend/e2e/suites/mvp/scenar
 |---|---|
 | `docs/FEATURES.md` is dated 2026-11-11 with stale test counts (649 / 510) and a "known failing test" that now passes | Documentation only |
 | "Reports — Soon" in the sidebar | Cosmetic; sprint reports are outside the MVP |
+| Read latency at 10,000 issues per project misses the 300 ms target (p95 2.31 s under 10 readers); fine for small and medium projects | Performance at the assumed upper scale; backlog B3 |
 
 ## 8. Outside the MVP but already built
 
@@ -166,7 +167,7 @@ Section 9 lists these as optional "if already implemented and stable": comments,
 2. ~~Run the full-stack E2E journeys~~ — done 2026-11-24 (13 of 13). Repeat the journeys against the deployed URL once it exists.
 3. ~~Responsive and visual QA pass~~ — done 2026-11-24 (243 combinations clean; 30 curated screenshots in `docs/ui-redesign/evidence/2026-11-24-responsive-qa/`).
 4. ~~Portfolio assets~~ — done 2026-11-25 (README, architecture diagram, screenshots, `docs/PORTFOLIO.md`). Only the demo link remains, and it waits on the deployment (backlog B1).
-5. ~~Close the 🟡 items~~ — admin pages confirmed (no placeholders) and basic reporting built (project Summary page, 2026-11-25). Still open: record a k6 baseline result.
+5. ~~Close the 🟡 items~~ — admin pages confirmed (no placeholders), basic reporting built (project Summary page) and the k6 baseline recorded (2026-11-25). The baseline found that reads miss the latency target at 10,000 issues per project: backlog B3.
 6. **Refresh `docs/FEATURES.md`** (test counts, known-failure note).
 
 ## 10. Backlog
@@ -200,3 +201,9 @@ Work that is agreed but not scheduled. Nothing here blocks day-to-day developmen
 ### B2 — Reporting follow-ups (not started)
 
 Natural next steps after the project Summary page, none needed for the MVP definition: per-assignee workload, trends over time (burndown, throughput; the sidebar "Reports - Soon" entry is for these), due-date and aging views, a per-status filter on the issue list (so status rows on the Summary could link too), and sharing or exporting the page.
+
+### B3 — Read latency at the assumed scale (found 2026-11-25, not started)
+
+The k6 baseline (`docs/runbooks/performance-baseline.md`) showed reads missing the 300 ms p95 target on a 10,000-issue project, while writes pass easily. Cause: the `issues_select` row-level-security policy calls `app_can_view_project(project_id)` once per row, about 30 µs each, so any query that scans many issues (the project Summary at 1.2 s, the list, board and search at 0.3 to 0.45 s) pays for every row it touches. Small and medium projects are unaffected (10 to 20 ms).
+
+**Plan when picked up:** (1) rewrite the policy so project visibility is evaluated once per query (a set-based subquery), with an ADR note and the cross-tenant and RLS test suites as the safety net; (2) make the Summary a single pass; (3) check what the board loads; (4) re-run the baseline and update the runbook. **Estimate:** about a day, mostly care and tests, because it changes a security policy.

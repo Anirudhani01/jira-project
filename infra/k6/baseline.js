@@ -2,7 +2,13 @@
 // production-like environment seeded with the assumed scale (see docs/runbooks).
 //
 //   k6 run -e BASE_URL=http://localhost:8001 -e ORG=acme -e PROJECT=WEB \
-//          -e SESSION=<__Host-session cookie value> -e CSRF=<csrf token> infra/k6/baseline.js
+//          -e SESSION=<session cookie value> -e CSRF=<csrf token> \
+//          -e TYPE_ID=<issue type id> -e PRIORITY_ID=<priority id> infra/k6/baseline.js
+//
+// COOKIE_NAME is `__Host-session` (the default) when COOKIE_SECURE is on, and `session` in the
+// local dev stack. ORIGIN must equal the API's APP_BASE_URL (writes from any other origin are
+// rejected). Seed the project first with infra/k6/seed.js. Full steps and the recorded results:
+// docs/runbooks/performance-baseline.md.
 //
 // Thresholds mirror the NFRs: p95 < 300 ms reads, < 500 ms writes.
 import http from 'k6/http';
@@ -11,7 +17,8 @@ import { check, sleep } from 'k6';
 const BASE = __ENV.BASE_URL || 'http://localhost:8001';
 const ORG = __ENV.ORG || 'acme';
 const PROJECT = __ENV.PROJECT || 'WEB';
-const jar = { Cookie: `__Host-session=${__ENV.SESSION || ''}` };
+const COOKIE = __ENV.COOKIE_NAME || '__Host-session';
+const jar = { Cookie: `${COOKIE}=${__ENV.SESSION || ''}` };
 const write = { ...jar, 'X-CSRF-Token': __ENV.CSRF || '', 'Content-Type': 'application/json',
   Origin: __ENV.ORIGIN || 'http://localhost:5173' };
 
