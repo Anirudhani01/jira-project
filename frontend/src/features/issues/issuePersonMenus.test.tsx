@@ -25,7 +25,7 @@ describe('person menu button', () => {
     render(<IssueListAssigneeMenu org="acme" issue={ISSUE} members={[]} canAssign />);
     const button = screen.getByRole('button', { name: /^Assignee: Ann Example/ });
     // Label in name: the visible text must be part of the accessible name.
-    expect(button).toHaveAccessibleName(expect.stringContaining('Ann Example'));
+    expect(button).toHaveAccessibleName(/Ann Example/);
     // The avatar is decorative here, so the name is not repeated as hidden text.
     expect(within(button).getAllByText('Ann Example')).toHaveLength(1);
   });
